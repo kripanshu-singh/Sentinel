@@ -2,11 +2,12 @@
  * worker/src/agent/graph/nodes/validate-node.ts
  *
  * VALIDATE node — runs business rules + completeness checks on the extracted
- * product. Records discrepancies and whether HITL is required.
+ * product. Records discrepancies and routes to the HITL node when a discrepancy
+ * exceeds the auto-approve threshold (`pendingHITL`).
  *
- * Phase A (this migration step): discrepancies are recorded but the run does NOT
- * pause — the `validate → HITL` conditional edge lands in Phase B. Phase C adds
- * the replan loop for low-confidence / incomplete extractions.
+ * Phase A: discrepancies recorded, run continues. Phase B: `next: "hitl"` routes
+ * to the human approval gate. Phase C adds the replan loop for low-confidence /
+ * incomplete extractions.
  */
 
 import { checkProduct } from "../../rule-engine.js";
@@ -58,28 +59,27 @@ export async function validateNode(
   }
 
   if (result.requiresHITL) {
-    // Phase B adds the actual pause + HITL node. For now, record and continue.
-    await emitEvent(
-      runId,
-      "CHECK",
-      "Variance above threshold",
-      `Found $${product.unitPrice} - target $${input.targetUnitPrice ?? 0}. Human approval gate lands in Phase B.`,
-      "success",
-      { discrepancies: result.discrepancies, requiresHITL: true }
-    );
-  } else {
-    await emitEvent(
-      runId,
-      "CHECK",
-      "Business rules check passed",
-      "All pricing and coupons within acceptable ranges.",
-      "success"
-    );
+    // Route to the HITL node (Phase B): it registers the approval request, blocks
+    // for the operator's decision, and resumes/aborts.
+    return {
+      discrepancies: result.discrepancies,
+      pendingHITL: true,
+      status: "CHECKING",
+      next: "hitl",
+    };
   }
+
+  await emitEvent(
+    runId,
+    "CHECK",
+    "Business rules check passed",
+    "All pricing and coupons within acceptable ranges.",
+    "success"
+  );
 
   return {
     discrepancies: result.discrepancies,
-    pendingHITL: result.requiresHITL,
+    pendingHITL: false,
     status: "CHECKING",
     next: "execute",
   };

@@ -122,14 +122,23 @@ export async function waitForHITLResolution(
   timeoutSeconds = 3600
 ): Promise<ApprovalResolution | null> {
   const key = hitlKey(runId);
-  // BLPOP blocks until an element is pushed or timeout expires
-  const result = await redis.blpop(key, timeoutSeconds);
-  if (!result) return null;
-  const [, payload] = result;
+  // BLPOP blocks its connection, so it needs a dedicated client: if it ran on
+  // the shared `redis` client, `signalHITLResolution` (rpush from the /resolve
+  // route) would queue behind the blocking command and never reach the server
+  // until the timeout. Dedicated connection breaks that deadlock.
+  const blocker = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
   try {
-    return JSON.parse(payload) as ApprovalResolution;
-  } catch {
-    return null;
+    // BLPOP blocks until an element is pushed or timeout expires
+    const result = await blocker.blpop(key, timeoutSeconds);
+    if (!result) return null;
+    const [, payload] = result;
+    try {
+      return JSON.parse(payload) as ApprovalResolution;
+    } catch {
+      return null;
+    }
+  } finally {
+    blocker.disconnect();
   }
 }
 

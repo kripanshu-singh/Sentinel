@@ -3,14 +3,16 @@
  *
  * Sentinel agent graph (LangGraph.js StateGraph).
  *
- * Phase A: deterministic main line only — `plan → execute ⇄ extract ⇄ validate →
- * report`. The only conditional edges are deterministic step routing (a state
- * channel `next`, set in code — never by an LLM). No replan, no HITL pause yet;
- * those are Phase B (HITL) and Phase C (replan).
+ * Phase A+B: deterministic main line `plan → execute ⇄ extract ⇄ validate
+ * [→ hitl] → report`. Conditional edges are deterministic step routing (a state
+ * channel `next`, set in code — never by an LLM) plus the HITL gate
+ * (`validate → hitl` when a discrepancy needs a human). No replan loop yet —
+ * that is Phase C.
  *
  * The `execute` node is a one-step-at-a-time machine: it processes a single plan
  * step per invocation and routes via `next` to keep processing (self-loop),
- * hand off extraction/validation, or finish at the report node.
+ * hand off extraction/validation, pause at the HITL gate, or finish at the
+ * report node.
  */
 
 import { END, START, StateGraph } from "@langchain/langgraph";
@@ -19,6 +21,7 @@ import { planNode } from "./nodes/plan-node.js";
 import { executeNode } from "./nodes/execute-node.js";
 import { extractNode } from "./nodes/extract-node.js";
 import { validateNode } from "./nodes/validate-node.js";
+import { hitlNode } from "./nodes/hitl-node.js";
 import { reportNode } from "./nodes/report-node.js";
 import { emitEvent, transition } from "./emit.js";
 import { sessionManager } from "../session/session-manager.js";
@@ -35,6 +38,7 @@ export function buildSentinelGraph() {
     .addNode("execute", executeNode)
     .addNode("extract", extractNode)
     .addNode("validate", validateNode)
+    .addNode("hitl", hitlNode)
     .addNode("report_node", reportNode)
     .addEdge(START, "plan")
     .addConditionalEdges(
@@ -53,7 +57,16 @@ export function buildSentinelGraph() {
       [...MACHINE_NODES, END]
     )
     .addEdge("extract", "validate")
-    .addEdge("validate", "execute")
+    .addConditionalEdges(
+      "validate",
+      (s: SentinelStateValue) => (s.pendingHITL ? "hitl" : "execute"),
+      ["execute", "hitl"]
+    )
+    .addConditionalEdges(
+      "hitl",
+      (s: SentinelStateValue) => (s.next === "end" ? END : "execute"),
+      ["execute", END]
+    )
     .addEdge("report_node", END)
     .compile();
 }

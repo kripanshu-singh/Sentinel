@@ -318,15 +318,17 @@ worker/src/agent/
 
 ## 14. Migration phases (each ends green: `npm run build` + `npm run lint`)
 
-**Phase A — Scaffold the graph, no behavior change**
+**Phase A — Scaffold the graph, no behavior change** ✅ done (2026-08-06)
 Add `@langchain/langgraph`. Build `state.ts`, `SessionManager`, and the action
 executors. Introduce `PlanResult` + extractor confidence. Compile a **linear** graph
 `plan → execute → extract → validate → report` with no conditional edges. Run the worker
 against the mock storefront and confirm identical events/report to pre-migration.
 
-**Phase B — HITL edge**
+**Phase B — HITL edge** ✅ done (2026-08-06)
 Add the `hitl` node + `validate → hitl` conditional edge (needs-human), wired to the
 existing BLPOP wait and `/resolve`. Verify approve/override/abort end-to-end.
+Verified via node-level tests (validate routes `hitl`; override → RESUME + recheck,
+approve → RESUME, abort → ABORTED/end; `approval_requests` row + resolution persisted).
 
 **Phase C — Replan loop**
 Add `replan` node + failure branch (low confidence / incomplete / sanity mismatch),
@@ -358,6 +360,14 @@ Delete `runner.ts`; update `.ai/architecture.md` (worker in-tree + graph),
 - **Node names cannot collide with state channels.** `addNode("report", ...)` throws at
   build time because `report` is a channel; node renamed to `report_node` and `next`
   value updated to match.
+- **HITL BLPOP deadlock (pre-existing, fixed in Phase B).** `waitForHITLResolution` ran
+  `blpop` on the shared `redis` client. A blocking command occupies the connection, so
+  `signalHITLResolution`'s `rpush` (from `POST /runs/:id/resolve`, same process) queued
+  behind it and only reached the server after the 3600s timeout — i.e. the old runner
+  could never be approved. Fix: BLPOP now runs on a dedicated per-call connection in
+  `waitForHITLResolution` (`src/storage/redis.ts`); `signalHITLResolution` keeps the
+  shared client. Verified with a direct blpop/rpush concurrency test and the HITL
+  node-level tests.
 - **Live storefront reality (pre-existing, not a migration regression):**
   `thread-shopping.netlify.app` ("Therads") is a client-side SPA with **no search box**
   (the `navigate → search` step always times out in `Navigator.search`, exactly as it
