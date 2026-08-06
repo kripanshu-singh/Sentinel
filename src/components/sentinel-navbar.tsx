@@ -158,7 +158,7 @@ export function SentinelNavbar({
           </TooltipContent>
         </Tooltip>
 
-        <Separator orientation="vertical" className="h-5 mx-1" />
+        <Separator orientation="vertical" className="mx-1 self-center" />
 
         <Tooltip>
           <TooltipTrigger asChild>
