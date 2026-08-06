@@ -20,6 +20,11 @@ import {
 
 type ConversationTurn = { role: "user" | "assistant"; content: string };
 
+type HelpContent = {
+  intro: string;
+  capabilities: { title: string; description: string; example: string }[];
+};
+
 type AssistantMessage =
   | {
       kind: "conversational";
@@ -27,10 +32,7 @@ type AssistantMessage =
     }
   | {
       kind: "help";
-      help: {
-        intro: string;
-        capabilities: { title: string; description: string; example: string }[];
-      };
+      help: HelpContent;
     };
 
 const SUGGESTED_WORKFLOWS = [
@@ -109,7 +111,7 @@ export default function GoalInputPage() {
       const data = await res.json() as {
         intent: "CONVERSATIONAL" | "CAPABILITY_QUERY" | "AUTOMATION_TASK";
         reply?: string;
-        help?: AssistantMessage & { kind: "help" };
+        help?: HelpContent;
         runId?: string;
       };
 
@@ -121,7 +123,7 @@ export default function GoalInputPage() {
 
       if (data.intent === "CAPABILITY_QUERY" && data.help) {
         setConversation([...history, userTurn]);
-        setAssistantMessage({ kind: "help", help: data.help.help });
+        setAssistantMessage({ kind: "help", help: data.help });
       } else {
         const reply = data.reply ?? "";
         setConversation([...history, userTurn, { role: "assistant", content: reply }]);

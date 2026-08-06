@@ -69,7 +69,12 @@ const CHITCHAT_PATTERN =
   /^\s*(hi|hi+|hello+|hey+|yo+|hola|namaste|greetings)\b|good (morning|afternoon|evening)|what('| i)?s [\d+\-*/.]+\??$|what('| i)?s my name\??$/i;
 
 const TASK_HINTS =
-  /(search|find|check|verify|compare|order|buy|cart|audit|reconcil|reorder|price|vendor|portal|storefront|discount|coupon|inventory|shipping|invoice|margin|extract|product|supplier)/i;
+  /(search|find|check|verify|compare|order|buy|purchase|cart|audit|reconcil|reorder|price|vendor|portal|storefront|discount|coupon|inventory|shipping|invoice|margin|extract|product|supplier|add|select|pick|grab)/i;
+
+const SHOPPING_VERB_PATTERN = /\b(add|buy|purchase|order|search|find|look for|pick|select|grab|get)\b/i;
+const PRODUCT_PATTERN = /\b(t[- ]?shirt|shirt|jacket|pants|shoes?|sneakers?|hat|watch|book|phone|laptop|item|product|sku)\b/i;
+const PRICE_PATTERN = /\b(?:under|up to|below|at most|max|less than|for)\s*\$?\d+(?:\.\d+)?\b|\$\d+(?:\.\d+)?\b/i;
+const CART_PATTERN = /\b(cart|basket|checkout)\b/i;
 
 const GREETING_PATTERN = /^\s*(hi+|hello+|hey+|yo+|hola|namaste|greetings)\b/i;
 
@@ -95,6 +100,19 @@ function rememberName(
   return undefined;
 }
 
+function looksLikeShoppingTask(text: string): boolean {
+  const hasShoppingVerb = SHOPPING_VERB_PATTERN.test(text);
+  const hasProductContext = PRODUCT_PATTERN.test(text);
+  const hasCartContext = CART_PATTERN.test(text);
+  const hasPriceContext = PRICE_PATTERN.test(text);
+
+  if (hasShoppingVerb && (hasProductContext || hasCartContext || hasPriceContext)) {
+    return true;
+  }
+
+  return Boolean(hasCartContext && hasPriceContext);
+}
+
 export class RuleBasedIntentClassifier implements IntentClassifier {
   async route(
     message: string,
@@ -110,7 +128,7 @@ export class RuleBasedIntentClassifier implements IntentClassifier {
       intent = "CAPABILITY_QUERY";
     } else if (CHITCHAT_PATTERN.test(text)) {
       intent = "CONVERSATIONAL";
-    } else if (TASK_HINTS.test(text)) {
+    } else if (looksLikeShoppingTask(text) || TASK_HINTS.test(text)) {
       intent = "AUTOMATION_TASK";
     } else {
       intent = "CONVERSATIONAL";
@@ -145,9 +163,14 @@ const CLASSIFY_SYSTEM_PROMPT = `You are Sentinel, a B2B procurement automation a
 A short conversation for THIS session is provided; use it to answer personal follow-ups (for example, if the user says "I'm Kripanshu" and later asks "what's my name?", you must answer Kripanshu — never claim to not know).
 
 Classify the user's latest message into exactly one intent:
-- AUTOMATION_TASK: a concrete browser task (search/order/compare/verify prices, build a cart, audit, reconcile, extract data from a storefront or vendor portal).
+- AUTOMATION_TASK: a concrete browser task (search/order/compare/verify prices, build a cart, add a product to a cart, audit, reconcile, extract data from a storefront or vendor portal).
 - CAPABILITY_QUERY: a question about what the agent can do or how it works.
 - CONVERSATIONAL: greetings, chitchat, small talk, math, or questions about the user or this conversation.
+
+Examples:
+- "add the red t-shirt under $20" -> AUTOMATION_TASK
+- "buy a laptop under $1000" -> AUTOMATION_TASK
+- "what can you do?" -> CAPABILITY_QUERY
 
 For CONVERSATIONAL, reply briefly (max 2 sentences), grounded in the conversation history.
 For the other two, set "reply" to null.

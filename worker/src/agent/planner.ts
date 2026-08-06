@@ -19,6 +19,71 @@ export interface PlanResult {
   estimatedSteps: number;
 }
 
+function looksLikeSimpleShoppingGoal(goal: string): boolean {
+  const normalized = goal.trim().toLowerCase();
+  const hasShoppingVerb = /\b(add|buy|purchase|order|search|find|look for|pick|select|grab|get)\b/.test(normalized);
+  const hasProductContext = /\b(t[- ]?shirt|shirt|jacket|pants|shoes?|sneakers?|hat|watch|book|phone|laptop|item|product|sku)\b/.test(normalized);
+  const hasPriceContext = /\b(?:under|up to|below|at most|max|less than|for)\s*\$?\d+(?:\.\d+)?\b|\$\d+(?:\.\d+)?\b/.test(normalized);
+  const hasCartContext = /\b(cart|basket|checkout)\b/.test(normalized);
+
+  return Boolean(
+    (hasShoppingVerb && (hasProductContext || hasPriceContext || hasCartContext)) ||
+      (hasCartContext && hasPriceContext)
+  );
+}
+
+export function getFallbackPlan(input: GoalInput): PlanResult {
+  if (!looksLikeSimpleShoppingGoal(input.goal)) {
+    return {
+      goal: input.goal,
+      plan: [],
+      needsClarification: true,
+      risk: "low",
+      confidence: 0.3,
+      estimatedSteps: 0,
+    };
+  }
+
+  const normalizedGoal = input.goal.trim();
+  const productName = normalizedGoal
+    .replace(/^(?:add|buy|purchase|order|search|find|look for|pick|select|grab|get)\s+/i, "")
+    .replace(/\s+(?:under|up to|below|at most|max|less than|for|with|in|from)\b.*$/i, "")
+    .replace(/^(?:the|a|an)\s+/i, "")
+    .trim();
+
+  return {
+    goal: `Find and add ${productName} to the cart`
+      .replace(/\s+/g, " ")
+      .trim(),
+    plan: [
+      {
+        kind: "search",
+        description: `Search for ${productName}`,
+        params: { query: productName },
+      },
+      {
+        kind: "extract_product",
+        description: `Review the matching product details for ${productName}`,
+        params: { targetName: productName },
+      },
+      {
+        kind: "check_price",
+        description: `Check the price and availability for ${productName}`,
+        params: { targetName: productName },
+      },
+      {
+        kind: "add_to_cart",
+        description: `Add ${productName} to the cart`,
+        params: { quantity: 1 },
+      },
+    ],
+    needsClarification: false,
+    risk: "low",
+    confidence: 0.85,
+    estimatedSteps: 4,
+  };
+}
+
 const SYSTEM_PROMPT = `You are a B2B procurement automation planner.
 Given a natural-language procurement goal and business rules, decompose it into
 an ordered list of concrete automation steps.
@@ -118,6 +183,11 @@ export async function planGoal(
   input: GoalInput,
   failureContext?: string
 ): Promise<PlanResult> {
+  const fallbackPlan = getFallbackPlan(input);
+  if (!fallbackPlan.needsClarification) {
+    return fallbackPlan;
+  }
+
   const llm = getLLMProvider();
 
   const userPrompt = `
