@@ -135,11 +135,17 @@ export const schema = {
  */
 export async function createTablesIfNotExist(): Promise<void> {
   await client`
-    CREATE TYPE IF NOT EXISTS run_status AS ENUM (
-      'PENDING','PARSED','NAVIGATING','EXTRACTING','CHECKING',
-      'HITL_PENDING','RESUME','FORM_FILLING','VALIDATING','RECOVERING',
-      'DRAFT_READY','DONE','ABORTED','FAILED'
-    )
+    DO $$
+    BEGIN
+      CREATE TYPE run_status AS ENUM (
+        'PENDING','PARSED','NAVIGATING','EXTRACTING','CHECKING',
+        'HITL_PENDING','RESUME','FORM_FILLING','VALIDATING','RECOVERING',
+        'DRAFT_READY','DONE','ABORTED','FAILED'
+      );
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+    END
+    $$
   `;
 
   await client`
