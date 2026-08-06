@@ -82,8 +82,13 @@ const PLAN_SCHEMA = {
 
 /**
  * Parse a GoalInput into a PlanResult using the LLM.
+ * `failureContext` (Phase C) is appended when replanning after failed steps, so
+ * the LLM can avoid the specific strategies that already failed.
  */
-export async function planGoal(input: GoalInput): Promise<PlanResult> {
+export async function planGoal(
+  input: GoalInput,
+  failureContext?: string
+): Promise<PlanResult> {
   const llm = getLLMProvider();
 
   const userPrompt = `
@@ -94,6 +99,17 @@ Business rules:
 - Variance threshold: ${input.varianceThresholdPct}%
 - Discount code: ${input.discountCode ?? "none"}
 - Fallback policy: ${input.fallbackPolicy}
+${
+  failureContext
+    ? `
+
+Previous attempts failed. Structured failure history:
+${failureContext}
+
+Produce a REVISED step plan that avoids the failed steps (different selectors,
+search queries, or fallbacks). You may reuse steps that already succeeded.`
+    : ""
+}
 
 Generate the step plan.`.trim();
 

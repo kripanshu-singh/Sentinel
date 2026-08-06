@@ -330,10 +330,15 @@ existing BLPOP wait and `/resolve`. Verify approve/override/abort end-to-end.
 Verified via node-level tests (validate routes `hitl`; override → RESUME + recheck,
 approve → RESUME, abort → ABORTED/end; `approval_requests` row + resolution persisted).
 
-**Phase C — Replan loop**
+**Phase C — Replan loop** ✅ done (2026-08-06)
 Add `replan` node + failure branch (low confidence / incomplete / sanity mismatch),
 structured `ReplanEntry`, per-node `nodeRetries`. Verify: forced failure → replan →
 success on retry; forced double failure → `FAILED`.
+Verified via node-contract tests: `validate` routes incomplete/low-confidence to
+`replan` (`nodeRetries.extract` 1→2) then FAILED at cap; `execute` step errors route
+to `replan` (`nodeRetries.execute` 1→2) then FAILED at cap; `replan` produces a
+revised plan (→ `execute`, `stepIndex: 0`) or FAILED on empty plan. Final-invoice
+sanity mode (§6) is deferred — report node already gates the invoice before commit.
 
 **Phase D — Cleanup**
 Delete `runner.ts`; update `.ai/architecture.md` (worker in-tree + graph),
@@ -368,6 +373,12 @@ Delete `runner.ts`; update `.ai/architecture.md` (worker in-tree + graph),
   `waitForHITLResolution` (`src/storage/redis.ts`); `signalHITLResolution` keeps the
   shared client. Verified with a direct blpop/rpush concurrency test and the HITL
   node-level tests.
+- **Replan triggers are validate-driven (extraction) or execute-driven (thrown step
+  errors).** `replan` re-runs the whole revised plan from `stepIndex: 0` (idempotent
+  by design), which is simpler than surgically resuming at the failed step and matches
+  the "re-run affected steps" routing rule. Budget is checked when the failure is
+  *detected* (`nodeRetries[node] < MAX_RETRIES_PER_NODE`), so `replan` itself only
+  decides success (→ execute) vs terminal (→ FAILED on empty revised plan).
 - **Live storefront reality (pre-existing, not a migration regression):**
   `thread-shopping.netlify.app` ("Therads") is a client-side SPA with **no search box**
   (the `navigate → search` step always times out in `Navigator.search`, exactly as it

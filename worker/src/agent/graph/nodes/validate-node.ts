@@ -2,16 +2,20 @@
  * worker/src/agent/graph/nodes/validate-node.ts
  *
  * VALIDATE node — runs business rules + completeness checks on the extracted
- * product. Records discrepancies and routes to the HITL node when a discrepancy
- * exceeds the auto-approve threshold (`pendingHITL`).
+ * product. Routes by outcome (all in code):
  *
- * Phase A: discrepancies recorded, run continues. Phase B: `next: "hitl"` routes
- * to the human approval gate. Phase C adds the replan loop for low-confidence /
- * incomplete extractions.
+ *   - low confidence / incomplete / missing extraction → REPLAN while the
+ *     `extract` node has retry budget, else FAILED (Phase C).
+ *   - discrepancy above auto-approve threshold → HITL node (Phase B).
+ *   - otherwise → back to EXECUTE.
+ *
+ * Final-invoice sanity mode (§6 of the migration plan) is deferred: the
+ * report node already gates the invoice before commit.
  */
 
 import { checkProduct } from "../../rule-engine.js";
 import { emitEvent, transition } from "../emit.js";
+import { failRun, MAX_RETRIES_PER_NODE, retryUpdate } from "../retry.js";
 import type { SentinelStateUpdate, SentinelStateValue } from "../state.js";
 
 const MIN_CONFIDENCE = 0.75;
@@ -29,15 +33,7 @@ export async function validateNode(
   await emitEvent(runId, "CHECK", "Checking business rules", "Evaluating unit price and inventory thresholds", "pending");
 
   if (!currentProduct) {
-    // Phase C replaces this with the replan loop.
-    await emitEvent(
-      runId,
-      "CHECK",
-      "Nothing to validate",
-      "No product extraction available at this checkpoint.",
-      "error"
-    );
-    return { status: "CHECKING", next: "execute" };
+    return replanOrFail(state, "no_product", "No product extraction available at this checkpoint.");
   }
 
   const { product, confidence } = currentProduct;
@@ -46,16 +42,11 @@ export async function validateNode(
     !product.sku || typeof product.unitPrice !== "number" || confidence < MIN_CONFIDENCE;
 
   if (incomplete) {
-    // Phase C replaces this with the replan loop.
-    await emitEvent(
-      runId,
-      "CHECK",
-      "Extraction incomplete",
-      `Confidence ${confidence.toFixed(2)} or missing fields — replan loop lands in Phase C.`,
-      "error",
-      { confidence, product }
+    return replanOrFail(
+      state,
+      "incomplete_extraction",
+      `Confidence ${confidence.toFixed(2)}; sku="${product.sku}" unitPrice=${product.unitPrice}`
     );
-    return { status: "CHECKING", next: "execute" };
   }
 
   if (result.requiresHITL) {
@@ -83,4 +74,39 @@ export async function validateNode(
     status: "CHECKING",
     next: "execute",
   };
+}
+
+/**
+ * Phase C — low confidence / incomplete / missing extraction routes to REPLAN
+ * while the `extract` node has retry budget; otherwise the run FAILS.
+ */
+async function replanOrFail(
+  state: SentinelStateValue,
+  reason: string,
+  detail: string
+): Promise<SentinelStateUpdate> {
+  const { runId } = state;
+  const retries = state.nodeRetries["extract"] ?? 0;
+
+  if (retries >= MAX_RETRIES_PER_NODE) {
+    await emitEvent(
+      runId,
+      "EXTRACT",
+      "Extraction failed",
+      `Could not recover after ${MAX_RETRIES_PER_NODE} replans (${reason}).`,
+      "error",
+      { reason, nodeRetries: state.nodeRetries }
+    );
+    return failRun(runId, "EXTRACT", "Extraction failed", `Could not recover after ${MAX_RETRIES_PER_NODE} replans.`);
+  }
+
+  await emitEvent(
+    runId,
+    "CHECK",
+    "Extraction incomplete — replanning",
+    `${detail} (attempt ${retries + 1}/${MAX_RETRIES_PER_NODE}).`,
+    "error",
+    { reason, retry: retries + 1 }
+  );
+  return { ...retryUpdate(state, "extract", reason, detail), pendingHITL: false };
 }

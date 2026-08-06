@@ -17,6 +17,8 @@
 import { sessionManager } from "../../session/session-manager.js";
 import * as actions from "../../actions/index.js";
 import { emitEvent, transition } from "../emit.js";
+import { failRun, MAX_RETRIES_PER_NODE, retryUpdate } from "../retry.js";
+import type { StepPlan } from "../../../types/index.js";
 import type { SentinelStateUpdate, SentinelStateValue } from "../state.js";
 
 const DEFAULT_STOREFRONT_URL = "https://thread-shopping.netlify.app/";
@@ -72,7 +74,8 @@ export async function executeNode(
     next: "execute",
   };
 
-  switch (step.kind) {
+  try {
+    switch (step.kind) {
     case "navigate": {
       const url = (step.params?.url as string | undefined) ?? DEFAULT_STOREFRONT_URL;
       await emitEvent(runId, "NAVIGATE", "Navigating", `Opening url: ${url}`, "pending");
@@ -151,5 +154,38 @@ export async function executeNode(
       // Unknown step kind — skip it rather than crash.
       console.warn(`[execute:${runId}] Skipping unknown step kind: ${(step as { kind: string }).kind}`);
       return base;
+    }
+  } catch (error: unknown) {
+    // Phase C — a thrown step error routes to REPLAN while `execute` has retry
+    // budget; otherwise the run FAILS.
+    const detail = error instanceof Error ? error.message : String(error);
+    const retries = state.nodeRetries["execute"] ?? 0;
+
+    if (retries >= MAX_RETRIES_PER_NODE) {
+      await emitEvent(
+        runId,
+        "RECOVER",
+        "Step failed",
+        `Step ${step.kind} failed again (attempt ${retries + 1}).`,
+        "error",
+        { step: step.kind, nodeRetries: state.nodeRetries }
+      );
+      return failRun(
+        runId,
+        "RECOVER",
+        "Run failed",
+        `Step ${step.kind} could not recover after ${MAX_RETRIES_PER_NODE} replans: ${detail.slice(0, 160)}`
+      );
+    }
+
+    await emitEvent(
+      runId,
+      "RECOVER",
+      "Step failed — replanning",
+      `Step ${step.kind} failed (attempt ${retries + 1}/${MAX_RETRIES_PER_NODE}): ${detail.slice(0, 160)}`,
+      "error",
+      { step: step.kind, retry: retries + 1 }
+    );
+    return retryUpdate(state, "execute", "step_error", `${step.kind}: ${detail.slice(0, 160)}`);
   }
 }
