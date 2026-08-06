@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
       const result = await startRun({
         goal: parsed.data.goal,
         targetUnitPrice: parsed.data.targetUnitPrice,
+        targetSubtotal: parsed.data.targetSubtotal,
         varianceThresholdPct: parsed.data.varianceThresholdPct,
         discountCode: parsed.data.discountCode,
         fallbackPolicy: parsed.data.fallbackPolicy,

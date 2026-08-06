@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { SidebarInset } from "@/components/ui/sidebar";
+import { Input } from "@/components/ui/input";
 import {
   Play,
   Paperclip,
@@ -35,33 +36,61 @@ type AssistantMessage =
       help: HelpContent;
     };
 
-const SUGGESTED_WORKFLOWS = [
-  {
-    icon: Backpack,
-    title: "SauceDemo cart with approval gate",
-    description:
-      "Build a multi-step cart, pause on any item above the price threshold, and finish with an itemized summary.",
-    goal: "Log in to SauceDemo. Build a cart with one Backpack, one Bike Light, and two Bolt T-Shirts. If any item's price exceeds $20, pause and ask for my approval before adding it to the cart. Continue after approval, fill the checkout form using the customer profile, stop at the final review page, and generate an itemized purchase summary.",
-  },
+const FALLBACK_OPTIONS = [
+  { value: "default_wholesale", label: "Default wholesale tier" },
+  { value: "best_available", label: "Best available code" },
+  { value: "abort", label: "Abort run" },
+];
+
+interface SuggestedWorkflow {
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+  goal: string;
+  targetUnitPrice?: string;
+  targetSubtotal?: string;
+  varianceThresholdPct?: string;
+  discountCode?: string;
+  fallbackPolicy?: string;
+}
+
+const SUGGESTED_WORKFLOWS: SuggestedWorkflow[] = [
   {
     icon: Bike,
-    title: "Backpack price check",
+    title: "Guarded Jacket & Light Purchase",
     description:
-      "Inspect one item, enforce a higher approval threshold, and then proceed to checkout.",
+      "Procure Fleece Jacket and Bike Light. Guard with a combined subtotal threshold of $50.00 and 10% variance limit.",
+    goal: "Procure the 'Sauce Labs Fleece Jacket' and 'Sauce Labs Bike Light' from the store. Verify that the combined item subtotal does not exceed $50.00. If the subtotal variance exceeds 10%, pause execution and request human authorization before proceeding to checkout.",
+    targetSubtotal: "50.00",
+    varianceThresholdPct: "10",
+    fallbackPolicy: "default_wholesale",
+  },
+  {
+    icon: Backpack,
+    title: "Backpack Approval Check",
+    description:
+      "Find the Sauce Labs Backpack and enforce a strict price ceiling of $25.00 before adding to cart.",
     goal: "Login to the store, find the Sauce Labs Backpack, check its price. If the price is higher than $25, pause and ask for approval before adding it to the cart. Then proceed to checkout.",
+    targetUnitPrice: "25.00",
+    varianceThresholdPct: "0",
+    fallbackPolicy: "default_wholesale",
   },
   {
     icon: Workflow,
-    title: "Guarded multi-step checkout",
+    title: "Infant Dress Procurement",
     description:
-      "Show a multi-step flow with threshold checks, human approval, and structured output.",
-    goal: "Complete a guarded checkout flow that searches for products, compares each selected item's price against an approval threshold, pauses for human-in-the-loop approval whenever the threshold is exceeded, resumes after approval, and stops at a final review screen with a structured purchase summary.",
+      "Find and buy a dress for the infant on a strict budget of $10.00.",
+    goal: "So I need to buy the dress for the infant. And my budget is $10. So I want you to find the dress and add to cart and checkout.",
+    targetSubtotal: "10.00",
+    varianceThresholdPct: "0",
+    fallbackPolicy: "abort",
   },
 ];
 
 export default function GoalInputPage() {
   const [goal, setGoal] = useState("");
   const [targetPrice, setTargetPrice] = useState("");
+  const [targetSubtotal, setTargetSubtotal] = useState("");
   const [variancePct, setVariancePct] = useState("10");
   const [discountCode, setDiscountCode] = useState("");
   const [fallback, setFallback] = useState("default_wholesale");
@@ -72,14 +101,25 @@ export default function GoalInputPage() {
   const [conversation, setConversation] = useState<ConversationTurn[]>([]);
   const router = useRouter();
 
-  function handleWorkflowClick(workflowGoal: string) {
-    setGoal(workflowGoal);
+  function handleWorkflowClick(workflow: string | SuggestedWorkflow) {
+    if (typeof workflow === "string") {
+      setGoal(workflow);
+      setAssistantMessage(null);
+      return;
+    }
+    setGoal(workflow.goal);
+    setTargetPrice(workflow.targetUnitPrice ?? "");
+    setTargetSubtotal(workflow.targetSubtotal ?? "");
+    setVariancePct(workflow.varianceThresholdPct ?? "10");
+    setDiscountCode(workflow.discountCode ?? "");
+    setFallback(workflow.fallbackPolicy ?? "default_wholesale");
     setAssistantMessage(null);
   }
 
   function handleNewWorkflow() {
     setGoal("");
     setTargetPrice("");
+    setTargetSubtotal("");
     setVariancePct("10");
     setDiscountCode("");
     setFallback("default_wholesale");
@@ -104,7 +144,8 @@ export default function GoalInputPage() {
         body: JSON.stringify({
           goal: goal.trim(),
           targetUnitPrice: targetPrice ? parseFloat(targetPrice) : undefined,
-          varianceThresholdPct: parseFloat(variancePct) || 10,
+          targetSubtotal: targetSubtotal ? parseFloat(targetSubtotal) : undefined,
+          varianceThresholdPct: parseFloat(variancePct) ?? 10,
           discountCode: discountCode.trim() || undefined,
           fallbackPolicy: fallback,
           history,
@@ -318,21 +359,19 @@ export default function GoalInputPage() {
             )}
 
             {/* Business rules */}
-            {/* <fieldset className="bg-card border border-border rounded-xl p-5 flex flex-col gap-4">
-              <legend className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
-                Business rules
+            <fieldset className="bg-card border border-border rounded-xl p-5 flex flex-col gap-4 shadow-sm">
+              <legend className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2">
+                Business Rules
               </legend>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {/* Target Unit Price */}
                 <div className="flex flex-col gap-1.5">
-                  <label
-                    htmlFor="target-price"
-                    className="text-sm font-medium text-foreground"
-                  >
-                    Target unit price
+                  <label htmlFor="target-price" className="text-xs font-medium text-muted-foreground">
+                    Target Unit Price
                   </label>
-                  <div className="flex items-center border border-border rounded-lg overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
-                    <span className="px-3 py-2 bg-muted text-muted-foreground text-sm border-r border-border select-none">
+                  <div className="flex items-center h-8 rounded-lg border border-input bg-transparent focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 transition-all overflow-hidden">
+                    <span className="px-2.5 h-full bg-muted/40 text-muted-foreground text-xs font-mono border-r border-input flex items-center justify-center select-none shrink-0">
                       $
                     </span>
                     <input
@@ -340,68 +379,84 @@ export default function GoalInputPage() {
                       type="number"
                       min="0"
                       step="0.01"
-                      placeholder="4.00"
+                      placeholder="0.00"
                       value={targetPrice}
                       onChange={(e) => setTargetPrice(e.target.value)}
-                      className="flex-1 px-3 py-2 bg-transparent text-sm text-foreground placeholder:text-muted-foreground border-none focus:ring-0 focus:outline-none"
+                      className="flex-1 h-full px-2.5 bg-transparent text-sm text-foreground placeholder:text-muted-foreground border-none outline-none focus:ring-0 focus:outline-none"
                     />
                   </div>
                 </div>
 
+                {/* Target Subtotal */}
                 <div className="flex flex-col gap-1.5">
-                  <label
-                    htmlFor="variance"
-                    className="text-sm font-medium text-foreground"
-                  >
-                    Variance threshold (%)
+                  <label htmlFor="target-subtotal" className="text-xs font-medium text-muted-foreground">
+                    Target Subtotal
                   </label>
-                  <div className="flex items-center border border-border rounded-lg overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+                  <div className="flex items-center h-8 rounded-lg border border-input bg-transparent focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 transition-all overflow-hidden">
+                    <span className="px-2.5 h-full bg-muted/40 text-muted-foreground text-xs font-mono border-r border-input flex items-center justify-center select-none shrink-0">
+                      $
+                    </span>
+                    <input
+                      id="target-subtotal"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={targetSubtotal}
+                      onChange={(e) => setTargetSubtotal(e.target.value)}
+                      className="flex-1 h-full px-2.5 bg-transparent text-sm text-foreground placeholder:text-muted-foreground border-none outline-none focus:ring-0 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Variance Threshold */}
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="variance" className="text-xs font-medium text-muted-foreground">
+                    Variance Threshold
+                  </label>
+                  <div className="flex items-center h-8 rounded-lg border border-input bg-transparent focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 transition-all overflow-hidden">
                     <input
                       id="variance"
                       type="number"
                       min="0"
                       max="100"
                       step="1"
+                      placeholder="10"
                       value={variancePct}
                       onChange={(e) => setVariancePct(e.target.value)}
-                      className="flex-1 px-3 py-2 bg-transparent text-sm text-foreground placeholder:text-muted-foreground border-none focus:ring-0 focus:outline-none"
+                      className="flex-1 h-full px-2.5 bg-transparent text-sm text-foreground placeholder:text-muted-foreground border-none outline-none focus:ring-0 focus:outline-none"
                     />
-                    <span className="px-3 py-2 bg-muted text-muted-foreground text-sm border-l border-border select-none">
+                    <span className="px-2.5 h-full bg-muted/40 text-muted-foreground text-xs font-mono border-l border-input flex items-center justify-center select-none shrink-0">
                       %
                     </span>
                   </div>
                 </div>
 
+                {/* Discount Code */}
                 <div className="flex flex-col gap-1.5">
-                  <label
-                    htmlFor="discount-code"
-                    className="text-sm font-medium text-foreground"
-                  >
-                    Discount code
+                  <label htmlFor="discount-code" className="text-xs font-medium text-muted-foreground">
+                    Discount Code
                   </label>
-                  <input
+                  <Input
                     id="discount-code"
                     type="text"
-                    placeholder="SUMMER20"
+                    placeholder="e.g. SUMMER20"
                     value={discountCode}
                     onChange={(e) => setDiscountCode(e.target.value)}
-                    className="px-3 py-2 border border-border rounded-lg bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all"
+                    className="h-8"
                   />
                 </div>
 
-             
-                <div className="flex flex-col gap-1.5">
-                  <label
-                    htmlFor="fallback"
-                    className="text-sm font-medium text-foreground"
-                  >
-                    Fallback policy
+                {/* Fallback Policy */}
+                <div className="flex flex-col gap-1.5 sm:col-span-2 md:col-span-2">
+                  <label htmlFor="fallback" className="text-xs font-medium text-muted-foreground">
+                    Fallback Policy
                   </label>
                   <select
                     id="fallback"
                     value={fallback}
                     onChange={(e) => setFallback(e.target.value)}
-                    className="px-3 py-2 border border-border rounded-lg bg-card text-sm text-foreground focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all"
+                    className="h-8 px-2.5 border border-input rounded-lg bg-card text-sm text-foreground focus:border-ring focus:ring-3 focus:ring-ring/50 focus:outline-none transition-all outline-none"
                   >
                     {FALLBACK_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -411,7 +466,7 @@ export default function GoalInputPage() {
                   </select>
                 </div>
               </div>
-            </fieldset> */}
+            </fieldset>
           </form>
 
           {/* Suggested workflows */}
@@ -420,26 +475,27 @@ export default function GoalInputPage() {
               Suggested Workflows
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {SUGGESTED_WORKFLOWS.map(
-                ({ icon: Icon, title, description, goal: wGoal }) => (
+              {SUGGESTED_WORKFLOWS.map((workflow) => {
+                const Icon = workflow.icon;
+                return (
                   <button
-                    key={title}
+                    key={workflow.title}
                     type="button"
-                    onClick={() => handleWorkflowClick(wGoal)}
+                    onClick={() => handleWorkflowClick(workflow)}
                     className="group text-left bg-card border border-border rounded-xl p-4 hover:border-primary/50 hover:shadow-sm cursor-pointer transition-all"
                   >
                     <div className="size-8 rounded-lg bg-accent flex items-center justify-center mb-3 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                       <Icon className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
                     <h3 className="text-sm font-semibold text-foreground mb-1">
-                      {title}
+                      {workflow.title}
                     </h3>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      {description}
+                      {workflow.description}
                     </p>
                   </button>
-                ),
-              )}
+                );
+              })}
             </div>
           </div>
         </div>
