@@ -139,11 +139,23 @@ export async function executeNode(
     }
 
     case "search": {
-      // Product name comes from the plan (params.query, set by the LLM from the
-      // goal). Fall back to the user's own goal text — never a hardcoded product.
       const query = (step.params?.query as string | undefined) ?? input.goal;
       await emitEvent(runId, "SEARCH", "Searching catalog", `Searching for "${query}"`, "pending");
       const result = await actions.search(ctx, query);
+      // On searchless storefronts like SauceDemo the search action is a no-op
+      // (no search box). Scroll the matching inventory card into view so the
+      // page state is meaningful before the extract step runs.
+      try {
+        const card = ctx.page
+          .locator(".inventory_item, .product-card, .product-item")
+          .filter({ hasText: query })
+          .first();
+        if (await card.isVisible({ timeout: 2000 })) {
+          await card.scrollIntoViewIfNeeded();
+        }
+      } catch {
+        // Not critical — proceed
+      }
       await emitEvent(runId, "SEARCH", "Search complete", `Found results matching "${query}"`, "success", { screenshot: result.screenshot });
       return { ...base, currentScreenshot: result.screenshot ?? null };
     }

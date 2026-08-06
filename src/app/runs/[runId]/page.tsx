@@ -153,7 +153,12 @@ export default function LiveRunPage({
     enabled: !!runId,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
-      return status && TERMINAL_STATUSES.has(status) ? false : 3000;
+      if (!status) return 3000;
+      if (TERMINAL_STATUSES.has(status)) return false;
+      // Poll aggressively while waiting for human input so the approval
+      // panel appears without needing a page refresh.
+      if (status === "HITL_PENDING") return 1000;
+      return 3000;
     },
   });
 
@@ -210,7 +215,11 @@ export default function LiveRunPage({
     "Manual intervention required.";
   const hasHITL =
     !hitlResolved &&
-    Boolean(hitlEvent || approvalRequest || status === "HITL_PENDING");
+    Boolean(
+      (hitlEvent && hitlEvent.status === "pending") ||
+      approvalRequest ||
+      status === "HITL_PENDING"
+    );
 
   const phases = buildPhases(events, status);
 

@@ -30,39 +30,66 @@ export async function updateCartQuantity(
   }
 }
 
+/**
+ * Derive a SauceDemo-style data-test selector from a product display name.
+ *
+ * SauceDemo uses a predictable convention:
+ *   "Sauce Labs Fleece Jacket"  →  [data-test="add-to-cart-sauce-labs-fleece-jacket"]
+ *   "Sauce Labs Bike Light"     →  [data-test="add-to-cart-sauce-labs-bike-light"]
+ *
+ * This is far more reliable than `.first()` or container-text matching because
+ * SauceDemo has no search — all items are always visible on the same page.
+ */
+function sauceDemoAddToCartSelector(productName: string): string {
+  const slug = productName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `[data-test="add-to-cart-${slug}"]`;
+}
+
 export async function clickAddToCart(
   page: Page,
   productName?: string,
-  buttonSelector = 'button[id*="add-to-cart" i], button:has-text("Add to Cart"), button:has-text("Add to cart"), .add-to-cart'
 ): Promise<void> {
-  let button = page.locator(buttonSelector).first();
+  const GENERIC_SELECTOR =
+    'button[id*="add-to-cart" i], button:has-text("Add to Cart"), button:has-text("Add to cart"), .add-to-cart';
 
+  // Strategy 1: SauceDemo data-test attribute (most reliable — no search needed)
   if (productName) {
-    const containers = [
-      '.inventory_item',
-      '.product-card',
-      '.product-item',
-      '.card',
-      'tr',
-      'div'
-    ];
+    const dataTestSel = sauceDemoAddToCartSelector(productName);
+    try {
+      const btn = page.locator(dataTestSel).first();
+      if (await btn.isVisible({ timeout: 3000 })) {
+        await btn.click();
+        await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
+        return;
+      }
+    } catch {
+      // Not a SauceDemo page or selector not found — fall through
+    }
 
-    for (const selector of containers) {
+    // Strategy 2: Find the product card by name, click the Add-to-Cart inside it
+    const cardSelectors = [".inventory_item", ".product-card", ".product-item", ".card"];
+    for (const sel of cardSelectors) {
       try {
-        const card = page.locator(selector).filter({ hasText: productName }).first();
-        if (await card.isVisible()) {
-          const cardButton = card.locator(buttonSelector).first();
-          if (await cardButton.isVisible()) {
-            button = cardButton;
-            break;
+        const card = page.locator(sel).filter({ hasText: productName }).first();
+        if (await card.isVisible({ timeout: 2000 })) {
+          const btn = card.locator(GENERIC_SELECTOR).first();
+          if (await btn.isVisible({ timeout: 2000 })) {
+            await btn.click();
+            await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
+            return;
           }
         }
       } catch {
-        // Fall back to general locator
+        // Try next card selector
       }
     }
   }
 
+  // Strategy 3: Generic fallback (single-product pages or unknown storefronts)
+  const button = page.locator(GENERIC_SELECTOR).first();
   await button.waitFor({ state: "visible", timeout: 10000 });
   await button.click();
   await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);

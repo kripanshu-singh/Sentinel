@@ -19,11 +19,20 @@ function targetNameFromPlan(
   // Prefer the extract step's explicit target, then the plan's search query
   // (both set by the LLM from the goal), then the user's goal text. Never a
   // hardcoded product name.
-  const step = plan[stepIndex - 1];
-  const searchStep = [...plan].reverse().find((s) => s.kind === "search");
+  const currentIndex = stepIndex - 1;
+  const step = plan[currentIndex];
+  
+  let lastSearchQuery: string | undefined;
+  for (let i = currentIndex; i >= 0; i--) {
+    if (plan[i]?.kind === "search") {
+      lastSearchQuery = plan[i]?.params?.query as string | undefined;
+      break;
+    }
+  }
+
   return (
     (step?.params?.targetName as string | undefined) ??
-    (searchStep?.params?.query as string | undefined) ??
+    lastSearchQuery ??
     goal
   );
 }

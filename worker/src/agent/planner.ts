@@ -152,13 +152,22 @@ Each step must have:
 - kind: one of navigate | search | extract_product | check_price | add_to_cart |
          apply_coupon | pause_for_approval | fill_form | validate | draft_report
 - description: plain English description of this step
-- params: an object with kind-specific keys (always include the PRODUCT NAME
-  extracted from the goal — never generic placeholders like "milk" or "Almond Milk"):
-  - search / extract_product: params.query / params.targetName = the exact product
-    name from the goal (e.g. "Sauce Labs Backpack"). Do not invent a product that
-    is not in the goal.
-  - navigate: params.url when the goal names a specific storefront URL
-  - add_to_cart / fill_form: params.quantity / params.fields when given
+- params: an object with kind-specific keys. ALWAYS include the target product name
+  in every product-specific step — never use generic placeholders:
+  - search:          params.query     = exact product name from the goal
+  - extract_product: params.targetName = exact product name from the goal
+  - check_price:     params.targetName = exact product name from the goal
+  - add_to_cart:     params.targetName = exact product name from the goal
+                     params.quantity  = quantity (default 1)
+  - navigate:        params.url when the goal names a specific storefront URL
+  - fill_form:       params.fields when given
+
+IMPORTANT — multi-product goals:
+- If the goal mentions TWO OR MORE products, emit a COMPLETE set of steps for
+  EACH product: search → extract_product → check_price → add_to_cart.
+  Do NOT skip any product. Do NOT merge steps from different products.
+- The targetName / query param on every step MUST match the exact product name
+  from the goal — this is how the agent knows WHICH item to interact with.
 
 IMPORTANT — human approval:
 - If the goal asks the agent to pause, confirm, get approval, or asks the user for
@@ -213,7 +222,15 @@ const PLAN_SCHEMA = {
             ],
           },
           description: { type: "string" },
-          params: { type: "object" },
+          params: {
+            type: "object",
+            properties: {
+              url: { type: "string" },
+              query: { type: "string" },
+              targetName: { type: "string" },
+              quantity: { type: "integer" },
+            },
+          },
         },
         required: ["kind", "description", "params"],
       },
@@ -248,42 +265,53 @@ export function orderPlanSteps(plan: StepPlan[]): StepPlan[] {
   const productGroups: { [product: string]: StepPlan[] } = {};
   const productOrder: string[] = [];
 
+  // Product-specific step kinds — everything else is pre/post
+  const PRODUCT_SPECIFIC_KINDS = new Set([
+    "search", "extract_product", "check_price", "add_to_cart", "apply_coupon",
+  ]);
+
   let lastProduct: string | null = null;
 
   for (const step of plan) {
-    const targetName = (step.params?.targetName ?? step.params?.query) as string | undefined;
-    if (targetName) {
-      lastProduct = targetName;
+    // Prefer explicit targetName, then query — add_to_cart should now always
+    // carry targetName after the system prompt fix.
+    const paramProduct = (
+      (step.params?.targetName as string | undefined) ??
+      (step.params?.query as string | undefined)
+    );
+    if (paramProduct) {
+      lastProduct = paramProduct;
     }
 
-    const isProductSpecific = ["search", "extract_product", "check_price", "add_to_cart", "apply_coupon"].includes(step.kind);
+    const isProductSpecific = PRODUCT_SPECIFIC_KINDS.has(step.kind);
 
     if (isProductSpecific) {
-      const prod = lastProduct ?? "unknown";
+      // Use the param name directly if present; otherwise fall back to the
+      // last seen product so orphaned steps (missing params) stay with the
+      // correct product group.
+      const prod = paramProduct ?? lastProduct ?? "unknown";
       if (!productGroups[prod]) {
         productGroups[prod] = [];
         productOrder.push(prod);
       }
       productGroups[prod].push(step);
+    } else if (step.kind === "navigate") {
+      preSteps.push(step);
     } else {
-      if (step.kind === "navigate") {
-        preSteps.push(step);
-      } else {
-        postSteps.push(step);
-      }
+      postSteps.push(step);
     }
   }
 
   const orderedProducts: StepPlan[] = [];
   for (const prod of productOrder) {
-    const sortedGroup = productGroups[prod].sort(
+    const sortedGroup = [...productGroups[prod]].sort(
       (a, b) => (STEP_ORDER[a.kind] ?? 99) - (STEP_ORDER[b.kind] ?? 99)
     );
     orderedProducts.push(...sortedGroup);
   }
 
-  const sortedPre = preSteps.sort((a, b) => (STEP_ORDER[a.kind] ?? 99) - (STEP_ORDER[b.kind] ?? 99));
-  const sortedPost = postSteps.sort((a, b) => (STEP_ORDER[a.kind] ?? 99) - (STEP_ORDER[b.kind] ?? 99));
+  const sortedPre = [...preSteps].sort((a, b) => (STEP_ORDER[a.kind] ?? 99) - (STEP_ORDER[b.kind] ?? 99));
+  const sortedPost = [...postSteps].sort((a, b) => (STEP_ORDER[a.kind] ?? 99) - (STEP_ORDER[b.kind] ?? 99));
 
   return [...sortedPre, ...orderedProducts, ...sortedPost];
 }
@@ -311,6 +339,7 @@ Procurement goal: ${input.goal}
 
 Business rules:
 - Target unit price: ${input.targetUnitPrice != null ? `$${input.targetUnitPrice}` : "not set"}
+- Target cart subtotal (combined): ${input.targetSubtotal != null ? `$${input.targetSubtotal}` : "not set"}
 - Variance threshold: ${input.varianceThresholdPct}%
 - Discount code: ${input.discountCode ?? "none"}
 - Fallback policy: ${input.fallbackPolicy}

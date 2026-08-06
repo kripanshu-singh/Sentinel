@@ -8,9 +8,9 @@ import {
   Play,
   Paperclip,
   Globe,
-  ClipboardCheck,
-  Percent,
-  RefreshCcw,
+  Backpack,
+  Bike,
+  Workflow,
   Bell,
   HelpCircle,
   Bot,
@@ -37,22 +37,25 @@ type AssistantMessage =
 
 const SUGGESTED_WORKFLOWS = [
   {
-    icon: ClipboardCheck,
-    title: "Audit Inventory",
-    description: "Cross-reference warehouse API counts with recent POS data.",
-    goal: "Audit the inventory by cross-referencing warehouse counts with POS data for the last 30 days. Flag any discrepancies above 5%.",
+    icon: Backpack,
+    title: "SauceDemo cart with approval gate",
+    description:
+      "Build a multi-step cart, pause on any item above the price threshold, and finish with an itemized summary.",
+    goal: "Log in to SauceDemo. Build a cart with one Backpack, one Bike Light, and two Bolt T-Shirts. If any item's price exceeds $20, pause and ask for my approval before adding it to the cart. Continue after approval, fill the checkout form using the customer profile, stop at the final review page, and generate an itemized purchase summary.",
   },
   {
-    icon: Percent,
-    title: "Verify Discounts",
-    description: "Check wholesale bulk tiers against current vendor contracts.",
-    goal: "Verify discount codes BULK10 and WHOLESALE20 against our current vendor contracts. Report any codes that are expired or misconfigured.",
+    icon: Bike,
+    title: "Backpack price check",
+    description:
+      "Inspect one item, enforce a higher approval threshold, and then proceed to checkout.",
+    goal: "Login to the store, find the Sauce Labs Backpack, check its price. If the price is higher than $25, pause and ask for approval before adding it to the cart. Then proceed to checkout.",
   },
   {
-    icon: RefreshCcw,
-    title: "Re-order Low Stock",
-    description: "Identify SKUs below threshold and draft purchase orders.",
-    goal: "Identify all SKUs below the reorder threshold of 50 units and draft purchase orders for the primary vendor at contracted pricing.",
+    icon: Workflow,
+    title: "Guarded multi-step checkout",
+    description:
+      "Show a multi-step flow with threshold checks, human approval, and structured output.",
+    goal: "Complete a guarded checkout flow that searches for products, compares each selected item's price against an approval threshold, pauses for human-in-the-loop approval whenever the threshold is exceeded, resumes after approval, and stops at a final review screen with a structured purchase summary.",
   },
 ];
 
