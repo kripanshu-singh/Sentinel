@@ -39,6 +39,9 @@ const REQUIRES_LLM_RE =
 const REQUIRES_APPROVAL_RE =
   /\b(?:pause|approve|approval|confirm|wait)\b|\bbefore\s+(?:you\s+)?(?:checkout|check\sout|submit|complete|buy|purchase|proceed)\b|\bask(?:ing)?\s+(?:me|for)\b/i;
 
+const CONDITIONAL_HITL_RE =
+  /\bif\b[\s\S]{0,120}\b(?:subtotal|variance|price|cost|total)\b[\s\S]{0,120}\b(?:exceed|exceeds|exceeded|above|over|higher\s+than|greater\s+than|more\s+than|not\s+exceed)\b/i;
+
 function looksLikeSimpleShoppingGoal(goal: string): boolean {
   const normalized = goal.trim().toLowerCase();
   const hasShoppingVerb = /\b(add|buy|purchase|order|search|find|look for|pick|select|grab|get)\b/.test(normalized);
@@ -117,6 +120,13 @@ export function getFallbackPlan(input: GoalInput): PlanResult {
  * (fill_form) step so the operator is brought into the loop before the commit.
  */
 export function injectApprovalStep(plan: StepPlan[], goal: string): StepPlan[] {
+  // Goals that already tie approval to a condition (for example, a subtotal
+  // variance threshold) should not be forced into an unconditional pause. The
+  // business-rule evaluator handles the actual threshold check.
+  if (CONDITIONAL_HITL_RE.test(goal)) {
+    return plan;
+  }
+
   if (
     !REQUIRES_APPROVAL_RE.test(goal) ||
     plan.some((s) => s.kind === "pause_for_approval")

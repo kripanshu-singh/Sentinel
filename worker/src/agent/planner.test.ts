@@ -47,6 +47,20 @@ test("injects a pause_for_approval step before checkout when the goal asks for c
   assert.equal(result[pauseIndex + 1]?.kind, "fill_form");
 });
 
+test("injectApprovalStep leaves conditional variance gates to the rule engine", () => {
+  const plan: StepPlan[] = [
+    { kind: "add_to_cart", description: "Add to cart", params: {} },
+    { kind: "fill_form", description: "Checkout", params: {} },
+  ];
+
+  const result = injectApprovalStep(
+    plan,
+    "Verify that the combined item subtotal does not exceed $50.00. If the subtotal variance exceeds 10%, pause execution and request human authorization before proceeding to checkout."
+  );
+
+  assert.deepEqual(result, plan);
+});
+
 test("injectApprovalStep appends the pause step when there is no checkout step", () => {
   const plan: StepPlan[] = [{ kind: "add_to_cart", description: "Add", params: {} }];
   const result = injectApprovalStep(plan, "pause so I can confirm first");
