@@ -64,7 +64,11 @@ export async function loginToStore(
 
 export async function openCartAndCheckout(page: Page): Promise<void> {
   await page.locator("#shopping_cart_container").click();
-  await page.locator("#checkout").waitFor({ timeout: 10000 });
+  await page.locator("#checkout").waitFor({ timeout: 5000 });
+  const itemCount = await page.locator(".cart_item").count();
+  if (itemCount === 0) {
+    throw new Error("Cart is empty — add a product to the cart before checking out.");
+  }
   await page.locator("#checkout").click();
   await page.locator("#first-name").waitFor({ timeout: 10000 });
 }

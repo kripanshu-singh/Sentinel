@@ -74,6 +74,8 @@ export function getLLMProvider(): LLMProvider {
 /**
  * Parse JSON from the model's text output.
  * Strips markdown code fences if the model wraps the JSON in ```json … ```.
+ * On failure, makes a best-effort repair for truncated output (unclosed
+ * brackets/braces) before giving up — the caller usually retries.
  */
 export function parseModelJSON<T = unknown>(text: string): T {
   // Strip optional markdown fences
@@ -81,5 +83,39 @@ export function parseModelJSON<T = unknown>(text: string): T {
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/\s*```$/i, "")
     .trim();
-  return JSON.parse(stripped) as T;
+  try {
+    return JSON.parse(stripped) as T;
+  } catch {
+    const repaired = closeDelimiters(stripped);
+    if (repaired !== stripped) {
+      return JSON.parse(repaired) as T;
+    }
+    throw new SyntaxError(`Invalid JSON from model: ${text.slice(0, 200)}`);
+  }
+}
+
+/**
+ * Append the closing delimiters needed to make truncated JSON parseable.
+ * Returns the input unchanged if a string is unterminated (unrepairable).
+ */
+function closeDelimiters(input: string): string {
+  const stack: string[] = [];
+  let inString = false;
+  let escaped = false;
+
+  for (const char of input) {
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') inString = false;
+      continue;
+    }
+    if (char === '"') inString = true;
+    else if (char === "{") stack.push("}");
+    else if (char === "[") stack.push("]");
+    else if (char === "}" || char === "]") stack.pop();
+  }
+
+  if (inString) return input;
+  return input + stack.reverse().join("");
 }

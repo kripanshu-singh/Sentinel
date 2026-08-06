@@ -179,7 +179,12 @@ export async function executeNode(
   } catch (error: unknown) {
     // Phase C — a thrown step error routes to REPLAN while `execute` has retry
     // budget; otherwise the run FAILS.
-    const detail = error instanceof Error ? error.message : String(error);
+    // Strip ANSI escape codes (Playwright error logs) so control characters
+    // never leak into the replan prompt or the failure event.
+    const detail = (error instanceof Error ? error.message : String(error)).replace(
+      /\u001b\[[0-9;]*m/g,
+      ""
+    );
     const retries = state.nodeRetries["execute"] ?? 0;
 
     if (retries >= MAX_RETRIES_PER_NODE) {

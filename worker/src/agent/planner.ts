@@ -6,7 +6,7 @@
  * (risk, confidence, clarification flag) that the UI can surface later.
  */
 
-import { getLLMProvider, parseModelJSON } from "../llm/client.js";
+import { getLLMProvider, parseModelJSON, type LLMMessage } from "../llm/client.js";
 import type { GoalInput, StepPlan } from "../types/index.js";
 
 export interface PlanResult {
@@ -28,6 +28,9 @@ Each step must have:
          apply_coupon | fill_form | validate | draft_report
 - description: plain English description of this step
 - params: optional key-value pairs (e.g. url, query, field names, quantities)
+
+Steps will be re-ordered into a canonical execution order automatically, so do
+not worry about ordering — focus on WHICH steps are needed and their params.
 
 Also return:
 - goal: a short normalized restatement of the goal
@@ -81,9 +84,29 @@ const PLAN_SCHEMA = {
 };
 
 /**
+ * Canonical execution order. The LLM picks WHICH steps to run; this ranks their
+ * order so the graph can never fill a cart or hit checkout before searching and
+ * extracting (a real failure we hit live: fill_form ran before search).
+ */
+const STEP_ORDER: Record<string, number> = {
+  navigate: 0,
+  search: 1,
+  extract_product: 2,
+  check_price: 3,
+  add_to_cart: 4,
+  apply_coupon: 5,
+  fill_form: 6,
+  validate: 7,
+  draft_report: 8,
+};
+
+const MAX_PLAN_ATTEMPTS = 3;
+
+/**
  * Parse a GoalInput into a PlanResult using the LLM.
  * `failureContext` (Phase C) is appended when replanning after failed steps, so
  * the LLM can avoid the specific strategies that already failed.
+ * Retries the generation+parse when the model returns malformed JSON.
  */
 export async function planGoal(
   input: GoalInput,
@@ -113,26 +136,43 @@ search queries, or fallbacks). You may reuse steps that already succeeded.`
 
 Generate the step plan.`.trim();
 
-  const text = await llm.generate(
-    [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: userPrompt },
-    ],
-    { responseSchema: PLAN_SCHEMA, temperature: 0.1 }
-  );
+  const messages: LLMMessage[] = [
+    { role: "system", content: SYSTEM_PROMPT },
+    { role: "user", content: userPrompt },
+  ];
 
-  const result = parseModelJSON<Partial<PlanResult>>(text);
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= MAX_PLAN_ATTEMPTS; attempt++) {
+    try {
+      const text = await llm.generate(
+        messages,
+        { responseSchema: PLAN_SCHEMA, temperature: 0.1 }
+      );
+      const result = parseModelJSON<Partial<PlanResult>>(text);
 
-  const plan = Array.isArray(result.plan) ? result.plan : [];
-  const needsClarification =
-    result.needsClarification === true || plan.length === 0;
+      const plan = Array.isArray(result.plan) ? result.plan : [];
+      const orderedPlan = [...plan].sort(
+        (a, b) => (STEP_ORDER[a.kind] ?? 99) - (STEP_ORDER[b.kind] ?? 99)
+      );
+      const needsClarification =
+        result.needsClarification === true || orderedPlan.length === 0;
 
-  return {
-    goal: typeof result.goal === "string" ? result.goal : input.goal,
-    plan,
-    needsClarification,
-    risk: result.risk ?? "low",
-    confidence: typeof result.confidence === "number" ? result.confidence : 0.5,
-    estimatedSteps: plan.length,
-  };
+      return {
+        goal: typeof result.goal === "string" ? result.goal : input.goal,
+        plan: orderedPlan,
+        needsClarification,
+        risk: result.risk ?? "low",
+        confidence: typeof result.confidence === "number" ? result.confidence : 0.5,
+        estimatedSteps: orderedPlan.length,
+      };
+    } catch (error: unknown) {
+      lastError = error;
+      console.warn(
+        `[planner] Planning attempt ${attempt}/${MAX_PLAN_ATTEMPTS} failed:`,
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+
+  throw lastError ?? new Error("Planning failed after retries");
 }
