@@ -109,6 +109,7 @@ export const SentinelState = Annotation.Root({
   currentProduct: Annotation<ProductExtraction | null>(),
   discrepancies: Annotation<Discrepancy[]>(lastValueWithDefault<Discrepancy[]>([])),
   pendingHITL: Annotation<boolean>(lastValueWithDefault(false)),
+  requiresApproval: Annotation<boolean>(lastValueWithDefault(false)),
   resolution: Annotation<ApprovalResolution | null>(),
   approvalHandled: Annotation<boolean>(lastValueWithDefault(false)),
 

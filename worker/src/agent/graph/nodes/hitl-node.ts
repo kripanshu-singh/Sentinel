@@ -34,20 +34,25 @@ export async function hitlNode(
 
   await transition(runId, "HITL_PENDING");
 
+  const explicitGate = state.requiresApproval === true;
   const approvalId = nanoid();
   await db.insert(approvalRequests).values({
     id: approvalId,
     runId,
-    title: "Variance Alert",
-    detail: `Variance check triggered for ${currentProduct?.product.description ?? "product"}`,
+    title: explicitGate ? "Human approval required" : "Variance Alert",
+    detail: explicitGate
+      ? "The agent has paused and is waiting for your confirmation before proceeding."
+      : `Variance check triggered for ${currentProduct?.product.description ?? "product"}`,
     discrepancies,
   });
 
   await emitEvent(
     runId,
     "HITL",
-    "Variance above threshold",
-    `Found $${currentProduct?.product.unitPrice ?? 0} - target $${input.targetUnitPrice ?? 0}. Exceeds threshold.`,
+    explicitGate ? "Awaiting your confirmation" : "Variance above threshold",
+    explicitGate
+      ? "The agent has paused to ask for your approval before running the next step."
+      : `Found $${currentProduct?.product.unitPrice ?? 0} - target $${input.targetUnitPrice ?? 0}. Exceeds threshold.`,
     "pending",
     {
       discrepancies,
@@ -72,6 +77,7 @@ export async function hitlNode(
       resolution: resolution ?? null,
       status: "ABORTED",
       pendingHITL: false,
+      requiresApproval: false,
       next: "end",
     };
   }
@@ -107,6 +113,7 @@ export async function hitlNode(
         status: "RESUME",
         pendingHITL: false,
         approvalHandled: true,
+        requiresApproval: false,
         next: "execute",
       };
     }
@@ -115,6 +122,7 @@ export async function hitlNode(
       status: "RESUME",
       pendingHITL: false,
       approvalHandled: true,
+      requiresApproval: false,
       next: "execute",
     };
   }
@@ -135,6 +143,7 @@ export async function hitlNode(
     status: "RESUME",
     pendingHITL: false,
     approvalHandled: true,
+    requiresApproval: false,
     next: "execute",
   };
 }

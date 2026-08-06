@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getFallbackPlan } from "./planner.js";
-import type { GoalInput } from "../types/index.js";
+import { getFallbackPlan, injectApprovalStep } from "./planner.js";
+import type { GoalInput, StepPlan } from "../types/index.js";
 
 test("creates a fallback plan for simple shopping requests", () => {
   const input: GoalInput = {
@@ -31,4 +31,30 @@ test("complex goals are routed to the LLM planner, not the deterministic fallbac
   assert.ok(plan, "expected a fallback plan");
   assert.equal(plan?.needsClarification, true);
   assert.equal(plan?.plan.length, 0);
+});
+
+test("injects a pause_for_approval step before checkout when the goal asks for confirmation", () => {
+  const plan: StepPlan[] = [
+    { kind: "add_to_cart", description: "Add to cart", params: {} },
+    { kind: "fill_form", description: "Checkout", params: {} },
+  ];
+
+  const result = injectApprovalStep(plan, "add to cart, then pause and ask me to confirm before checkout");
+
+  assert.equal(result.length, 3);
+  const pauseIndex = result.findIndex((s) => s.kind === "pause_for_approval");
+  assert.notEqual(pauseIndex, -1);
+  assert.equal(result[pauseIndex + 1]?.kind, "fill_form");
+});
+
+test("injectApprovalStep appends the pause step when there is no checkout step", () => {
+  const plan: StepPlan[] = [{ kind: "add_to_cart", description: "Add", params: {} }];
+  const result = injectApprovalStep(plan, "pause so I can confirm first");
+  assert.equal(result[result.length - 1]?.kind, "pause_for_approval");
+});
+
+test("injectApprovalStep does not alter goals without a confirmation request", () => {
+  const plan: StepPlan[] = [{ kind: "fill_form", description: "Checkout", params: {} }];
+  const result = injectApprovalStep(plan, "add the backpack to the cart");
+  assert.deepEqual(result, plan);
 });

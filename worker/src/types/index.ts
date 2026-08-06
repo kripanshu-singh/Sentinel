@@ -149,6 +149,7 @@ export type StepKind =
   | "check_price"
   | "add_to_cart"
   | "apply_coupon"
+  | "pause_for_approval"
   | "fill_form"
   | "validate"
   | "draft_report";

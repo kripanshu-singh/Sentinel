@@ -31,6 +31,14 @@ const DEFAULT_STOREFRONT_URL = "https://www.saucedemo.com/";
 const REQUIRES_LLM_RE =
   /\b(?:login|log in|sign in|signin|sign into|sign out|checkout)\b|(?:\b(?:order\s+)?summary\b)|\b(?:pause|ask|ask me|confirm|approve|approval|human|wait for|review)\b|(?:if\s+the\s+(?:price|item|product)\s+is\s+(?:higher|greater|more)\s+than)|\b(?:do\s+not\s+(?:complete|purchase|buy|checkout)|extract\s+the\s+(?:order|invoice|receipt))\b/i;
 
+/**
+ * Goals that ask for human confirmation before a high-stakes action must pause
+ * the agent and bring the operator into the loop before the main commit
+ * (checkout / finalizing an order).
+ */
+const REQUIRES_APPROVAL_RE =
+  /\b(?:pause|approve|approval|confirm|wait)\b|\bbefore\s+(?:you\s+)?(?:checkout|check\sout|submit|complete|buy|purchase|proceed)\b|\bask(?:ing)?\s+(?:me|for)\b/i;
+
 function looksLikeSimpleShoppingGoal(goal: string): boolean {
   const normalized = goal.trim().toLowerCase();
   const hasShoppingVerb = /\b(add|buy|purchase|order|search|find|look for|pick|select|grab|get)\b/.test(normalized);
@@ -103,13 +111,36 @@ export function getFallbackPlan(input: GoalInput): PlanResult {
   };
 }
 
+/**
+ * Insert a pause_for_approval step into a plan when the goal asks for human
+ * confirmation but the model omitted it. Placed right before the first checkout
+ * (fill_form) step so the operator is brought into the loop before the commit.
+ */
+export function injectApprovalStep(plan: StepPlan[], goal: string): StepPlan[] {
+  if (
+    !REQUIRES_APPROVAL_RE.test(goal) ||
+    plan.some((s) => s.kind === "pause_for_approval")
+  ) {
+    return plan;
+  }
+  const pauseStep: StepPlan = {
+    kind: "pause_for_approval",
+    description: "Pause and ask for human confirmation before checkout",
+    params: {},
+  };
+  const beforeIndex = plan.findIndex((s) => s.kind === "fill_form");
+  return beforeIndex === -1
+    ? [...plan, pauseStep]
+    : [...plan.slice(0, beforeIndex), pauseStep, ...plan.slice(beforeIndex)];
+}
+
 const SYSTEM_PROMPT = `You are a B2B procurement automation planner.
 Given a natural-language procurement goal and business rules, decompose it into
 an ordered list of concrete automation steps.
 
 Each step must have:
 - kind: one of navigate | search | extract_product | check_price | add_to_cart |
-         apply_coupon | fill_form | validate | draft_report
+         apply_coupon | pause_for_approval | fill_form | validate | draft_report
 - description: plain English description of this step
 - params: an object with kind-specific keys (always include the PRODUCT NAME
   extracted from the goal — never generic placeholders like "milk" or "Almond Milk"):
@@ -118,6 +149,13 @@ Each step must have:
     is not in the goal.
   - navigate: params.url when the goal names a specific storefront URL
   - add_to_cart / fill_form: params.quantity / params.fields when given
+
+IMPORTANT — human approval:
+- If the goal asks the agent to pause, confirm, get approval, or asks the user for
+  confirmation before a high-stakes action (checkout, submitting, or completing an
+  order), include a pause_for_approval step right before that action.
+- The step order is re-ranked automatically, so just include the step — placement
+  is handled for you.
 
 Steps will be re-ordered into a canonical execution order automatically, so do
 not worry about ordering — focus on WHICH steps are needed and their params.
@@ -158,6 +196,7 @@ const PLAN_SCHEMA = {
               "check_price",
               "add_to_cart",
               "apply_coupon",
+              "pause_for_approval",
               "fill_form",
               "validate",
               "draft_report",
@@ -185,9 +224,10 @@ const STEP_ORDER: Record<string, number> = {
   check_price: 3,
   add_to_cart: 4,
   apply_coupon: 5,
-  fill_form: 6,
-  validate: 7,
-  draft_report: 8,
+  pause_for_approval: 6,
+  fill_form: 7,
+  validate: 8,
+  draft_report: 9,
 };
 
 const MAX_PLAN_ATTEMPTS = 3;
@@ -246,11 +286,16 @@ Generate the step plan.`.trim();
       const result = parseModelJSON<Partial<PlanResult>>(text);
 
       const plan = Array.isArray(result.plan) ? result.plan : [];
-      const orderedPlan = [...plan].sort(
+      let orderedPlan = [...plan].sort(
         (a, b) => (STEP_ORDER[a.kind] ?? 99) - (STEP_ORDER[b.kind] ?? 99)
       );
       const needsClarification =
         result.needsClarification === true || orderedPlan.length === 0;
+
+      // Backstop: if the goal asked for human confirmation but the model omitted
+      // the pause step, insert one before the first checkout step so the agent
+      // always brings the operator into the loop before the high-stakes action.
+      orderedPlan = injectApprovalStep(orderedPlan, input.goal);
 
       return {
         goal: typeof result.goal === "string" ? result.goal : input.goal,

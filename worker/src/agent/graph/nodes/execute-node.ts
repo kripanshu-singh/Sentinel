@@ -182,6 +182,16 @@ export async function executeNode(
       return { ...base, currentScreenshot: couponResult.screenshot ?? null };
     }
 
+    case "pause_for_approval":
+      await emitEvent(runId, "CHECK", "Human confirmation needed", "The agent has paused to ask for your approval before proceeding.", "pending");
+      return {
+        ...base,
+        status: "HITL_PENDING",
+        pendingHITL: true,
+        requiresApproval: true,
+        next: "validate",
+      };
+
     case "fill_form": {
       await transition(runId, "FORM_FILLING");
       await emitEvent(runId, "FORM_FILL", "Opening checkout", "Moving cart to checkout and filling the shipping form...", "pending");

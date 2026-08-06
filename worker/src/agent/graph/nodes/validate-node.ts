@@ -32,6 +32,25 @@ export async function validateNode(
   await transition(runId, "CHECKING");
   await emitEvent(runId, "CHECK", "Checking business rules", "Evaluating unit price and inventory thresholds", "pending");
 
+  // Explicit human-approval gate (from a pause_for_approval step): the goal asked
+  // the operator to confirm before checkout, independent of any price variance.
+  // Route straight to HITL without demanding a clean product extraction.
+  if (state.requiresApproval) {
+    await emitEvent(
+      runId,
+      "CHECK",
+      "Approval required",
+      "Confirmation needed before the agent proceeds.",
+      "pending"
+    );
+    return {
+      requiresApproval: true,
+      pendingHITL: true,
+      status: "CHECKING",
+      next: "hitl",
+    };
+  }
+
   if (!currentProduct) {
     return replanOrFail(state, "no_product", "No product extraction available at this checkpoint.");
   }
