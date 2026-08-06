@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -44,9 +44,11 @@ const EVENT_LABELS: Record<string, string> = {
 function AgentStreamRow({
   event,
   showSpinner,
+  onOpenScreenshot,
 }: {
   event: AgentEvent;
   showSpinner: boolean;
+  onOpenScreenshot?: () => void;
 }) {
   const label = EVENT_LABELS[event.type] ?? event.type;
   const screenshot =
@@ -85,21 +87,30 @@ function AgentStreamRow({
       <div className="flex flex-col gap-2">
         <p className="text-foreground/80 leading-relaxed">{event.detail}</p>
         {screenshot && (
-          <a
-            href={screenshot}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex rounded overflow-hidden border border-border hover:ring-2 hover:ring-primary/30 transition-shadow"
+          <button
+            type="button"
+            onClick={onOpenScreenshot}
+            className="group inline-flex items-center gap-2 rounded-lg border border-border bg-surface p-2 shadow-sm transition hover:border-primary hover:shadow-md"
           >
-            <Image
-              src={screenshot}
-              alt={event.title}
-              width={120}
-              height={90}
-              unoptimized
-              className="block object-cover"
-            />
-          </a>
+            <div className="relative h-16 w-24 overflow-hidden rounded-md border border-border bg-background">
+              <Image
+                src={screenshot}
+                alt={event.title}
+                fill
+                unoptimized
+                className="object-cover grayscale group-hover:grayscale-0 transition"
+              />
+            </div>
+            <div className="flex flex-col text-left">
+              <span className="text-[11px] font-semibold text-foreground">
+                Open screenshot
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                Click to expand
+              </span>
+            </div>
+            <ExternalLink className="size-3 text-muted-foreground" />
+          </button>
         )}
       </div>
     </div>
@@ -118,6 +129,10 @@ export default function LiveRunPage({
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [overrideOpen, setOverrideOpen] = useState(false);
   const [overrideTarget, setOverrideTarget] = useState("");
+  const [previewScreenshot, setPreviewScreenshot] = useState<string | null>(
+    null,
+  );
+  const previewOverlayRef = useRef<HTMLDivElement | null>(null);
 
   // Unwrap async params once on mount
   useEffect(() => {
@@ -166,6 +181,19 @@ export default function LiveRunPage({
     | undefined;
 
   const latestHITLEvent = [...events].reverse().find((e) => e.type === "HITL");
+
+  useEffect(() => {
+    if (!previewScreenshot) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setPreviewScreenshot(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [previewScreenshot]);
   const approvalRequest = summary?.currentApprovalRequest;
   const hitlEvent = latestHITLEvent;
   const hitlEvidence =
@@ -403,6 +431,13 @@ export default function LiveRunPage({
                     event.id === latestPendingId &&
                     !isTerminal
                   }
+                  onOpenScreenshot={() => {
+                    const screenshotUrl =
+                      typeof event.evidence?.screenshot === "string"
+                        ? event.evidence.screenshot
+                        : undefined;
+                    if (screenshotUrl) setPreviewScreenshot(screenshotUrl);
+                  }}
                 />
               ))}
             </div>
@@ -605,6 +640,36 @@ export default function LiveRunPage({
           </div>
         </div>
       </main>
+      {previewScreenshot && (
+        <div
+          ref={previewOverlayRef}
+          onClick={(event) => {
+            if (event.target === previewOverlayRef.current) {
+              setPreviewScreenshot(null);
+            }
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
+        >
+          <div className="relative max-h-[90vh] max-w-[90vw] overflow-hidden rounded-3xl border border-border bg-card shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setPreviewScreenshot(null)}
+              className="absolute right-3 top-3 rounded-full bg-background/90 px-3 py-2 text-xs font-semibold text-foreground shadow hover:bg-background"
+            >
+              Close
+            </button>
+            <div className="relative h-[80vh] w-[80vw] max-w-[1200px] max-h-[800px]">
+              <Image
+                src={previewScreenshot}
+                alt="Expanded screenshot"
+                fill
+                unoptimized
+                className="object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </SidebarInset>
   );
 }
