@@ -5,6 +5,17 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import {
+  Avatar,
+  AvatarFallback,
+} from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Play,
   Paperclip,
@@ -12,11 +23,11 @@ import {
   Backpack,
   Bike,
   Workflow,
-  Bell,
-  HelpCircle,
   Bot,
   Sparkles,
-  PencilLine,
+  ShieldCheck,
+  Plus,
+  Bell,
 } from "lucide-react";
 
 type ConversationTurn = { role: "user" | "assistant"; content: string };
@@ -193,43 +204,62 @@ export default function GoalInputPage() {
 
   return (
     <SidebarInset>
-      {/* Top Bar */}
-      <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="flex items-center gap-4">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="gap-2 text-muted-foreground hover:text-foreground"
-            onClick={handleNewWorkflow}
-          >
-            <PencilLine className="size-4" />
-            New workflow
-          </Button>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <span className="hover:text-primary cursor-pointer transition-colors">
-              Reconciliation
-            </span>
-            <span className="hover:text-primary cursor-pointer transition-colors">
-              Audit
-            </span>
-            <span className="hover:text-primary cursor-pointer transition-colors">
-              Vendor Analysis
-            </span>
+      {/* Navbar */}
+      <header className="sticky top-0 z-20 flex items-center justify-between h-14 px-5 bg-background/80 backdrop-blur-md border-b border-border">
+        {/* Left: Brand */}
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center justify-center size-7 rounded-lg bg-primary/10">
+            <ShieldCheck className="size-4 text-primary" aria-hidden="true" />
           </div>
+          <span className="text-sm font-semibold tracking-tight text-foreground">
+            Sentinel
+          </span>
+          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-mono">
+            v0.1
+          </Badge>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="text-muted-foreground hover:text-primary transition-colors">
-            <Bell className="size-4" />
-          </button>
-          <button className="text-muted-foreground hover:text-primary transition-colors">
-            <HelpCircle className="size-4" />
-          </button>
-          <div className="size-8 rounded-full bg-muted border border-border overflow-hidden">
-            <div className="size-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
-              <span className="text-primary text-xs font-semibold">EA</span>
-            </div>
-          </div>
+
+        {/* Right: actions */}
+        <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleNewWorkflow}
+                className="gap-1.5 text-muted-foreground"
+              >
+                <Plus className="size-3.5" aria-hidden="true" />
+                New run
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Start a new procurement run</TooltipContent>
+          </Tooltip>
+
+          <Separator orientation="vertical" className="h-5 mx-1" />
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8 text-muted-foreground relative"
+                aria-label="Notifications"
+              >
+                <Bell className="size-4" aria-hidden="true" />
+                <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Notifications</TooltipContent>
+          </Tooltip>
+
+          <Avatar size="sm" className="ml-1 cursor-pointer">
+            <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
+              EA
+            </AvatarFallback>
+          </Avatar>
         </div>
       </header>
 
