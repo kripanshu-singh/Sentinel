@@ -64,6 +64,25 @@ export const GoalInputSchema = z.object({
 export type GoalInput = z.infer<typeof GoalInputSchema>;
 
 // ---------------------------------------------------------------------------
+// Conversation — session-scoped memory for the intent gatekeeper
+// The browser tab owns the thread: it sends prior turns with each /api/intent
+// request. Nothing is persisted server-side and history never crosses into a
+// task run (a new thread).
+// ---------------------------------------------------------------------------
+
+export const ConversationTurnSchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  content: z.string().min(1).max(2000),
+});
+
+export const IntentRequestSchema = GoalInputSchema.extend({
+  history: z.array(ConversationTurnSchema).max(50).default([]),
+});
+
+export type ConversationTurn = z.infer<typeof ConversationTurnSchema>;
+export type IntentRequest = z.infer<typeof IntentRequestSchema>;
+
+// ---------------------------------------------------------------------------
 // Intent gatekeeper — POST /api/intent
 // Every prompt is classified before a run is enqueued so chitchat never
 // launches a browser session. The request body is a GoalInput; the response is

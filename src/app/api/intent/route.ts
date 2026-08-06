@@ -11,13 +11,9 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { GoalInputSchema, IntentResponseSchema } from "@/server/schemas";
+import { IntentRequestSchema, IntentResponseSchema } from "@/server/schemas";
 import { startRun } from "@/server/worker-client";
-import {
-  CAPABILITY_HELP,
-  classifyIntent,
-  conversationalReply,
-} from "@/server/intent-classifier";
+import { CAPABILITY_HELP, routeIntent } from "@/server/intent-classifier";
 
 export async function POST(request: NextRequest) {
   let body: unknown;
@@ -27,7 +23,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const parsed = GoalInputSchema.safeParse(body);
+  const parsed = IntentRequestSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Validation failed", issues: parsed.error.issues },
@@ -35,11 +31,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const intent = await classifyIntent(parsed.data.goal);
+  const decision = await routeIntent(parsed.data.goal, parsed.data.history);
 
-  if (intent === "AUTOMATION_TASK") {
+  if (decision.intent === "AUTOMATION_TASK") {
     try {
-      const result = await startRun(parsed.data);
+      const result = await startRun({
+        goal: parsed.data.goal,
+        targetUnitPrice: parsed.data.targetUnitPrice,
+        varianceThresholdPct: parsed.data.varianceThresholdPct,
+        discountCode: parsed.data.discountCode,
+        fallbackPolicy: parsed.data.fallbackPolicy,
+      });
       const response = IntentResponseSchema.parse({
         intent: "AUTOMATION_TASK",
         runId: result.runId,
@@ -51,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  if (intent === "CAPABILITY_QUERY") {
+  if (decision.intent === "CAPABILITY_QUERY") {
     const response = IntentResponseSchema.parse({
       intent: "CAPABILITY_QUERY",
       help: CAPABILITY_HELP,
@@ -61,7 +63,9 @@ export async function POST(request: NextRequest) {
 
   const response = IntentResponseSchema.parse({
     intent: "CONVERSATIONAL",
-    reply: conversationalReply(parsed.data.goal),
+    reply:
+      decision.reply ??
+      "Nice to meet you. Please give me a browser task when you're ready.",
   });
   return NextResponse.json(response);
 }

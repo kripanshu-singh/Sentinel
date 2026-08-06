@@ -18,6 +18,8 @@ import {
   Sparkles,
 } from "lucide-react";
 
+type ConversationTurn = { role: "user" | "assistant"; content: string };
+
 type AssistantMessage =
   | {
       kind: "conversational";
@@ -68,6 +70,7 @@ export default function GoalInputPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [assistantMessage, setAssistantMessage] =
     useState<AssistantMessage | null>(null);
+  const [conversation, setConversation] = useState<ConversationTurn[]>([]);
   const router = useRouter();
 
   function handleWorkflowClick(workflowGoal: string) {
@@ -81,6 +84,9 @@ export default function GoalInputPage() {
     setIsSubmitting(true);
     setSubmitError(null);
 
+    const history = conversation.slice(-12);
+    const userTurn: ConversationTurn = { role: "user", content: goal.trim() };
+
     try {
       const res = await fetch("/api/intent", {
         method: "POST",
@@ -91,6 +97,7 @@ export default function GoalInputPage() {
           varianceThresholdPct: parseFloat(variancePct) || 10,
           discountCode: discountCode.trim() || undefined,
           fallbackPolicy: fallback,
+          history,
         }),
       });
 
@@ -107,14 +114,18 @@ export default function GoalInputPage() {
       };
 
       if (data.intent === "AUTOMATION_TASK") {
+        setConversation([]);
         router.push(`/runs/${data.runId}`);
         return;
       }
 
       if (data.intent === "CAPABILITY_QUERY" && data.help) {
+        setConversation([...history, userTurn]);
         setAssistantMessage({ kind: "help", help: data.help.help });
       } else {
-        setAssistantMessage({ kind: "conversational", reply: data.reply ?? "" });
+        const reply = data.reply ?? "";
+        setConversation([...history, userTurn, { role: "assistant", content: reply }]);
+        setAssistantMessage({ kind: "conversational", reply });
       }
       setIsSubmitting(false);
     } catch (err: unknown) {
