@@ -7,3 +7,41 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+# Sentinel — B2B Vendor Order & Discrepancy Reconciliation Agent
+
+Sentinel is an AI agent that executes B2B procurement workflows: it navigates storefronts, builds carts, fills order/invoice forms, validates pricing and coupons against business rules, and **pauses for human approval before any high-stakes action**. This repo is the **Next.js frontend** (goal input, live run screen, result screen, thin API). The automation worker (Playwright + LLM orchestration) is a separate service; this repo defines the shared contract for it.
+
+## Mandatory context — read the `.ai/` folder first
+
+Before any non-trivial change, read these in order. They are the source of truth.
+
+| # | File | What it tells you |
+|---|------|-------------------|
+| 1 | `.ai/project_overview.md` | What Sentinel is, who it is for, and why it exists. |
+| 2 | `.ai/architecture.md` | **Why** the frontend/worker split exists and where code belongs. |
+| 3 | `.ai/ui_context.md` | **Most important UI file.** Design system + every screen spec. |
+| 4 | `.ai/code_standards.md` | **Most important code file.** Rules that govern generated code. |
+| 5 | `.ai/decisions.md` | Every architecture/product decision (ADRs). Constraints you must respect. |
+| 6 | `.ai/acceptance_criteria.md` | Each requirement as a checkable acceptance criterion. |
+| 7 | `.ai/prompts.md` | Reusable prompts for common tasks. |
+| 8 | `.ai/roadmap.md` | Current phase and what is planned. |
+
+The above Next.js block applies to every change in `src/`.
+
+## Non-negotiables (full detail in `.ai/code_standards.md`)
+
+- **No inline CSS.** Tailwind only, semantic tokens only (`bg-background`, `text-muted-foreground`, …).
+- **Zod validation** at every API boundary — never trust raw input.
+- **React Query** for server state; composition over props-drilling.
+- **Server-first.** Server Components by default; `"use client"` only for interactivity.
+- Verify before reporting done: `npm run lint` and `npm run build`.
+- Never commit secrets, and never commit at all unless asked.
+
+## Standard workflow
+
+1. Read the `.ai/*.md` context above.
+2. Explore `src/` to find the right home for the change (see `.ai/architecture.md`).
+3. Implement per `.ai/code_standards.md` and `.ai/ui_context.md`.
+4. Run `npm run lint` and `npm run build`.
+5. Report what changed and how it was verified.
