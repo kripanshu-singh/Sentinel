@@ -9,7 +9,7 @@ import OpenAI from "openai";
 import type { LLMProvider, LLMMessage, LLMGenerateOptions } from "./client.js";
 
 const MODEL_NAME =
-  process.env.OPENROUTER_MODEL ?? "google/gemini-2.5-flash";
+  process.env.OPENROUTER_MODEL ?? "google/gemini-3.5-flash-lite";
 
 export class OpenRouterProvider implements LLMProvider {
   private readonly client: OpenAI;

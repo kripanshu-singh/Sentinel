@@ -11,21 +11,33 @@ import { emitEvent, transition } from "../emit.js";
 import type { StepPlan } from "../../../types/index.js";
 import type { SentinelStateUpdate, SentinelStateValue } from "../state.js";
 
-function targetNameFromPlan(plan: StepPlan[], stepIndex: number): string {
+function targetNameFromPlan(
+  plan: StepPlan[],
+  stepIndex: number,
+  goal: string
+): string {
+  // Prefer the extract step's explicit target, then the plan's search query
+  // (both set by the LLM from the goal), then the user's goal text. Never a
+  // hardcoded product name.
   const step = plan[stepIndex - 1];
-  return (step?.params?.targetName as string | undefined) ?? "Milk";
+  const searchStep = [...plan].reverse().find((s) => s.kind === "search");
+  return (
+    (step?.params?.targetName as string | undefined) ??
+    (searchStep?.params?.query as string | undefined) ??
+    goal
+  );
 }
 
 export async function extractNode(
   state: SentinelStateValue
 ): Promise<SentinelStateUpdate> {
-  const { runId, planResult, stepIndex } = state;
+  const { runId, input, planResult, stepIndex } = state;
 
   if (state.status === "FAILED" || state.status === "ABORTED") {
     return { next: "validate" };
   }
 
-  const targetName = targetNameFromPlan(planResult?.plan ?? [], stepIndex);
+  const targetName = targetNameFromPlan(planResult?.plan ?? [], stepIndex, input.goal);
 
   await transition(runId, "EXTRACTING");
   await emitEvent(runId, "EXTRACT", "Extracting product details", `Parsing DOM for "${targetName}"`, "pending");

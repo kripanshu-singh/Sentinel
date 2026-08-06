@@ -25,8 +25,10 @@ import { validateNode } from "./nodes/validate-node.js";
 import { hitlNode } from "./nodes/hitl-node.js";
 import { replanNode } from "./nodes/replan-node.js";
 import { reportNode } from "./nodes/report-node.js";
+import { loggedNode } from "./node-logger.js";
 import { emitEvent, transition } from "./emit.js";
 import { sessionManager } from "../session/session-manager.js";
+import { log } from "../../lib/logger.js";
 import type { GoalInput } from "../../types/index.js";
 
 const RECURSION_LIMIT = 200;
@@ -36,13 +38,13 @@ const MACHINE_NODES: MachineNode[] = ["execute", "extract", "validate", "replan"
 
 export function buildSentinelGraph() {
   return new StateGraph(SentinelState)
-    .addNode("plan", planNode)
-    .addNode("execute", executeNode)
-    .addNode("extract", extractNode)
-    .addNode("validate", validateNode)
-    .addNode("hitl", hitlNode)
-    .addNode("replan", replanNode)
-    .addNode("report_node", reportNode)
+    .addNode("plan", loggedNode("plan", planNode))
+    .addNode("execute", loggedNode("execute", executeNode))
+    .addNode("extract", loggedNode("extract", extractNode))
+    .addNode("validate", loggedNode("validate", validateNode))
+    .addNode("hitl", loggedNode("hitl", hitlNode))
+    .addNode("replan", loggedNode("replan", replanNode))
+    .addNode("report_node", loggedNode("report_node", reportNode))
     .addEdge(START, "plan")
     .addConditionalEdges(
       "plan",
@@ -92,8 +94,10 @@ export function buildSentinelGraph() {
  */
 export async function runGraph(runId: string, input: GoalInput): Promise<void> {
   const graph = buildSentinelGraph();
+  log("graph", "run start", { runId, goal: input.goal, targetUnitPrice: input.targetUnitPrice });
   try {
     await graph.invoke({ runId, input }, { recursionLimit: RECURSION_LIMIT });
+    log("graph", "run complete", { runId });
   } catch (error: unknown) {
     console.error(`[graph:${runId}] Run crashed:`, error);
     await transition(runId, "FAILED");

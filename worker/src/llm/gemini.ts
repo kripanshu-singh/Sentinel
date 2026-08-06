@@ -12,7 +12,7 @@ import {
 } from "@google/generative-ai";
 import type { LLMProvider, LLMMessage, LLMGenerateOptions } from "./client.js";
 
-const MODEL_NAME = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+const MODEL_NAME = process.env.GEMINI_MODEL ?? "gemini-3.5-flash-lite";
 
 export class GeminiProvider implements LLMProvider {
   private readonly client: GoogleGenerativeAI;

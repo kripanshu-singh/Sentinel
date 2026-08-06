@@ -106,7 +106,9 @@ export async function executeNode(
     }
 
     case "search": {
-      const query = (step.params?.query as string | undefined) ?? "Almond Milk";
+      // Product name comes from the plan (params.query, set by the LLM from the
+      // goal). Fall back to the user's own goal text — never a hardcoded product.
+      const query = (step.params?.query as string | undefined) ?? input.goal;
       await emitEvent(runId, "SEARCH", "Searching catalog", `Searching for "${query}"`, "pending");
       const result = await actions.search(ctx, query);
       await emitEvent(runId, "SEARCH", "Search complete", `Found results matching "${query}"`, "success");

@@ -27,7 +27,13 @@ Each step must have:
 - kind: one of navigate | search | extract_product | check_price | add_to_cart |
          apply_coupon | fill_form | validate | draft_report
 - description: plain English description of this step
-- params: optional key-value pairs (e.g. url, query, field names, quantities)
+- params: an object with kind-specific keys (always include the PRODUCT NAME
+  extracted from the goal — never generic placeholders like "milk" or "Almond Milk"):
+  - search / extract_product: params.query / params.targetName = the exact product
+    name from the goal (e.g. "Sauce Labs Backpack"). Do not invent a product that
+    is not in the goal.
+  - navigate: params.url when the goal names a specific storefront URL
+  - add_to_cart / fill_form: params.quantity / params.fields when given
 
 Steps will be re-ordered into a canonical execution order automatically, so do
 not worry about ordering — focus on WHICH steps are needed and their params.
@@ -76,7 +82,7 @@ const PLAN_SCHEMA = {
           description: { type: "string" },
           params: { type: "object" },
         },
-        required: ["kind", "description"],
+        required: ["kind", "description", "params"],
       },
     },
   },
@@ -166,10 +172,14 @@ Generate the step plan.`.trim();
         estimatedSteps: orderedPlan.length,
       };
     } catch (error: unknown) {
+      // Only malformed JSON (SyntaxError) is worth retrying — a fresh sample may
+      // parse fine. API/provider errors (e.g. quota, network) fail fast instead
+      // of burning the same doomed request repeatedly.
+      if (!(error instanceof SyntaxError)) throw error;
       lastError = error;
       console.warn(
-        `[planner] Planning attempt ${attempt}/${MAX_PLAN_ATTEMPTS} failed:`,
-        error instanceof Error ? error.message : error
+        `[planner] Planning attempt ${attempt}/${MAX_PLAN_ATTEMPTS} returned malformed JSON:`,
+        error.message
       );
     }
   }

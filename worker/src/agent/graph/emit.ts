@@ -10,6 +10,7 @@ import { nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
 import { db, agentEvents, runs } from "../../storage/db.js";
 import { setRunStatus, publishEvent } from "../../storage/redis.js";
+import { log } from "../../lib/logger.js";
 import type { AgentEvent, AgentEventStatus, AgentEventType, RunStatus } from "../../types/index.js";
 
 function getTimestamp(): string {
@@ -19,7 +20,7 @@ function getTimestamp(): string {
 
 /** Persist run status to Postgres + Redis cache. */
 export async function transition(runId: string, status: RunStatus): Promise<void> {
-  console.log(`[runner:${runId}] Transitioned to state: ${status}`);
+  log("runner", "transition", { runId, status });
   await db.update(runs)
     .set({ status, updatedAt: new Date() })
     .where(eq(runs.runId, runId));
@@ -45,6 +46,8 @@ export async function emitEvent(
     status,
     evidence,
   };
+
+  log("emit", "event", { runId, type, status, title, detail, evidence });
 
   await db.insert(agentEvents).values({
     id: event.id,
