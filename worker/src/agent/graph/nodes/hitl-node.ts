@@ -106,6 +106,7 @@ export async function hitlNode(
         discrepancies: updated.discrepancies,
         status: "RESUME",
         pendingHITL: false,
+        approvalHandled: true,
         next: "execute",
       };
     }
@@ -113,6 +114,7 @@ export async function hitlNode(
       resolution,
       status: "RESUME",
       pendingHITL: false,
+      approvalHandled: true,
       next: "execute",
     };
   }
@@ -132,6 +134,7 @@ export async function hitlNode(
     resolution,
     status: "RESUME",
     pendingHITL: false,
+    approvalHandled: true,
     next: "execute",
   };
 }

@@ -50,6 +50,30 @@ export async function validateNode(
   }
 
   if (result.requiresHITL) {
+    const lastResolution = state.resolution;
+    const shouldProceedAfterResolution =
+      state.approvalHandled ||
+      lastResolution?.action === "approve" ||
+      (lastResolution?.action === "override" && lastResolution.overrideTarget != null);
+
+    if (shouldProceedAfterResolution) {
+      await emitEvent(
+        runId,
+        "CHECK",
+        "Human approval accepted",
+        "Continuing past the approved discrepancy.",
+        "success",
+        { resolution: lastResolution?.action ?? "approve" }
+      );
+      return {
+        discrepancies: result.discrepancies,
+        pendingHITL: false,
+        status: "CHECKING",
+        next: "execute",
+        approvalHandled: false,
+      };
+    }
+
     // Route to the HITL node (Phase B): it registers the approval request, blocks
     // for the operator's decision, and resumes/aborts.
     return {
