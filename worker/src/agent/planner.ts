@@ -242,6 +242,52 @@ const STEP_ORDER: Record<string, number> = {
 
 const MAX_PLAN_ATTEMPTS = 3;
 
+export function orderPlanSteps(plan: StepPlan[]): StepPlan[] {
+  const preSteps: StepPlan[] = [];
+  const postSteps: StepPlan[] = [];
+  const productGroups: { [product: string]: StepPlan[] } = {};
+  const productOrder: string[] = [];
+
+  let lastProduct: string | null = null;
+
+  for (const step of plan) {
+    const targetName = (step.params?.targetName ?? step.params?.query) as string | undefined;
+    if (targetName) {
+      lastProduct = targetName;
+    }
+
+    const isProductSpecific = ["search", "extract_product", "check_price", "add_to_cart", "apply_coupon"].includes(step.kind);
+
+    if (isProductSpecific) {
+      const prod = lastProduct ?? "unknown";
+      if (!productGroups[prod]) {
+        productGroups[prod] = [];
+        productOrder.push(prod);
+      }
+      productGroups[prod].push(step);
+    } else {
+      if (step.kind === "navigate") {
+        preSteps.push(step);
+      } else {
+        postSteps.push(step);
+      }
+    }
+  }
+
+  const orderedProducts: StepPlan[] = [];
+  for (const prod of productOrder) {
+    const sortedGroup = productGroups[prod].sort(
+      (a, b) => (STEP_ORDER[a.kind] ?? 99) - (STEP_ORDER[b.kind] ?? 99)
+    );
+    orderedProducts.push(...sortedGroup);
+  }
+
+  const sortedPre = preSteps.sort((a, b) => (STEP_ORDER[a.kind] ?? 99) - (STEP_ORDER[b.kind] ?? 99));
+  const sortedPost = postSteps.sort((a, b) => (STEP_ORDER[a.kind] ?? 99) - (STEP_ORDER[b.kind] ?? 99));
+
+  return [...sortedPre, ...orderedProducts, ...sortedPost];
+}
+
 /**
  * Parse a GoalInput into a PlanResult using the LLM.
  * `failureContext` (Phase C) is appended when replanning after failed steps, so
@@ -297,9 +343,7 @@ Generate the step plan.`.trim();
       const result = parseModelJSON<Partial<PlanResult>>(text);
 
       const plan = Array.isArray(result.plan) ? result.plan : [];
-      let orderedPlan = [...plan].sort(
-        (a, b) => (STEP_ORDER[a.kind] ?? 99) - (STEP_ORDER[b.kind] ?? 99)
-      );
+      let orderedPlan = orderPlanSteps(plan);
       const needsClarification =
         result.needsClarification === true || orderedPlan.length === 0;
 

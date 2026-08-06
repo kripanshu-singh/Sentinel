@@ -56,6 +56,7 @@ export const FallbackPolicySchema = z.enum([
 export const GoalInputSchema = z.object({
   goal: z.string().min(1, "Goal is required").max(2000),
   targetUnitPrice: z.number().positive().optional(),
+  targetSubtotal: z.number().positive().optional(),
   varianceThresholdPct: z.number().min(0).max(100).default(10),
   discountCode: z.string().max(64).optional(),
   fallbackPolicy: FallbackPolicySchema.default("default_wholesale"),

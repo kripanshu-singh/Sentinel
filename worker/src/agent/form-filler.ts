@@ -32,11 +32,37 @@ export async function updateCartQuantity(
 
 export async function clickAddToCart(
   page: Page,
-  buttonSelector = 'button[id*="add-to-cart" i], button:has-text("Add to Cart"), button:has-text("Add to cart"), .add-to-cart, [data-test="add-to-cart-sauce-labs-fleece-jacket"]'
+  productName?: string,
+  buttonSelector = 'button[id*="add-to-cart" i], button:has-text("Add to Cart"), button:has-text("Add to cart"), .add-to-cart'
 ): Promise<void> {
-  // `.first()` avoids Playwright strict-mode violations when the storefront
-  // renders several add-to-cart buttons at once (e.g. Sauce Demo inventory grid).
-  const button = page.locator(buttonSelector).first();
+  let button = page.locator(buttonSelector).first();
+
+  if (productName) {
+    const containers = [
+      '.inventory_item',
+      '.product-card',
+      '.product-item',
+      '.card',
+      'tr',
+      'div'
+    ];
+
+    for (const selector of containers) {
+      try {
+        const card = page.locator(selector).filter({ hasText: productName }).first();
+        if (await card.isVisible()) {
+          const cardButton = card.locator(buttonSelector).first();
+          if (await cardButton.isVisible()) {
+            button = cardButton;
+            break;
+          }
+        }
+      } catch {
+        // Fall back to general locator
+      }
+    }
+  }
+
   await button.waitFor({ state: "visible", timeout: 10000 });
   await button.click();
   await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);

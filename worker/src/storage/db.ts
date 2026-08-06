@@ -59,6 +59,7 @@ export const runs = pgTable("runs", {
   goal: text("goal").notNull(),
   status: runStatusEnum("status").notNull().default("PENDING"),
   targetUnitPrice: real("target_unit_price"),
+  targetSubtotal: real("target_subtotal"),
   varianceThresholdPct: real("variance_threshold_pct").notNull().default(10),
   discountCode: text("discount_code"),
   fallbackPolicy: text("fallback_policy").notNull().default("default_wholesale"),
@@ -154,12 +155,17 @@ export async function createTablesIfNotExist(): Promise<void> {
       goal                  TEXT NOT NULL,
       status                run_status NOT NULL DEFAULT 'PENDING',
       target_unit_price     REAL,
+      target_subtotal       REAL,
       variance_threshold_pct REAL NOT NULL DEFAULT 10,
       discount_code         TEXT,
       fallback_policy       TEXT NOT NULL DEFAULT 'default_wholesale',
       created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `;
+
+  await client`
+    ALTER TABLE runs ADD COLUMN IF NOT EXISTS target_subtotal REAL;
   `;
 
   await client`

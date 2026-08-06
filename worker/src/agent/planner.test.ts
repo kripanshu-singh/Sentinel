@@ -88,3 +88,38 @@ test("injectApprovalStep does not alter goals without a confirmation request", (
   const result = injectApprovalStep(plan, "add the backpack to the cart");
   assert.deepEqual(result, plan);
 });
+
+test("orderPlanSteps groups and sorts product-specific steps canonically while preserving order of products", () => {
+  const plan: StepPlan[] = [
+    { kind: "navigate", description: "Open storefront", params: {} },
+    { kind: "search", description: "Search for A", params: { query: "Product A" } },
+    { kind: "search", description: "Search for B", params: { query: "Product B" } },
+    { kind: "add_to_cart", description: "Add B", params: {} },
+    { kind: "extract_product", description: "Extract A", params: { targetName: "Product A" } },
+    { kind: "add_to_cart", description: "Add A", params: {} },
+    { kind: "extract_product", description: "Extract B", params: { targetName: "Product B" } },
+    { kind: "fill_form", description: "Checkout", params: {} },
+    { kind: "validate", description: "Verify subtotal", params: {} },
+    { kind: "draft_report", description: "Generate report", params: {} }
+  ];
+
+  const { orderPlanSteps } = require("./planner.js");
+  const result = orderPlanSteps(plan);
+
+  const expectedKinds = [
+    "navigate",
+    "search",          // Product A search
+    "extract_product",  // Product A extract
+    "add_to_cart",      // Product A add
+    "search",          // Product B search
+    "extract_product",  // Product B extract
+    "add_to_cart",      // Product B add
+    "fill_form",
+    "validate",
+    "draft_report"
+  ];
+
+  assert.deepEqual(result.map((s: StepPlan) => s.kind), expectedKinds);
+  assert.equal((result[1].params as any).query, "Product A");
+  assert.equal((result[4].params as any).query, "Product B");
+});

@@ -17,6 +17,9 @@ import { checkProduct } from "../../rule-engine.js";
 import { emitEvent, transition } from "../emit.js";
 import { failRun, MAX_RETRIES_PER_NODE, retryUpdate } from "../retry.js";
 import type { SentinelStateUpdate, SentinelStateValue } from "../state.js";
+import { extractInvoiceFromDOM } from "../../extractor.js";
+import { sessionManager } from "../../session/session-manager.js";
+import type { Discrepancy } from "../../../types/index.js";
 
 const MIN_CONFIDENCE = 0.75;
 
@@ -30,11 +33,107 @@ export async function validateNode(
   }
 
   await transition(runId, "CHECKING");
-  await emitEvent(runId, "CHECK", "Checking business rules", "Evaluating unit price and inventory thresholds", "pending");
 
-  // Explicit human-approval gate (from a pause_for_approval step): the goal asked
-  // the operator to confirm before checkout, independent of any price variance.
-  // Route straight to HITL without demanding a clean product extraction.
+  // ── Final Invoice Subtotal validation ───────────────────────────────────
+  if (state.status === "VALIDATING") {
+    await emitEvent(runId, "CHECK", "Checking subtotal rules", "Evaluating combined subtotal against target budget", "pending");
+    const targetSubtotal = input.targetSubtotal;
+
+    const session = await sessionManager.get(runId);
+    const html = await session.navigator.getDOMSnapshot();
+
+    let invoice;
+    try {
+      invoice = await extractInvoiceFromDOM(html);
+    } catch (err) {
+      const items = (state.extractedProducts ?? []).map(p => ({
+        sku: p.product.sku,
+        description: p.product.description,
+        quantity: p.product.quantityRequested,
+        unitPrice: p.product.unitPrice,
+        lineTotal: p.product.unitPrice * p.product.quantityRequested,
+        discounts: 0,
+      }));
+      invoice = { items, summary: "Calculated from extracted products." };
+    }
+
+    const actualSubtotal = invoice.items.reduce((sum, item) => sum + item.lineTotal, 0);
+    const discrepancies: Discrepancy[] = [];
+
+    if (targetSubtotal !== undefined) {
+      const variancePct = ((actualSubtotal - targetSubtotal) / targetSubtotal) * 100;
+      const absPct = Math.abs(variancePct);
+
+      if (absPct > 0.01) {
+        const severity = actualSubtotal > targetSubtotal
+          ? absPct > input.varianceThresholdPct * 2 ? "high" : "medium"
+          : absPct > input.varianceThresholdPct * 2 ? "medium" : "low";
+
+        discrepancies.push({
+          kind: "price",
+          expected: targetSubtotal,
+          actual: actualSubtotal,
+          variancePct: Math.round(variancePct * 100) / 100,
+          threshold: input.varianceThresholdPct,
+          severity,
+        });
+      }
+    }
+
+    const requiresHITL = discrepancies.some(d => d.severity === "medium" || d.severity === "high");
+
+    if (requiresHITL) {
+      const lastResolution = state.resolution;
+      const shouldProceedAfterResolution =
+        state.approvalHandled ||
+        lastResolution?.action === "approve" ||
+        (lastResolution?.action === "override" && lastResolution.overrideTarget != null);
+
+      if (shouldProceedAfterResolution) {
+        await emitEvent(
+          runId,
+          "CHECK",
+          "Human approval accepted",
+          "Continuing past the approved subtotal discrepancy.",
+          "success",
+          { resolution: lastResolution?.action ?? "approve" }
+        );
+        return {
+          discrepancies,
+          pendingHITL: false,
+          status: "VALIDATING",
+          next: "execute",
+          approvalHandled: false,
+          resolution: null,
+        };
+      }
+
+      return {
+        discrepancies,
+        pendingHITL: true,
+        status: "VALIDATING",
+        next: "hitl",
+      };
+    }
+
+    await emitEvent(
+      runId,
+      "CHECK",
+      "Subtotal verification passed",
+      `Actual: $${actualSubtotal.toFixed(2)} vs target: $${targetSubtotal?.toFixed(2) ?? "none"}`,
+      "success"
+    );
+
+    return {
+      discrepancies,
+      pendingHITL: false,
+      status: "VALIDATING",
+      next: "execute",
+      resolution: null,
+    };
+  }
+
+  // ── Explicit human-approval gate ─────────────────────────────────────────
   if (state.requiresApproval) {
     await emitEvent(
       runId,
@@ -90,11 +189,10 @@ export async function validateNode(
         status: "CHECKING",
         next: "execute",
         approvalHandled: false,
+        resolution: null,
       };
     }
 
-    // Route to the HITL node (Phase B): it registers the approval request, blocks
-    // for the operator's decision, and resumes/aborts.
     return {
       discrepancies: result.discrepancies,
       pendingHITL: true,
@@ -116,6 +214,7 @@ export async function validateNode(
     pendingHITL: false,
     status: "CHECKING",
     next: "execute",
+    resolution: null,
   };
 }
 

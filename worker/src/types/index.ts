@@ -59,6 +59,7 @@ export type FallbackPolicy = "default_wholesale" | "best_available" | "abort";
 export interface GoalInput {
   goal: string;
   targetUnitPrice?: number;
+  targetSubtotal?: number;
   varianceThresholdPct: number;
   discountCode?: string;
   fallbackPolicy: FallbackPolicy;

@@ -9,7 +9,7 @@ import { nanoid } from "nanoid";
 import { db, runs, agentEvents, approvalRequests, reconciliationReports } from "../storage/db.js";
 import { eq } from "drizzle-orm";
 import { runsQueue } from "../queue/jobs.js";
-import { extractTargetPrice } from "../lib/goal-rules.js";
+import { extractTargetPrice, extractTargetSubtotal } from "../lib/goal-rules.js";
 import type { GoalInput, RunSummary } from "../types/index.js";
 
 const router = Router();
@@ -31,6 +31,7 @@ router.post("/", async (req: Request, res: Response) => {
   // explicitly (e.g. "If the price is higher than $25, pause and ask for
   // approval" → targetUnitPrice = 25).
   const targetUnitPrice = input.targetUnitPrice ?? extractTargetPrice(input.goal);
+  const targetSubtotal = input.targetSubtotal ?? extractTargetSubtotal(input.goal);
 
   try {
     // 1. Create run record in Database
@@ -39,13 +40,14 @@ router.post("/", async (req: Request, res: Response) => {
       goal: input.goal,
       status: "PENDING",
       targetUnitPrice,
+      targetSubtotal,
       varianceThresholdPct: input.varianceThresholdPct,
       discountCode: input.discountCode,
       fallbackPolicy: input.fallbackPolicy,
     });
 
     // 2. Add job to Queue
-    await runsQueue.add(runId, { runId, input: { ...input, targetUnitPrice } });
+    await runsQueue.add(runId, { runId, input: { ...input, targetUnitPrice, targetSubtotal } });
 
     res.status(201).json({ runId });
   } catch (err: unknown) {

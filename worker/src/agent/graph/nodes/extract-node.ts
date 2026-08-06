@@ -57,6 +57,7 @@ export async function extractNode(
 
   return {
     currentProduct: { product, confidence },
+    extractedProducts: [{ product, confidence }],
     status: "EXTRACTING",
     next: "validate",
   };

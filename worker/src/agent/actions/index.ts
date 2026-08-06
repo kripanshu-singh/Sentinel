@@ -60,9 +60,13 @@ export async function search(ctx: ActionContext, query: string): Promise<ActionR
   return { screenshot: await screenshotOf(ctx.page) };
 }
 
-export async function addToCart(ctx: ActionContext, quantity: number): Promise<ActionResult> {
+export async function addToCart(
+  ctx: ActionContext,
+  quantity: number,
+  productName?: string
+): Promise<ActionResult> {
   await updateCartQuantity(ctx.page, quantity);
-  await clickAddToCart(ctx.page);
+  await clickAddToCart(ctx.page, productName);
   return { screenshot: await screenshotOf(ctx.page) };
 }
 

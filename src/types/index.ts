@@ -40,6 +40,7 @@ export interface AgentEvent {
 export interface GoalInput {
   goal: string;
   targetUnitPrice?: number;
+  targetSubtotal?: number;
   varianceThresholdPct: number;
   discountCode?: string;
   fallbackPolicy: "default_wholesale" | "best_available" | "abort";

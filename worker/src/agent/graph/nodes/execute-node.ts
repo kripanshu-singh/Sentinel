@@ -150,9 +150,18 @@ export async function executeNode(
 
     case "add_to_cart": {
       const qty = quantityFromGoal(input.goal);
-      await emitEvent(runId, "FORM_FILL", "Adding items to cart", `Adding quantity: ${qty}`, "pending");
-      const result = await actions.addToCart(ctx, qty);
-      await emitEvent(runId, "FORM_FILL", "Cart updated", "Items successfully loaded into session cart", "success", { screenshot: result.screenshot });
+      let productName: string | undefined;
+      for (let i = stepIndex; i >= 0; i--) {
+        const s = plan[i];
+        const name = (s?.params?.targetName ?? s?.params?.query) as string | undefined;
+        if (name) {
+          productName = name;
+          break;
+        }
+      }
+      await emitEvent(runId, "FORM_FILL", "Adding items to cart", `Adding quantity: ${qty}${productName ? ` for "${productName}"` : ""}`, "pending");
+      const result = await actions.addToCart(ctx, qty, productName);
+      await emitEvent(runId, "FORM_FILL", "Cart updated", `${productName ?? "Items"} successfully loaded into session cart`, "success", { screenshot: result.screenshot });
       return { ...base, currentScreenshot: result.screenshot ?? null };
     }
 
@@ -201,10 +210,7 @@ export async function executeNode(
     }
 
     case "validate": {
-      await transition(runId, "VALIDATING");
-      await emitEvent(runId, "VALIDATE", "Final validation", "Double checking totals, taxes and fees", "pending");
-      await emitEvent(runId, "VALIDATE", "Validation passed", "Order matches planned thresholds exactly", "success");
-      return base;
+      return { ...base, status: "VALIDATING", next: "validate" };
     }
 
     case "extract_product":

@@ -107,6 +107,10 @@ export const SentinelState = Annotation.Root({
 
   // extraction / validation
   currentProduct: Annotation<ProductExtraction | null>(),
+  extractedProducts: Annotation<ProductExtraction[]>({
+    reducer: appendList,
+    default: () => [],
+  }),
   discrepancies: Annotation<Discrepancy[]>(lastValueWithDefault<Discrepancy[]>([])),
   pendingHITL: Annotation<boolean>(lastValueWithDefault(false)),
   requiresApproval: Annotation<boolean>(lastValueWithDefault(false)),
