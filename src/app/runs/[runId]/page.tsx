@@ -9,7 +9,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { useRunStream } from "@/hooks/use-run-stream";
-import type { AgentEvent, RunStatus, RunSummary } from "@/types";
+import type { AgentEvent, Discrepancy, RunStatus, RunSummary } from "@/types";
 import {
   Bell,
   HelpCircle,
@@ -23,6 +23,8 @@ import {
   CheckCheck,
   XCircle,
   Edit3,
+  Lock,
+  LoaderCircle,
 } from "lucide-react";
 
 
@@ -38,8 +40,18 @@ const EVENT_LABELS: Record<string, string> = {
   DRAFT: "DRAFT",
 };
 
-function AgentStreamRow({ event }: { event: AgentEvent }) {
+function AgentStreamRow({
+  event,
+  showSpinner,
+}: {
+  event: AgentEvent;
+  showSpinner: boolean;
+}) {
   const label = EVENT_LABELS[event.type] ?? event.type;
+  const screenshot =
+    typeof event.evidence?.screenshot === "string"
+      ? event.evidence.screenshot
+      : undefined;
 
   return (
     <div
@@ -64,8 +76,15 @@ function AgentStreamRow({ event }: { event: AgentEvent }) {
           [{label}]
         </span>
         <span className="text-foreground/80 leading-relaxed">{event.detail}</span>
-        {event.status === "pending" && (
+        {showSpinner && (
           <span className="size-3 rounded-full border-2 border-primary/30 border-t-primary animate-spin shrink-0 mt-0.5" />
+        )}
+        {screenshot && (
+          <img
+            src={screenshot}
+            alt={event.title}
+            className="size-10 rounded border border-border object-cover shrink-0"
+          />
         )}
       </div>
     </div>
@@ -82,6 +101,8 @@ export default function LiveRunPage({
   const [hitlResolved, setHitlResolved] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
+  const [overrideOpen, setOverrideOpen] = useState(false);
+  const [overrideTarget, setOverrideTarget] = useState("");
 
   // Unwrap async params once on mount
   useEffect(() => {
@@ -110,7 +131,27 @@ export default function LiveRunPage({
   const isTerminal = !!status && TERMINAL_STATUSES.has(status);
   const lastErrorEvent = [...events].reverse().find((e) => e.status === "error");
 
-  const hasHITL = events.some((e) => e.type === "HITL") && !hitlResolved;
+  // Only the most recent pending event is "in flight" — earlier pending rows are
+  // resolved, so they render as normal rows instead of spinning forever.
+  const latestPendingId = [...events]
+    .reverse()
+    .find((e) => e.status === "pending")?.id;
+
+  // Latest browser capture + URL surfaced by the worker via event evidence.
+  const screenshot = [...events]
+    .reverse()
+    .find((e) => typeof e.evidence?.screenshot === "string")?.evidence
+    ?.screenshot as string | undefined;
+  const currentUrl = [...events]
+    .reverse()
+    .find((e) => typeof e.evidence?.url === "string")?.evidence
+    ?.url as string | undefined;
+
+  const hitlEvent = [...events].find((e) => e.type === "HITL");
+  const hitlDiscrepancies = Array.isArray(hitlEvent?.evidence?.discrepancies)
+    ? (hitlEvent.evidence.discrepancies as Discrepancy[])
+    : [];
+  const hasHITL = !!hitlEvent && !hitlResolved;
 
   const STEPS = [
     { label: "Search", done: true, icon: Search },
@@ -119,7 +160,10 @@ export default function LiveRunPage({
     { label: "Checkout", done: false, icon: ShoppingCart },
   ];
 
-  async function postResolve(action: "approve" | "abort", body: object = {}) {
+  async function postResolve(
+    action: "approve" | "override" | "abort",
+    body: object = {}
+  ) {
     if (!runId) return;
     setIsResolving(true);
     setResolveError(null);
@@ -143,6 +187,13 @@ export default function LiveRunPage({
 
   async function handleApprove() {
     await postResolve("approve");
+    setHitlResolved(true);
+  }
+
+  async function handleOverride() {
+    const target = parseFloat(overrideTarget);
+    if (!Number.isFinite(target) || target <= 0) return;
+    await postResolve("override", { overrideTarget: target });
     setHitlResolved(true);
   }
 
@@ -304,12 +355,20 @@ export default function LiveRunPage({
                   </div>
                 )}
                 {events.map((event) => (
-                  <AgentStreamRow key={event.id} event={event} />
+                  <AgentStreamRow
+                    key={event.id}
+                    event={event}
+                    showSpinner={
+                      event.status === "pending" &&
+                      event.id === latestPendingId &&
+                      !isTerminal
+                    }
+                  />
                 ))}
               </div>
             </div>
 
-            {/* Center pane: Vendor portal preview */}
+            {/* Center pane: live browser capture */}
             <div className="col-span-6 bg-card border border-border rounded-xl flex flex-col overflow-hidden">
               {/* Browser chrome */}
               <div className="px-3 py-2 border-b border-border bg-muted/40 flex items-center gap-2">
@@ -318,68 +377,26 @@ export default function LiveRunPage({
                   <div className="size-3 rounded-full bg-muted-foreground/40" />
                   <div className="size-3 rounded-full bg-primary/70" />
                 </div>
-                <div className="flex-1 bg-card rounded-md px-3 py-1 text-xs font-mono text-muted-foreground flex items-center gap-1.5 border border-border">
-                  <span className="text-[10px]">🔒</span>
-                  vendor-portal.supplier-network.com/item/ALM-BAR-1L
+                <div className="flex-1 bg-card rounded-md px-3 py-1 text-xs font-mono text-muted-foreground flex items-center gap-1.5 border border-border truncate">
+                  <Lock className="size-3 shrink-0" />
+                  {currentUrl ?? "https://www.saucedemo.com/"}
                 </div>
               </div>
 
-              {/* Simulated vendor page */}
-              <div className="flex-1 bg-white relative overflow-auto p-8">
-                {/* Agent control overlay */}
-                <div className="absolute inset-0 bg-primary/[0.03] pointer-events-none border-2 border-primary/15 z-10" />
-
-                <div className="max-w-xl mx-auto flex gap-8">
-                  {/* Product image */}
-                  <div className="w-48 shrink-0">
-                    <div className="aspect-square bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center relative">
-                      <div className="absolute inset-2 border-2 border-dashed border-primary/50 rounded animate-pulse" />
-                      <div className="text-gray-300 text-6xl select-none">🥛</div>
-                    </div>
+              {/* Live screenshot from the worker */}
+              <div className="flex-1 bg-white relative overflow-hidden flex items-center justify-center">
+                {screenshot ? (
+                  <img
+                    src={screenshot}
+                    alt="Latest browser capture"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                    <LoaderCircle className="size-6 animate-spin" />
+                    <p className="text-xs font-mono">Waiting for browser capture…</p>
                   </div>
-
-                  {/* Product details */}
-                  <div className="flex-1">
-                    <p className="text-[11px] text-gray-500 uppercase tracking-wider font-semibold mb-1">
-                      Pantry Supplies
-                    </p>
-                    <h3 className="text-xl font-bold text-gray-900 leading-tight mb-2">
-                      Premium Barista Almond Milk — 1L
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-5">
-                      Professional grade almond milk formulated for coffee
-                      applications. Steams perfectly.
-                    </p>
-
-                    {/* Flagged price box */}
-                    <div className="relative mb-5 pb-5 border-b border-gray-200">
-                      <div className="absolute -inset-2 bg-red-50 border border-red-200 rounded pointer-events-none" />
-                      <div className="relative text-3xl font-bold text-gray-900 mb-1">
-                        $4.80
-                        <span className="text-sm font-normal text-gray-500 ml-1">
-                          / unit
-                        </span>
-                      </div>
-                      <div className="relative flex items-center gap-1 text-xs text-red-600 font-medium">
-                        ↑ +20% vs target ($4.00)
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 mb-5">
-                      <div className="flex items-center border border-gray-200 rounded-lg px-3 py-1.5 gap-3 text-sm">
-                        <span className="text-gray-400">−</span>
-                        <span className="font-semibold">24</span>
-                        <span className="text-gray-400">+</span>
-                      </div>
-                      <span className="text-sm text-gray-500">units requested</span>
-                    </div>
-
-                    <button className="w-full bg-gray-100 text-gray-400 py-2.5 rounded-lg text-sm font-medium cursor-not-allowed flex items-center justify-center gap-2">
-                      <ShoppingCart className="size-4" />
-                      Add to Cart (Agent Controlled)
-                    </button>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -399,25 +416,46 @@ export default function LiveRunPage({
                   </div>
                   <div className="p-4 flex flex-col gap-4">
                     {/* Data comparison */}
-                    <div className="flex flex-col gap-2">
-                      <div className="flex justify-between items-center border-b border-border pb-2 text-sm">
-                        <span className="text-muted-foreground">Target Price</span>
-                        <span className="font-mono font-medium">$4.00</span>
+                    {hitlDiscrepancies.length > 0 ? (
+                      <div className="flex flex-col gap-2">
+                        {hitlDiscrepancies.map((d, i) => (
+                          <div
+                            key={i}
+                            className="flex justify-between items-center border-b border-border pb-2 text-sm last:border-0 last:pb-0"
+                          >
+                            <div className="flex flex-col">
+                              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                                {d.kind} variance
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                expected {String(d.expected)} → found{" "}
+                                {String(d.actual)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-semibold text-destructive">
+                                {d.variancePct > 0 ? "+" : ""}
+                                {d.variancePct}%
+                              </span>
+                              <span
+                                className={cn(
+                                  "px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase",
+                                  d.severity === "high"
+                                    ? "bg-destructive/10 text-destructive"
+                                    : "bg-primary/10 text-primary"
+                                )}
+                              >
+                                {d.severity}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex justify-between items-center border-b border-border pb-2 text-sm">
-                        <span className="text-muted-foreground">Found Price</span>
-                        <span className="font-mono font-medium text-destructive">$4.80</span>
-                      </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">Total Impact</span>
-                        <span className="font-mono font-bold">
-                          +$19.20{" "}
-                          <span className="text-[10px] font-normal text-muted-foreground">
-                            (24 units)
-                          </span>
-                        </span>
-                      </div>
-                    </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        {hitlEvent?.detail ?? "Manual intervention required."}
+                      </p>
+                    )}
 
                     {/* Actions */}
                     <div className="flex flex-col gap-2">
@@ -434,10 +472,36 @@ export default function LiveRunPage({
                         )}
                         Approve &amp; Continue
                       </Button>
-                      <Button variant="outline" className="w-full gap-2" size="sm" disabled={isResolving}>
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2"
+                        size="sm"
+                        disabled={isResolving}
+                        onClick={() => setOverrideOpen((o) => !o)}
+                      >
                         <Edit3 className="size-4" />
                         Override Target
                       </Button>
+                      {overrideOpen && (
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={overrideTarget}
+                            onChange={(e) => setOverrideTarget(e.target.value)}
+                            placeholder="New target $"
+                            className="flex-1 px-3 py-2 border border-border rounded-lg bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all"
+                          />
+                          <Button
+                            size="sm"
+                            disabled={isResolving || !overrideTarget}
+                            onClick={handleOverride}
+                          >
+                            Apply
+                          </Button>
+                        </div>
+                      )}
                       <Button
                         variant="outline"
                         className="w-full gap-2 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5"
@@ -468,25 +532,18 @@ export default function LiveRunPage({
                 </div>
               )}
 
-              {/* Rule context */}
+              {/* Run context */}
               <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2">
                 <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Rule Context
+                  Run Goal
                 </h4>
                 <p className="text-xs text-foreground leading-relaxed">
-                  Auto-approval threshold is{" "}
-                  <span className="font-semibold text-primary">+5%</span> for
-                  category{" "}
-                  <code className="bg-accent px-1 rounded text-[11px]">PANTRY</code>.
-                  Current variance (+20%) triggers mandatory HITL review.
+                  {summary?.goal ?? "…"}
                 </p>
-                <button className="text-primary text-xs hover:underline flex items-center gap-1 w-max mt-1">
-                  View Policy Details →
-                </button>
               </div>
 
               {/* View Result link */}
-              {hitlResolved && (
+              {status === "DONE" && (
                 <Link
                   href={`/runs/${encodeURIComponent(runId ?? "")}/result`}
                   className={cn(buttonVariants({ variant: "outline" }), "w-full")}

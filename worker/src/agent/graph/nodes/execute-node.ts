@@ -79,9 +79,9 @@ export async function executeNode(
     switch (step.kind) {
     case "navigate": {
       const url = (step.params?.url as string | undefined) ?? DEFAULT_STOREFRONT_URL;
-      await emitEvent(runId, "NAVIGATE", "Navigating", `Opening url: ${url}`, "pending");
+      await emitEvent(runId, "NAVIGATE", "Navigating", `Opening url: ${url}`, "pending", { url });
       const result = await actions.navigate(ctx, url);
-      await emitEvent(runId, "NAVIGATE", "Navigation complete", `Loaded ${url}`, "success");
+      await emitEvent(runId, "NAVIGATE", "Navigation complete", `Loaded ${url}`, "success", { url });
 
       // Portals gate the catalog behind a login form (Sauce Demo does). Sign in
       // with the demo account so the product listing is reachable; no-op if the

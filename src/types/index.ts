@@ -14,16 +14,6 @@ export type RunStatus =
   | "ABORTED"
   | "FAILED";
 
-export interface RunSummary {
-  runId: string;
-  status: RunStatus;
-  goal: string;
-  createdAt: string;
-  updatedAt: string;
-  report?: ReconciliationReport;
-  currentApprovalRequest?: unknown;
-}
-
 export type AgentEventType =
   | "NAVIGATE"
   | "SEARCH"
@@ -43,22 +33,8 @@ export interface AgentEvent {
   detail: string;
   timestamp: string;
   status?: "success" | "error" | "pending";
-}
-
-export interface Discrepancy {
-  field: string;
-  expected: string | number;
-  actual: string | number;
-  variancePct: number;
-  thresholdPct: number;
-}
-
-export interface ApprovalRequest {
-  id: string;
-  runId: string;
-  title: string;
-  discrepancy: Discrepancy;
-  timestamp: string;
+  /** Worker-attached structured payload: screenshots, URLs, products, discrepancies. */
+  evidence?: Record<string, unknown>;
 }
 
 export interface GoalInput {
@@ -69,13 +45,36 @@ export interface GoalInput {
   fallbackPolicy: "default_wholesale" | "best_available" | "abort";
 }
 
-export interface ReconciliationLineItem {
+export interface Discrepancy {
+  kind: "price" | "discount" | "inventory" | "margin";
+  expected: string | number;
+  actual: string | number;
+  variancePct: number;
+  threshold: number;
+  severity: "low" | "medium" | "high";
+}
+
+export interface ApprovalResolution {
+  action: "approve" | "override" | "abort";
+  overrideTarget?: number;
+}
+
+export interface ApprovalRequest {
+  id: string;
+  runId: string;
+  title: string;
+  detail: string;
+  discrepancies: Discrepancy[];
+  resolution?: ApprovalResolution;
+}
+
+export interface LineItem {
   sku: string;
   description: string;
-  qty: number;
+  quantity: number;
   unitPrice: number;
-  discount: number;
   lineTotal: number;
+  discounts: number;
   status: "ok" | "flagged" | "confirmed";
 }
 
@@ -84,16 +83,24 @@ export interface ChannelSnapshot {
   price: number;
   discount: number;
   shipping: number;
-  margin: number;
-  variancePct: number;
-  aboveThreshold: boolean;
+  computedMargin: number;
 }
 
 export interface ReconciliationReport {
   runId: string;
-  outcome: "DONE" | "ABORTED";
   generatedAt: string;
+  items: LineItem[];
+  discrepancies: Discrepancy[];
+  channels?: ChannelSnapshot[];
   summary: string;
-  lineItems: ReconciliationLineItem[];
-  channelSnapshots?: ChannelSnapshot[];
+}
+
+export interface RunSummary {
+  runId: string;
+  status: RunStatus;
+  goal: string;
+  createdAt: string;
+  updatedAt: string;
+  report?: ReconciliationReport;
+  currentApprovalRequest?: ApprovalRequest;
 }
