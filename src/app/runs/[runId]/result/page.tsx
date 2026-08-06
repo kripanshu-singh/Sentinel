@@ -3,16 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { SentinelNavbar } from "@/components/sentinel-navbar";
 import type { LineItem, RunSummary } from "@/types";
 import {
-  Bell,
-  HelpCircle,
-  ChevronRight,
   Download,
   CheckCircle2,
   AlertTriangle,
@@ -103,32 +100,17 @@ export default function ResultPage({
 
   return (
     <SidebarInset>
-      {/* Top Bar */}
-      <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="flex items-center gap-4">
-          <SidebarTrigger />
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>Agent Runs</span>
-            <ChevronRight className="size-4" />
-            <span className="text-foreground font-semibold">
-              Run ID: {runId ?? "…"}
-            </span>
-            <ChevronRight className="size-4" />
-            <span className="text-foreground font-semibold">Result Report</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="text-muted-foreground hover:text-primary transition-colors">
-            <Bell className="size-4" />
-          </button>
-          <button className="text-muted-foreground hover:text-primary transition-colors">
-            <HelpCircle className="size-4" />
-          </button>
-          <div className="size-8 rounded-full bg-muted border border-border flex items-center justify-center">
-            <span className="text-primary text-xs font-semibold">EA</span>
-          </div>
-        </div>
-      </header>
+      <SentinelNavbar
+        breadcrumbs={[
+          { label: "Runs", href: "/" },
+          {
+            label: runId ? `Run ${runId.slice(0, 8)}…` : "…",
+            href: runId ? `/runs/${encodeURIComponent(runId)}` : undefined,
+          },
+          { label: "Result Report" },
+        ]}
+        statusBadge={{ label: summary?.status ?? "DONE", variant: "primary" }}
+      />
 
       <main className="flex-1 p-6 flex flex-col gap-6 max-w-5xl mx-auto w-full">
         {isLoading && (
