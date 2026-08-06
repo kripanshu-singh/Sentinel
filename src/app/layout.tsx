@@ -22,7 +22,11 @@ export const metadata: Metadata = {
     "AI-powered B2B vendor order & discrepancy reconciliation agent. Execute procurement workflows with human-in-the-loop guardrails.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="en"
