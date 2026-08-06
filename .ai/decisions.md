@@ -6,6 +6,26 @@ respect these decisions; if a decision is wrong, change the record first, then t
 
 ## Product & Architecture
 
+### ADR-011 — Worker orchestration on LangGraph.js (in-tree worker/)
+- **Status:** Accepted (2026-08-06)
+- **Context:** `AgentRunner`'s linear switch over a `StepPlan[]` cannot express
+  validator-driven replan loops or bounded retry without growing into a 600-line
+  switch. The worker actually lives in-tree at `worker/` (contrary to earlier
+  "separate repo" wording in ADR-002/architecture docs).
+- **Decision:** Orchestrate the worker with **LangGraph.js** `StateGraph`.
+  Deterministic edges for the happy path; conditional edges only for
+  `validate → replan` (per-node retry cap) and `validate → HITL`. A
+  **SessionManager** owns the Playwright browser lifecycle (graph state stores a
+  `sessionId` only, never `Page`/`Browser`/`Context`). Tiny **action executors**
+  (navigate/search/fill/click/wait/screenshot) keep nodes small. Keep the existing
+  **Redis BLPOP HITL** for MVP — swappable to `interrupt()` + persistent checkpointer
+  later without graph changes. Keep the existing `LLMProvider` abstraction and event
+  streaming; keep the shared frontend contract (`src/types/`) unchanged.
+- **Consequences:** `worker/` gains `@langchain/langgraph`; `worker/src/agent/runner.ts`
+  is removed at the end of the migration; `.ai/architecture.md` and `roadmap.md` are
+  updated to reflect the in-tree worker and graph orchestration. See
+  `.ai/langgraph-migration.md` for the phased plan.
+
 ### ADR-010 — Intent gatekeeper LLM call lives in the frontend (exception to ADR-002)
 - **Status:** Accepted (2026-08-06)
 - **Context:** An agent that launches a browser session on every message wastes a
