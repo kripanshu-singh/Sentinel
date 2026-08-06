@@ -81,7 +81,7 @@ export async function executeNode(
       const url = (step.params?.url as string | undefined) ?? DEFAULT_STOREFRONT_URL;
       await emitEvent(runId, "NAVIGATE", "Navigating", `Opening url: ${url}`, "pending", { url });
       const result = await actions.navigate(ctx, url);
-      await emitEvent(runId, "NAVIGATE", "Navigation complete", `Loaded ${url}`, "success", { url });
+      await emitEvent(runId, "NAVIGATE", "Navigation complete", `Loaded ${url}`, "success", { url, screenshot: result.screenshot });
 
       // Portals gate the catalog behind a login form (Sauce Demo does). Sign in
       // with the demo account so the product listing is reachable; no-op if the
@@ -111,7 +111,7 @@ export async function executeNode(
       const query = (step.params?.query as string | undefined) ?? input.goal;
       await emitEvent(runId, "SEARCH", "Searching catalog", `Searching for "${query}"`, "pending");
       const result = await actions.search(ctx, query);
-      await emitEvent(runId, "SEARCH", "Search complete", `Found results matching "${query}"`, "success");
+      await emitEvent(runId, "SEARCH", "Search complete", `Found results matching "${query}"`, "success", { screenshot: result.screenshot });
       return { ...base, currentScreenshot: result.screenshot ?? null };
     }
 
@@ -119,7 +119,7 @@ export async function executeNode(
       const qty = quantityFromGoal(input.goal);
       await emitEvent(runId, "FORM_FILL", "Adding items to cart", `Adding quantity: ${qty}`, "pending");
       const result = await actions.addToCart(ctx, qty);
-      await emitEvent(runId, "FORM_FILL", "Cart updated", "Items successfully loaded into session cart", "success");
+      await emitEvent(runId, "FORM_FILL", "Cart updated", "Items successfully loaded into session cart", "success", { screenshot: result.screenshot });
       return { ...base, currentScreenshot: result.screenshot ?? null };
     }
 
@@ -131,7 +131,7 @@ export async function executeNode(
       const couponResult = await actions.applyCoupon(ctx, input.discountCode);
 
       if (!couponResult.success) {
-        await emitEvent(runId, "VALIDATE", "Promo code failed", couponResult.errorMessage ?? "Invalid coupon", "error");
+        await emitEvent(runId, "VALIDATE", "Promo code failed", couponResult.errorMessage ?? "Invalid coupon", "error", { screenshot: couponResult.screenshot, errorMessage: couponResult.errorMessage });
         await transition(runId, "RECOVERING");
 
         const fallbackResult = await actions.applyCouponFallback(ctx, input.fallbackPolicy);
@@ -141,11 +141,11 @@ export async function executeNode(
           return { ...base, status: "ABORTED", next: "end" };
         }
 
-        await emitEvent(runId, "RECOVER", "Graceful recovery applied", "Proceeding under fallback guidelines", "success");
+        await emitEvent(runId, "RECOVER", "Graceful recovery applied", "Proceeding under fallback guidelines", "success", { screenshot: fallbackResult.screenshot });
         return { ...base, currentScreenshot: fallbackResult.screenshot ?? null };
       }
 
-      await emitEvent(runId, "VALIDATE", "Promo code applied", "Coupon discount accepted by checkout gateway", "success");
+      await emitEvent(runId, "VALIDATE", "Promo code applied", "Coupon discount accepted by checkout gateway", "success", { screenshot: couponResult.screenshot });
       return { ...base, currentScreenshot: couponResult.screenshot ?? null };
     }
 
@@ -153,7 +153,7 @@ export async function executeNode(
       await transition(runId, "FORM_FILLING");
       await emitEvent(runId, "FORM_FILL", "Opening checkout", "Moving cart to checkout and filling the shipping form...", "pending");
       const result = await actions.fillForm(ctx, SHIPPING_FIELDS);
-      await emitEvent(runId, "FORM_FILL", "Checkout prepared", "Shipping details filled; order staged at the final review screen", "success");
+      await emitEvent(runId, "FORM_FILL", "Checkout prepared", "Shipping details filled; order staged at the final review screen", "success", { screenshot: result.screenshot });
       return { ...base, currentScreenshot: result.screenshot ?? null };
     }
 

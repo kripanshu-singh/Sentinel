@@ -49,7 +49,12 @@ export async function hitlNode(
     "Variance above threshold",
     `Found $${currentProduct?.product.unitPrice ?? 0} - target $${input.targetUnitPrice ?? 0}. Exceeds threshold.`,
     "pending",
-    { discrepancies, approvalId }
+    {
+      discrepancies,
+      approvalId,
+      screenshot: state.currentScreenshot ?? undefined,
+      url: state.currentURL ?? undefined,
+    }
   );
 
   // Block until the operator resolves via POST /runs/:id/resolve.
@@ -71,16 +76,23 @@ export async function hitlNode(
     };
   }
 
+  await transition(runId, "RESUME");
+
   if (resolution.action === "override" && resolution.overrideTarget != null) {
-    await emitEvent(
-      runId,
-      "HITL",
-      "Target overridden",
-      `Operator set target to $${resolution.overrideTarget}`,
-      "success"
-    );
     if (currentProduct) {
       const updated = recheck(currentProduct.product, input, resolution.overrideTarget);
+      await emitEvent(
+        runId,
+        "HITL",
+        "Target overridden",
+        `Operator set target to $${resolution.overrideTarget}`,
+        "success",
+        {
+          discrepancies: updated.discrepancies,
+          screenshot: state.currentScreenshot ?? undefined,
+          url: state.currentURL ?? undefined,
+        }
+      );
       await emitEvent(
         runId,
         "CHECK",
@@ -105,7 +117,17 @@ export async function hitlNode(
     };
   }
 
-  await emitEvent(runId, "HITL", "Approved & Resumed", "Human operator accepted price discrepancy.", "success");
+  await emitEvent(
+    runId,
+    "HITL",
+    "Approved & Resumed",
+    "Human operator accepted price discrepancy.",
+    "success",
+    {
+      screenshot: state.currentScreenshot ?? undefined,
+      url: state.currentURL ?? undefined,
+    }
+  );
   return {
     resolution,
     status: "RESUME",
