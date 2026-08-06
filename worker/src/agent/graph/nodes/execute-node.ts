@@ -16,6 +16,7 @@
 
 import { sessionManager } from "../../session/session-manager.js";
 import * as actions from "../../actions/index.js";
+import type { ActionContext } from "../../actions/index.js";
 import { emitEvent, transition } from "../emit.js";
 import { failRun, MAX_RETRIES_PER_NODE, retryUpdate } from "../retry.js";
 import type { StepPlan } from "../../../types/index.js";
@@ -38,6 +39,38 @@ function quantityFromGoal(goal: string): number {
   return match ? parseInt(match[1], 10) : 1;
 }
 
+/**
+ * Open a URL, sign in to the demo portal if present, and return the resulting
+ * screenshot for transparency. Shared by the navigate step and the first-entry
+ * default navigation below.
+ */
+async function navigateAndLogin(
+  runId: string,
+  ctx: ActionContext,
+  url: string
+): Promise<{ url?: string; screenshot: string | null }> {
+  await emitEvent(runId, "NAVIGATE", "Navigating", `Opening url: ${url}`, "pending", { url });
+  const result = await actions.navigate(ctx, url);
+  await emitEvent(runId, "NAVIGATE", "Navigation complete", `Loaded ${url}`, "success", { url: result.url, screenshot: result.screenshot });
+
+  // Portals gate the catalog behind a login form (Sauce Demo does). Sign in
+  // with the demo account so the product listing is reachable; no-op if the
+  // storefront exposes no login form.
+  const loginResult = await actions.login(ctx, SAUCEDEMO_USERNAME, SAUCEDEMO_PASSWORD);
+  if (loginResult.authenticated) {
+    await emitEvent(
+      runId,
+      "NAVIGATE",
+      "Signed in",
+      "Authenticated to vendor portal with demo credentials",
+      "success",
+      { screenshot: loginResult.screenshot }
+    );
+  }
+
+  return { url: result.url, screenshot: loginResult.screenshot ?? result.screenshot ?? null };
+}
+
 export async function executeNode(
   state: SentinelStateValue
 ): Promise<SentinelStateUpdate> {
@@ -50,16 +83,33 @@ export async function executeNode(
     return { next: "end" };
   }
 
+  const plan = planResult.plan;
+
   // Lazily create the browser session on first entry (principle: browser launches
   // only after planning). sessionId lives in state; the Page never does.
   if (sessionId == null) {
     await transition(runId, "NAVIGATING");
+    const session = await sessionManager.get(runId);
+    const ctx: ActionContext = { navigator: session.navigator, page: session.page };
     await emitEvent(runId, "NAVIGATE", "Starting browser", "Initializing headless browser viewport...", "pending");
-    await sessionManager.get(runId);
     await emitEvent(runId, "NAVIGATE", "Browser initialized", "Connected to Chromium context successfully", "success");
+
+    // Plans don't always carry a navigate step (deterministic fallback, LLM
+    // omissions). Open the default storefront so the first action never runs
+    // against a blank page.
+    if (plan[stepIndex]?.kind !== "navigate") {
+      const { screenshot } = await navigateAndLogin(runId, ctx, DEFAULT_STOREFRONT_URL);
+      return {
+        sessionId: runId,
+        stepIndex,
+        currentURL: DEFAULT_STOREFRONT_URL,
+        currentScreenshot: screenshot,
+        status: "NAVIGATING",
+        next: "execute",
+      };
+    }
   }
 
-  const plan = planResult.plan;
   if (stepIndex >= plan.length) {
     // Plan exhausted — wrap up with the report node.
     return { sessionId: runId, status: "NAVIGATING", next: "report_node" };
@@ -79,29 +129,12 @@ export async function executeNode(
     switch (step.kind) {
     case "navigate": {
       const url = (step.params?.url as string | undefined) ?? DEFAULT_STOREFRONT_URL;
-      await emitEvent(runId, "NAVIGATE", "Navigating", `Opening url: ${url}`, "pending", { url });
-      const result = await actions.navigate(ctx, url);
-      await emitEvent(runId, "NAVIGATE", "Navigation complete", `Loaded ${url}`, "success", { url, screenshot: result.screenshot });
-
-      // Portals gate the catalog behind a login form (Sauce Demo does). Sign in
-      // with the demo account so the product listing is reachable; no-op if the
-      // storefront exposes no login form.
-      const loginResult = await actions.login(ctx, SAUCEDEMO_USERNAME, SAUCEDEMO_PASSWORD);
-      if (loginResult.authenticated) {
-        await emitEvent(
-          runId,
-          "NAVIGATE",
-          "Signed in",
-          "Authenticated to vendor portal with demo credentials",
-          "success",
-          { screenshot: loginResult.screenshot }
-        );
-      }
+      const { url: resolvedUrl, screenshot } = await navigateAndLogin(runId, ctx, url);
 
       return {
         ...base,
-        currentURL: result.url ?? url,
-        currentScreenshot: loginResult.screenshot ?? result.screenshot ?? null,
+        currentURL: resolvedUrl ?? url,
+        currentScreenshot: screenshot,
       };
     }
 

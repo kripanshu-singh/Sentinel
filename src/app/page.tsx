@@ -301,13 +301,12 @@ export default function GoalInputPage() {
             )}
 
             {/* Business rules */}
-            <fieldset className="bg-card border border-border rounded-xl p-5 flex flex-col gap-4">
+            {/* <fieldset className="bg-card border border-border rounded-xl p-5 flex flex-col gap-4">
               <legend className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
                 Business rules
               </legend>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Target unit price */}
                 <div className="flex flex-col gap-1.5">
                   <label
                     htmlFor="target-price"
@@ -332,7 +331,6 @@ export default function GoalInputPage() {
                   </div>
                 </div>
 
-                {/* Variance threshold */}
                 <div className="flex flex-col gap-1.5">
                   <label
                     htmlFor="variance"
@@ -357,7 +355,6 @@ export default function GoalInputPage() {
                   </div>
                 </div>
 
-                {/* Discount code */}
                 <div className="flex flex-col gap-1.5">
                   <label
                     htmlFor="discount-code"
@@ -375,7 +372,7 @@ export default function GoalInputPage() {
                   />
                 </div>
 
-                {/* Fallback policy */}
+             
                 <div className="flex flex-col gap-1.5">
                   <label
                     htmlFor="fallback"
@@ -397,7 +394,7 @@ export default function GoalInputPage() {
                   </select>
                 </div>
               </div>
-            </fieldset>
+            </fieldset> */}
           </form>
 
           {/* Suggested workflows */}

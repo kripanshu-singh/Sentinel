@@ -32,14 +32,14 @@ export async function updateCartQuantity(
 
 export async function clickAddToCart(
   page: Page,
-  buttonSelector = 'button[id*="add-to-cart" i], button:has-text("Add to Cart"), .add-to-cart'
+  buttonSelector = 'button[id*="add-to-cart" i], button:has-text("Add to Cart"), button:has-text("Add to cart"), .add-to-cart, [data-test="add-to-cart-sauce-labs-fleece-jacket"]'
 ): Promise<void> {
   // `.first()` avoids Playwright strict-mode violations when the storefront
   // renders several add-to-cart buttons at once (e.g. Sauce Demo inventory grid).
   const button = page.locator(buttonSelector).first();
-  await button.waitFor({ timeout: 5000 });
+  await button.waitFor({ state: "visible", timeout: 10000 });
   await button.click();
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
 }
 
 /**
@@ -51,26 +51,45 @@ export async function loginToStore(
   username: string,
   password: string
 ): Promise<boolean> {
-  const loginButton = page.locator("#login-button");
-  if (!(await loginButton.isVisible().catch(() => false))) {
+  const loginButton = page.locator('#login-button, button[type="submit"], input[type="submit"]');
+  if (!(await loginButton.first().isVisible().catch(() => false))) {
     return false;
   }
-  await page.fill("#user-name", username);
-  await page.fill("#password", password);
-  await loginButton.click();
-  await page.locator(".inventory_list").waitFor({ timeout: 15000 });
+  await page.fill('input#user-name, input[name="user-name"], input[type="text"]', username).catch(() => undefined);
+  await page.fill('input#password, input[name="password"]', password).catch(() => undefined);
+  await loginButton.first().click();
+
+  const inventorySelectors = [
+    ".inventory_list",
+    "[data-test='inventory-container']",
+    "[data-test='product-list']",
+    "#inventory_container",
+  ];
+
+  for (const selector of inventorySelectors) {
+    try {
+      await page.locator(selector).first().waitFor({ state: "visible", timeout: 5000 });
+      return true;
+    } catch {
+      // Try the next selector.
+    }
+  }
+
+  await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
   return true;
 }
 
 export async function openCartAndCheckout(page: Page): Promise<void> {
-  await page.locator("#shopping_cart_container").click();
-  await page.locator("#checkout").waitFor({ timeout: 5000 });
-  const itemCount = await page.locator(".cart_item").count();
+  const cartButton = page.locator('#shopping_cart_container, a.shopping_cart_link, button:has-text("Cart")').first();
+  await cartButton.waitFor({ state: "visible", timeout: 10000 });
+  await cartButton.click();
+  await page.locator('#checkout, button:has-text("Checkout")').first().waitFor({ state: "visible", timeout: 10000 });
+  const itemCount = await page.locator('.cart_item, .cart_list_item').count();
   if (itemCount === 0) {
     throw new Error("Cart is empty — add a product to the cart before checking out.");
   }
-  await page.locator("#checkout").click();
-  await page.locator("#first-name").waitFor({ timeout: 10000 });
+  await page.locator('#checkout, button:has-text("Checkout")').first().click();
+  await page.locator('#first-name, input[name*="first" i]').first().waitFor({ state: "visible", timeout: 10000 });
 }
 
 export async function continueToReview(page: Page): Promise<void> {

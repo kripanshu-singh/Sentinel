@@ -9,6 +9,43 @@ import { getLLMProvider, parseModelJSON } from "../llm/client.js";
 import type { ExtractedProduct } from "./rule-engine.js";
 import type { LineItem, ChannelSnapshot } from "../types/index.js";
 
+function parsePrice(value: string | null | undefined): number {
+  if (!value) return 0;
+  const match = value.match(/\$?([0-9]+(?:\.[0-9]{1,2})?)/);
+  return match ? Number(match[1]) : 0;
+}
+
+function fallbackProductExtraction(
+  html: string,
+  targetProductName: string
+): ExtractedProduct & { confidence: number } {
+  const normalizedTarget = targetProductName.toLowerCase();
+  const text = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ");
+  const plainText = text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").toLowerCase();
+
+  const productNameMatch = html.match(/<title>([^<]+)<\/title>/i);
+  const extractedName = productNameMatch?.[1]?.trim() ?? targetProductName;
+
+  const price = parsePrice(html.match(/\$([0-9]+(?:\.[0-9]{1,2})?)/i)?.[1] ?? null);
+  const inventoryMatch = html.match(/(\d+)\s*(items|units|stock|left)/i);
+  const inventoryAvailable = inventoryMatch ? Number(inventoryMatch[1]) : 999;
+
+  const hasTarget = normalizedTarget.length === 0 || plainText.includes(normalizedTarget);
+  const hasPrice = price > 0;
+  const confidence = hasTarget && hasPrice ? 0.85 : hasTarget ? 0.6 : 0.3;
+
+  return {
+    sku: "unknown",
+    description: extractedName,
+    unitPrice: price || 0,
+    discountApplied: 0,
+    couponApplied: false,
+    inventoryAvailable,
+    quantityRequested: 1,
+    confidence,
+  };
+}
+
 const EXTRACT_PRODUCT_SYSTEM_PROMPT = `You are a B2B storefront data extraction agent.
 Read the raw HTML snippet or page text and extract details about the primary product matching the user's intent.
 
@@ -95,7 +132,7 @@ export async function extractProductFromDOM(
   targetProductName: string
 ): Promise<ProductExtraction> {
   const llm = getLLMProvider();
-  
+
   // Truncate html to roughly 24k chars to stay safe with LLM context limit
   const truncatedHtml = html.slice(0, 24000);
 
@@ -105,21 +142,30 @@ HTML Content:
 ${truncatedHtml}
   `.trim();
 
-  const text = await llm.generate(
-    [
-      { role: "system", content: EXTRACT_PRODUCT_SYSTEM_PROMPT },
-      { role: "user", content: userPrompt },
-    ],
-    { responseSchema: EXTRACT_PRODUCT_SCHEMA, temperature: 0.1 }
-  );
+  try {
+    const text = await llm.generate(
+      [
+        { role: "system", content: EXTRACT_PRODUCT_SYSTEM_PROMPT },
+        { role: "user", content: userPrompt },
+      ],
+      { responseSchema: EXTRACT_PRODUCT_SCHEMA, temperature: 0.1 }
+    );
 
-  const data = parseModelJSON<ExtractedProduct & { confidence?: number }>(text);
-  const confidence =
-    typeof data.confidence === "number"
-      ? Math.min(1, Math.max(0, data.confidence))
-      : 0.5;
+    const data = parseModelJSON<ExtractedProduct & { confidence?: number }>(text);
+    const confidence =
+      typeof data.confidence === "number"
+        ? Math.min(1, Math.max(0, data.confidence))
+        : 0.5;
 
-  return { product: data, confidence };
+    if (typeof data.unitPrice === "number" && data.unitPrice > 0 && confidence >= 0.55) {
+      return { product: data, confidence };
+    }
+  } catch {
+    // Fall back to a deterministic HTML-based parser when the LLM output is weak.
+  }
+
+  const fallback = fallbackProductExtraction(html, targetProductName);
+  return { product: fallback, confidence: fallback.confidence };
 }
 
 export interface ExtractedInvoice {

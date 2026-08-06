@@ -19,6 +19,18 @@ export interface PlanResult {
   estimatedSteps: number;
 }
 
+const DEFAULT_STOREFRONT_URL = "https://www.saucedemo.com/";
+
+/**
+ * Goals that need reasoning beyond "add <product> to cart" (login, checkout,
+ * human approval, conditional price gates, order-summary extraction) are NOT
+ * safe for the deterministic fallback. The deterministic fallback would strip
+ * those requirements and use the whole goal as a product name, so we force
+ * these through the LLM planner instead.
+ */
+const REQUIRES_LLM_RE =
+  /\b(?:login|log in|sign in|signin|sign into|sign out|checkout)\b|(?:\b(?:order\s+)?summary\b)|\b(?:pause|ask|ask me|confirm|approve|approval|human|wait for|review)\b|(?:if\s+the\s+(?:price|item|product)\s+is\s+(?:higher|greater|more)\s+than)|\b(?:do\s+not\s+(?:complete|purchase|buy|checkout)|extract\s+the\s+(?:order|invoice|receipt))\b/i;
+
 function looksLikeSimpleShoppingGoal(goal: string): boolean {
   const normalized = goal.trim().toLowerCase();
   const hasShoppingVerb = /\b(add|buy|purchase|order|search|find|look for|pick|select|grab|get)\b/.test(normalized);
@@ -33,7 +45,9 @@ function looksLikeSimpleShoppingGoal(goal: string): boolean {
 }
 
 export function getFallbackPlan(input: GoalInput): PlanResult {
-  if (!looksLikeSimpleShoppingGoal(input.goal)) {
+  // Complex multi-step goals must go through the LLM planner — the deterministic
+  // fallback is only a fast path for trivial single-product orders.
+  if (REQUIRES_LLM_RE.test(input.goal) || !looksLikeSimpleShoppingGoal(input.goal)) {
     return {
       goal: input.goal,
       plan: [],
@@ -56,6 +70,11 @@ export function getFallbackPlan(input: GoalInput): PlanResult {
       .replace(/\s+/g, " ")
       .trim(),
     plan: [
+      {
+        kind: "navigate",
+        description: "Open the storefront",
+        params: { url: DEFAULT_STOREFRONT_URL },
+      },
       {
         kind: "search",
         description: `Search for ${productName}`,
@@ -80,7 +99,7 @@ export function getFallbackPlan(input: GoalInput): PlanResult {
     needsClarification: false,
     risk: "low",
     confidence: 0.85,
-    estimatedSteps: 4,
+    estimatedSteps: 5,
   };
 }
 

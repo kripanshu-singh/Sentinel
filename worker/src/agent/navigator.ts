@@ -41,21 +41,35 @@ export class Navigator {
   async search(query: string): Promise<void> {
     const page = this.getPage();
     const searchInput = page
-      .locator('input[type="search"], input[name="q"], input[placeholder*="Search" i]')
+      .locator('input[type="search"], input[name="q"], input[placeholder*="Search" i], input[aria-label*="Search" i], input[placeholder*="search" i]')
       .first();
 
     try {
       await searchInput.waitFor({ state: "visible", timeout: 3000 });
-    } catch {
-      // Storefronts without a search box (e.g. Sauce Demo) expose the full
-      // product grid; the extractor picks the matching product from it.
-      await page.locator(".inventory_list").waitFor({ timeout: 10000 });
+      await searchInput.fill(query);
+      await searchInput.press("Enter");
+      await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
       return;
-    }
+    } catch {
+      // Some storefronts do not expose a dedicated search box. In that case, we
+      // simply wait for a product list or any content change and continue.
+      const fallbackSelectors = [
+        ".inventory_list",
+        "[data-testid='inventory-container']",
+        "[data-testid='product-grid']",
+        "main",
+        "body",
+      ];
 
-    await searchInput.fill(query);
-    await searchInput.press("Enter");
-    await page.waitForLoadState("networkidle");
+      for (const selector of fallbackSelectors) {
+        try {
+          await page.locator(selector).first().waitFor({ state: "visible", timeout: 3000 });
+          break;
+        } catch {
+          // Keep trying the next selector.
+        }
+      }
+    }
   }
 
   async getDOMSnapshot(): Promise<string> {
