@@ -32,7 +32,7 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body suppressHydrationWarning className="min-h-full">
+      <body suppressHydrationWarning className="h-full">
         <QueryProvider>
           <TooltipProvider>
             <SidebarProvider defaultOpen={true}>

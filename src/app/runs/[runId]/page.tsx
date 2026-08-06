@@ -11,6 +11,13 @@ import { cn } from "@/lib/utils";
 import { SentinelNavbar } from "@/components/sentinel-navbar";
 import { useRunStream } from "@/hooks/use-run-stream";
 import { buildPhases } from "@/lib/run-progress";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
 import type { AgentEvent, Discrepancy, RunStatus, RunSummary } from "@/types";
 import {
   CheckCircle2,
@@ -23,6 +30,7 @@ import {
   LoaderCircle,
   ExternalLink,
   Send,
+  ChevronRight,
 } from "lucide-react";
 
 const EVENT_LABELS: Record<string, string> = {
@@ -55,22 +63,22 @@ function AgentStreamRow({
   return (
     <div
       className={cn(
-        "rounded-xl p-3 text-xs font-mono space-y-2",
+        "rounded-lg p-3 text-xs font-mono border border-border/40 bg-muted/20 transition-all",
         event.status === "error" &&
           "bg-destructive/5 text-destructive border border-destructive/20",
         event.status === "pending" &&
-          "bg-primary/5 text-primary border-l-2 border-primary",
+          "bg-primary/5 text-primary border-l-2 border-primary border-t-border/10 border-r-border/10 border-b-border/10",
       )}
     >
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-muted-foreground">{event.timestamp}</span>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-3 mb-1.5">
+        <span className="text-[10px] text-muted-foreground font-sans">{event.timestamp}</span>
+        <div className="flex items-center gap-1.5">
           {showSpinner && (
             <span className="size-3 rounded-full border-2 border-primary/30 border-t-primary animate-spin shrink-0" />
           )}
           <span
             className={cn(
-              "font-bold uppercase tracking-wide",
+              "font-bold uppercase tracking-wider text-[10px]",
               event.status === "success" && "text-primary",
               event.status === "error" && "text-destructive",
               event.status === "pending" && "text-primary",
@@ -81,31 +89,31 @@ function AgentStreamRow({
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <p className="text-foreground/80 leading-relaxed">{event.detail}</p>
+        <p className="text-foreground/90 leading-relaxed font-sans text-xs">{event.detail}</p>
         {screenshot && (
           <button
             type="button"
             onClick={onOpenScreenshot}
-            className="group inline-flex items-center gap-2 rounded-lg border border-border bg-surface p-2 shadow-sm transition hover:border-primary hover:shadow-md"
+            className="group inline-flex items-center gap-2 rounded-lg border border-border bg-card p-1.5 shadow-2xs transition hover:border-primary/50 hover:shadow-xs"
           >
-            <div className="relative h-16 w-24 overflow-hidden rounded-md border border-border bg-background">
+            <div className="relative h-12 w-20 overflow-hidden rounded border border-border/80 bg-background">
               <Image
                 src={screenshot}
                 alt={event.title}
                 fill
                 unoptimized
-                className="object-cover grayscale group-hover:grayscale-0 transition"
+                className="object-cover grayscale group-hover:grayscale-0 transition duration-300"
               />
             </div>
-            <div className="flex flex-col text-left">
-              <span className="text-[11px] font-semibold text-foreground">
-                Open screenshot
+            <div className="flex flex-col text-left font-sans">
+              <span className="text-[10px] font-semibold text-foreground">
+                View screenshot
               </span>
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-[9px] text-muted-foreground">
                 Click to expand
               </span>
             </div>
-            <ExternalLink className="size-3 text-muted-foreground" />
+            <ExternalLink className="size-3 text-muted-foreground ml-auto group-hover:text-primary transition-colors" />
           </button>
         )}
       </div>
@@ -130,6 +138,7 @@ export default function LiveRunPage({
   );
   const [instruction, setInstruction] = useState("");
   const previewOverlayRef = useRef<HTMLDivElement | null>(null);
+  const logBottomRef = useRef<HTMLDivElement | null>(null);
 
   // Unwrap async params once on mount
   useEffect(() => {
@@ -137,6 +146,11 @@ export default function LiveRunPage({
   }, [params]);
 
   const { events, isConnected, error } = useRunStream(runId ?? "");
+
+  // Auto-scroll agent log to bottom when new events arrive
+  useEffect(() => {
+    logBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [events.length]);
 
   const TERMINAL_STATUSES = new Set<RunStatus>(["DONE", "FAILED", "ABORTED"]);
 
@@ -293,10 +307,10 @@ export default function LiveRunPage({
         }
       />
 
-      <main className="flex-1 flex flex-col gap-5 p-6 overflow-hidden">
+      <main className="h-[calc(100dvh-3.5rem)] flex flex-col gap-4 p-5 overflow-hidden bg-background">
         {/* Terminal-state banner */}
         {status === "FAILED" && (
-          <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 flex items-start gap-3">
+          <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 flex items-start gap-3 shrink-0">
             <AlertTriangle className="size-5 text-destructive shrink-0 mt-0.5" />
             <div>
               <h3 className="text-sm font-bold text-destructive">Run failed</h3>
@@ -308,13 +322,13 @@ export default function LiveRunPage({
           </div>
         )}
         {status === "DONE" && (
-          <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 flex items-center gap-3">
+          <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 flex items-center gap-3 shrink-0">
             <CheckCircle2 className="size-5 text-primary shrink-0" />
             <p className="text-sm font-semibold text-primary">Run complete</p>
           </div>
         )}
         {status === "ABORTED" && (
-          <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 flex items-center gap-3">
+          <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 flex items-center gap-3 shrink-0">
             <XCircle className="size-5 text-destructive shrink-0" />
             <p className="text-sm font-semibold text-destructive">
               Run aborted
@@ -323,93 +337,97 @@ export default function LiveRunPage({
         )}
 
         {/* Progress Stepper */}
-        <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between shrink-0">
-          {phases.map((phase, i) => {
-            const Icon = phase.icon;
-            return (
-              <div key={phase.id} className="flex items-center flex-1">
-                <div className="flex flex-col items-center gap-1 min-w-20">
+        <div className="bg-card border border-border rounded-xl p-3 px-6 flex items-center justify-between shrink-0 shadow-2xs">
+          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <span>Workflow Progress</span>
+            <span className="text-[10px] text-muted-foreground/30">•</span>
+            <span className="text-foreground normal-case font-medium">
+              {status === "DONE" && "Completed"}
+              {status === "FAILED" && "Failed"}
+              {status === "ABORTED" && "Aborted"}
+              {status !== "DONE" && status !== "FAILED" && status !== "ABORTED" && (isConnected ? "Running" : "Connecting…")}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 md:gap-5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+            {phases.map((phase, i) => {
+              return (
+                <div key={phase.id} className="flex items-center gap-2 shrink-0">
                   <div
                     className={cn(
-                      "size-8 rounded-full flex items-center justify-center relative",
+                      "size-5 rounded-full flex items-center justify-center text-[10px] relative transition-all",
                       phase.done && "bg-primary text-primary-foreground",
                       phase.active &&
                         !phase.done &&
-                        "border-2 border-primary bg-primary/10 text-primary",
-                      phase.error && "bg-destructive/10 text-destructive border-2 border-destructive",
+                        "border border-primary bg-primary/10 text-primary font-bold shadow-[0_0_8px_rgba(0,104,95,0.2)] animate-pulse",
+                      phase.error && "bg-destructive/10 text-destructive border border-destructive",
                       !phase.done &&
                         !phase.active &&
                         !phase.error &&
-                        "border-2 border-border bg-background text-muted-foreground opacity-50",
+                        "border border-border bg-background text-muted-foreground/60",
                     )}
                   >
                     {phase.done ? (
-                      <CheckCheck className="size-4" />
+                      <CheckCheck className="size-3" />
                     ) : phase.error ? (
-                      <XCircle className="size-4" />
+                      <XCircle className="size-3" />
                     ) : (
-                      <Icon className="size-4" />
-                    )}
-                    {phase.active && !phase.done && (
-                      <span className="absolute -top-1 -right-1 size-3 bg-destructive rounded-full border-2 border-card animate-pulse" />
+                      <span className="font-semibold">{i + 1}</span>
                     )}
                   </div>
                   <span
                     className={cn(
-                      "text-xs font-medium",
+                      "text-xs font-medium tracking-tight",
                       phase.active && !phase.done
-                        ? "text-primary font-bold"
+                        ? "text-primary font-semibold"
                         : phase.done
                           ? "text-foreground"
                           : phase.error
                             ? "text-destructive"
-                            : "text-muted-foreground",
+                            : "text-muted-foreground/60",
                     )}
                   >
                     {phase.label}
                   </span>
+                  {i < phases.length - 1 && (
+                    <ChevronRight className="size-3 text-muted-foreground/30 ml-1.5" />
+                  )}
                 </div>
-                {i < phases.length - 1 && (
-                  <div
-                    className={cn(
-                      "flex-1 h-px mx-2",
-                      phase.done ? "bg-primary" : "bg-border",
-                    )}
-                  />
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
-        {/* Three-pane layout */}
-        <div className="flex-1 grid grid-cols-12 gap-5 min-h-0">
-          {/* Left pane: Agent stream */}
-          <div className="col-span-3 bg-card border border-border rounded-xl overflow-hidden h-[640px]">
-            <div className="px-4 py-3 border-b border-border bg-muted/40 flex items-center justify-between">
-              <h2 className="text-sm font-semibold flex items-center gap-2">
-                <Terminal className="size-4" />
-                Agent Stream
+        {/* Three-pane resizable layout */}
+        <ResizablePanelGroup
+          orientation="horizontal"
+          className="flex-1 min-h-0 h-full w-full rounded-xl border border-border bg-background shadow-xs overflow-hidden"
+        >
+          {/* Left panel: Agent stream */}
+          <ResizablePanel defaultSize={28} minSize={22} maxSize={38} className="bg-card flex flex-col min-h-0">
+            <div className="px-4 py-3 border-b border-border bg-muted/20 flex items-center justify-between shrink-0">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <Terminal className="size-3.5 text-primary" />
+                Agent Action Log
               </h2>
-              <span className="text-[10px] font-mono bg-accent text-muted-foreground px-2 py-0.5 rounded">
+              <span className="text-[10px] font-mono bg-accent text-accent-foreground px-1.5 py-0.5 rounded font-medium">
                 v2.4.1
               </span>
             </div>
             <div
-              className="h-full min-h-0 overflow-y-auto p-3 flex flex-col gap-2"
+              className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 min-h-0"
               style={{ scrollbarWidth: "thin" }}
             >
               {error && (
-                <div className="text-xs text-destructive bg-destructive/10 rounded px-2 py-1 mb-2">
+                <div className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded p-2 mb-2 font-mono">
                   {error}
                 </div>
               )}
               {events.length === 0 && (
-                <div className="flex flex-col gap-2 mt-2">
+                <div className="flex flex-col gap-2">
                   {[1, 2, 3].map((i) => (
                     <div
                       key={i}
-                      className="h-8 bg-muted rounded animate-pulse"
+                      className="h-14 bg-muted/40 rounded-lg animate-pulse"
                     />
                   ))}
                 </div>
@@ -432,100 +450,125 @@ export default function LiveRunPage({
                   }}
                 />
               ))}
+              {/* scroll anchor */}
+              <div ref={logBottomRef} />
             </div>
-          </div>
+          </ResizablePanel>
 
-          {/* Center pane: live browser capture */}
-          <div className="col-span-6 bg-card border border-border rounded-xl flex flex-col overflow-hidden min-h-0">
+          <ResizableHandle withHandle />
+
+          {/* Center panel: live browser capture */}
+          <ResizablePanel defaultSize={44} minSize={30} maxSize={60} className="bg-background flex flex-col min-h-0">
             {/* Browser chrome */}
-            <div className="px-3 py-2 border-b border-border bg-muted/40 flex items-center gap-2 shrink-0">
-              <div className="flex gap-1.5">
-                <div className="size-3 rounded-full bg-destructive/70" />
-                <div className="size-3 rounded-full bg-muted-foreground/40" />
-                <div className="size-3 rounded-full bg-primary/70" />
+            <div className="px-4 py-2.5 border-b border-border bg-muted/20 flex items-center gap-3 shrink-0">
+              <div className="flex gap-1.5 shrink-0">
+                <div className="size-2.5 rounded-full bg-destructive/60 hover:bg-destructive transition-colors cursor-pointer" />
+                <div className="size-2.5 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground transition-colors cursor-pointer" />
+                <div className="size-2.5 rounded-full bg-primary/50 hover:bg-primary transition-colors cursor-pointer" />
               </div>
-              <div className="flex-1 bg-card rounded-md px-3 py-1 text-xs font-mono text-muted-foreground flex items-center gap-1.5 border border-border truncate">
-                <Lock className="size-3 shrink-0" />
-                {currentUrl ?? "https://www.saucedemo.com/"}
+              <div className="flex-1 bg-card rounded-lg px-3 py-1 text-xs font-mono text-muted-foreground flex items-center gap-1.5 border border-border truncate max-w-lg shadow-2xs">
+                <Lock className="size-3 text-primary shrink-0" />
+                <span className="select-all truncate">{currentUrl ?? "https://www.saucedemo.com/"}</span>
               </div>
             </div>
 
             {/* Live screenshot from the worker */}
-            <div className="flex-1 min-h-0 bg-background relative overflow-hidden flex items-center justify-center">
+            <div className="flex-1 min-h-0 bg-muted/5 relative overflow-hidden flex items-center justify-center p-4">
               {screenshot ? (
-                <Image
-                  src={screenshot}
-                  alt="Latest browser capture"
-                  fill
-                  unoptimized
-                  className="object-contain"
-                />
+                <div className="relative w-full h-full rounded-lg border border-border bg-card overflow-hidden shadow-2xs">
+                  <Image
+                    src={screenshot}
+                    alt="Latest browser capture"
+                    fill
+                    unoptimized
+                    className="object-contain"
+                    priority
+                  />
+                </div>
               ) : (
                 <div className="flex flex-col items-center gap-3 text-muted-foreground">
-                  <LoaderCircle className="size-6 animate-spin" />
+                  <LoaderCircle className="size-6 animate-spin text-primary" />
                   <p className="text-xs font-mono">
                     Waiting for browser capture…
                   </p>
                 </div>
               )}
             </div>
-          </div>
+          </ResizablePanel>
 
-          {/* Right pane: HITL control */}
-          <div className="col-span-3 flex flex-col gap-4 min-h-0">
-            {/* HITL Alert */}
-            {hasHITL && (
-              <div className="bg-card border-2 border-destructive/30 rounded-xl overflow-hidden shadow-lg">
-                <div className="bg-destructive/10 px-4 py-3 flex items-start gap-3 border-b border-destructive/20">
-                  <AlertTriangle className="size-5 text-destructive shrink-0 mt-0.5" />
-                  <div>
-                    <h3 className="text-sm font-bold text-foreground">
-                      Variance Alert
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Manual intervention required.
-                    </p>
-                  </div>
-                </div>
-                <div className="p-4 flex flex-col gap-4">
-                  {/* Data comparison */}
+          <ResizableHandle withHandle />
+
+          {/* Right panel: HITL control */}
+          <ResizablePanel defaultSize={28} minSize={22} maxSize={38} className="bg-card flex flex-col min-h-0">
+            <div className="px-4 py-3 border-b border-border bg-muted/20 flex items-center shrink-0">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Control Panel
+              </h2>
+            </div>
+            
+            <div
+              className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 min-h-0"
+              style={{ scrollbarWidth: "thin" }}
+            >
+              {/* HITL Control Panel */}
+              {hasHITL && (
+                <div className="rounded-xl border border-border overflow-hidden bg-card shadow-xs flex flex-col gap-4 p-4">
+                  <Alert variant="destructive" className="border-destructive/20 bg-destructive/5 text-destructive p-3">
+                    <AlertTriangle className="size-4 text-destructive" />
+                    <AlertTitle className="text-xs font-bold text-foreground">Variance Warning</AlertTitle>
+                    <AlertDescription className="text-[11px] text-muted-foreground mt-0.5">
+                      The agent paused due to discrepancy detection.
+                    </AlertDescription>
+                  </Alert>
+
+                  {/* Discrepancies table */}
                   {hitlDiscrepancies.length > 0 ? (
-                    <div className="flex flex-col gap-2">
-                      {hitlDiscrepancies.map((d, i) => (
-                        <div
-                          key={i}
-                          className="flex justify-between items-center border-b border-border pb-2 text-sm last:border-0 last:pb-0"
-                        >
-                          <div className="flex flex-col">
-                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                              {d.kind} variance
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              expected {String(d.expected)} → found{" "}
-                              {String(d.actual)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-semibold text-destructive">
-                              {d.variancePct > 0 ? "+" : ""}
-                              {d.variancePct}%
-                            </span>
-                            <span
-                              className={cn(
-                                "px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase",
-                                d.severity === "high"
-                                  ? "bg-destructive/10 text-destructive"
-                                  : "bg-primary/10 text-primary",
-                              )}
-                            >
-                              {d.severity}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="rounded-lg border border-border overflow-hidden bg-card">
+                      <table className="w-full text-[11px] text-left border-collapse">
+                        <thead>
+                          <tr className="bg-muted/40 border-b border-border">
+                            <th className="px-2.5 py-1.5 font-medium text-muted-foreground uppercase tracking-wide text-[9px]">Variance</th>
+                            <th className="px-2.5 py-1.5 font-medium text-muted-foreground text-right uppercase tracking-wide text-[9px]">Details</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/60">
+                          {hitlDiscrepancies.map((d, i) => (
+                            <tr key={i} className="hover:bg-muted/5 transition-colors">
+                              <td className="px-2.5 py-2">
+                                <div className="font-semibold text-foreground uppercase text-[9px] tracking-wide">
+                                  {d.kind}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground mt-0.5">
+                                  Expected {String(d.expected)}
+                                </div>
+                              </td>
+                              <td className="px-2.5 py-2 text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <span className="font-mono font-bold text-destructive">
+                                    {d.variancePct > 0 ? "+" : ""}{d.variancePct}%
+                                  </span>
+                                  <Badge
+                                    className={cn(
+                                      "text-[9px] font-bold px-1.5 py-0 h-4 border-transparent uppercase tracking-wider shrink-0",
+                                      d.severity === "high"
+                                        ? "bg-destructive/10 text-destructive hover:bg-destructive/15"
+                                        : "bg-primary/10 text-primary hover:bg-primary/15"
+                                    )}
+                                  >
+                                    {d.severity}
+                                  </Badge>
+                                </div>
+                                <div className="text-[10px] text-muted-foreground mt-0.5">
+                                  Found {String(d.actual)}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   ) : (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
                       {hitlDetail}
                     </p>
                   )}
@@ -533,30 +576,32 @@ export default function LiveRunPage({
                   {/* Actions */}
                   <div className="flex flex-col gap-2">
                     <Button
-                      className="w-full gap-2"
+                      className="w-full gap-1.5"
                       size="sm"
                       disabled={isResolving}
                       onClick={handleApprove}
                     >
                       {isResolving ? (
-                        <span className="size-3.5 rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground animate-spin" />
+                        <LoaderCircle className="size-3.5 animate-spin" />
                       ) : (
-                        <CheckCircle2 className="size-4" />
+                        <CheckCircle2 className="size-3.5" />
                       )}
                       Approve &amp; Continue
                     </Button>
+                    
                     <Button
                       variant="outline"
-                      className="w-full gap-2"
+                      className="w-full gap-1.5"
                       size="sm"
                       disabled={isResolving}
                       onClick={() => setOverrideOpen((o) => !o)}
                     >
-                      <Edit3 className="size-4" />
+                      <Edit3 className="size-3.5" />
                       Override Target
                     </Button>
+
                     {overrideOpen && (
-                      <div className="flex gap-2">
+                      <div className="flex gap-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
                         <input
                           type="number"
                           min="0"
@@ -564,98 +609,102 @@ export default function LiveRunPage({
                           value={overrideTarget}
                           onChange={(e) => setOverrideTarget(e.target.value)}
                           placeholder="New target $"
-                          className="flex-1 px-3 py-2 border border-border rounded-lg bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all"
+                          className="flex-1 px-2.5 py-1.5 border border-border rounded-lg bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all shadow-2xs"
                         />
                         <Button
                           size="sm"
                           disabled={isResolving || !overrideTarget}
                           onClick={handleOverride}
+                          className="h-8"
                         >
                           Apply
                         </Button>
                       </div>
                     )}
+                    
                     <Button
                       variant="outline"
-                      className="w-full gap-2 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5"
+                      className="w-full gap-1.5 text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/5"
                       size="sm"
                       disabled={isResolving}
                       onClick={handleAbort}
                     >
-                      <XCircle className="size-4" />
+                      <XCircle className="size-3.5" />
                       Abort Task
                     </Button>
-                    <div className="flex flex-col gap-2 border-t border-border pt-3">
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                        Or type your own instruction
+                    
+                    <div className="flex flex-col gap-2 border-t border-border pt-3 mt-1">
+                      <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold">
+                        Or type custom instruction
                       </span>
                       <textarea
                         value={instruction}
                         onChange={(e) => setInstruction(e.target.value)}
                         rows={3}
                         placeholder="e.g. Change the quantity to 3 units and continue."
-                        className="w-full resize-none px-3 py-2 border border-border rounded-lg bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all"
+                        className="w-full resize-none px-2.5 py-2 border border-border rounded-lg bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all shadow-2xs"
                       />
                       <Button
                         size="sm"
-                        className="w-full gap-2"
+                        className="w-full gap-1.5"
                         disabled={isResolving || !instruction.trim()}
                         onClick={handleCustomInstruction}
                       >
                         {isResolving ? (
-                          <span className="size-3.5 rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground animate-spin" />
+                          <LoaderCircle className="size-3.5 animate-spin" />
                         ) : (
-                          <Send className="size-4" />
+                          <Send className="size-3.5" />
                         )}
                         Send Instruction
                       </Button>
                     </div>
+
                     {resolveError && (
                       <p
                         role="alert"
-                        className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded px-2 py-1"
+                        className="text-xs text-destructive bg-destructive/10 border border-destructive/25 rounded px-2.5 py-1 mt-1 font-sans"
                       >
                         {resolveError}
                       </p>
                     )}
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {hitlResolved && (
-              <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-center gap-3">
-                <CheckCircle2 className="size-5 text-primary shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-primary">Approved</p>
-                  <p className="text-xs text-muted-foreground">
-                    Agent resuming checkout…
-                  </p>
+              {hitlResolved && (
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-center gap-3 shadow-2xs">
+                  <CheckCircle2 className="size-5 text-primary shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-primary">Approved</p>
+                    <p className="text-xs text-muted-foreground">
+                      Agent resuming checkout…
+                    </p>
+                  </div>
                 </div>
+              )}
+
+              {/* Run goal details card */}
+              <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2 shadow-2xs">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Run Goal
+                </h4>
+                <p className="text-xs text-foreground leading-relaxed font-sans font-medium text-foreground/80">
+                  {summary?.goal ?? "…"}
+                </p>
               </div>
-            )}
 
-            {/* Run context */}
-            <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2">
-              <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Run Goal
-              </h4>
-              <p className="text-xs text-foreground leading-relaxed">
-                {summary?.goal ?? "…"}
-              </p>
+              {/* View Result link */}
+              {status === "DONE" && (
+                <Link
+                  href={`/runs/${encodeURIComponent(runId ?? "")}/result`}
+                  className={cn(buttonVariants({ variant: "outline" }), "w-full gap-1.5 mt-auto shadow-2xs")}
+                >
+                  View Result Report →
+                </Link>
+              )}
             </div>
-
-            {/* View Result link */}
-            {status === "DONE" && (
-              <Link
-                href={`/runs/${encodeURIComponent(runId ?? "")}/result`}
-                className={cn(buttonVariants({ variant: "outline" }), "w-full")}
-              >
-                View Result Report →
-              </Link>
-            )}
-          </div>
-        </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </main>
       {previewScreenshot && (
         <div
