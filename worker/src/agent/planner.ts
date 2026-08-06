@@ -124,7 +124,7 @@ export function injectApprovalStep(plan: StepPlan[], goal: string): StepPlan[] {
   // variance threshold) should not be forced into an unconditional pause. The
   // business-rule evaluator handles the actual threshold check.
   if (CONDITIONAL_HITL_RE.test(goal)) {
-    return plan;
+    return plan.filter((step) => step.kind !== "pause_for_approval");
   }
 
   if (

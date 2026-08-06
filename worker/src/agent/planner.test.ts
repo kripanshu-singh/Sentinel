@@ -61,6 +61,22 @@ test("injectApprovalStep leaves conditional variance gates to the rule engine", 
   assert.deepEqual(result, plan);
 });
 
+test("conditional approval goals do not keep a redundant pause step", () => {
+  const plan: StepPlan[] = [
+    { kind: "search", description: "Search", params: {} },
+    { kind: "pause_for_approval", description: "Pause", params: {} },
+    { kind: "add_to_cart", description: "Add", params: {} },
+    { kind: "fill_form", description: "Checkout", params: {} },
+  ];
+
+  const result = injectApprovalStep(
+    plan,
+    "Login to the store, find the Sauce Labs Backpack, check its price. If the price is higher than $25, pause and ask for approval before adding it to the cart. Then proceed to checkout."
+  );
+
+  assert.equal(result.filter((step) => step.kind === "pause_for_approval").length, 0);
+});
+
 test("injectApprovalStep appends the pause step when there is no checkout step", () => {
   const plan: StepPlan[] = [{ kind: "add_to_cart", description: "Add", params: {} }];
   const result = injectApprovalStep(plan, "pause so I can confirm first");
