@@ -93,7 +93,8 @@ export class AgentRunner {
       await this.logEvent("NAVIGATE", "Goal parsed", "Decomposing task into actionable step plan", "success");
 
       // Generate step plan via LLM
-      const plan = await planGoal(this.input);
+      const planResult = await planGoal(this.input);
+      const plan = planResult.plan;
       await this.logEvent("NAVIGATE", "Plan generated", `Decomposed into ${plan.length} steps`, "success", { plan });
 
       if (plan.length === 0) {
@@ -142,7 +143,7 @@ export class AgentRunner {
             await this.logEvent("EXTRACT", "Extracting product details", `Parsing DOM for "${targetName}"`, "pending");
             
             const html = await this.navigator.getDOMSnapshot();
-            const product = await extractProductFromDOM(html, targetName);
+            const { product } = await extractProductFromDOM(html, targetName);
             this.currentProduct = product;
             
             await this.logEvent("EXTRACT", "Product details extracted", `Found SKU: ${product.sku} - Price: $${product.unitPrice}`, "success", { product });

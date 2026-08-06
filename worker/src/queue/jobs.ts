@@ -5,7 +5,7 @@
  */
 
 import { Queue, Worker, type Job } from "bullmq";
-import { AgentRunner } from "../agent/runner.js";
+import { runGraph } from "../agent/graph/graph.js";
 import type { GoalInput } from "../types/index.js";
 
 const REDIS_URL = process.env.REDIS_URL ?? "redis://localhost:6379";
@@ -31,8 +31,7 @@ export function startQueueWorker(): Worker {
       const { runId, input } = job.data;
       console.log(`[queue] Processing run job ${runId}`);
       
-      const runner = new AgentRunner(runId, input);
-      await runner.run();
+      await runGraph(runId, input);
     },
     {
       connection: {

@@ -348,6 +348,26 @@ Delete `runner.ts`; update `.ai/architecture.md` (worker in-tree + graph),
 - **Debuggability improves:** per-node `nodeRetries`, structured `ReplanEntry`s, and
   `graph.getState()` snapshots that `AgentRunner` never had.
 
+### Phase A verification findings (2026-08-06)
+
+- **`END` must appear in the `addConditionalEdges` pathMap.** A router returning the `END`
+  symbol with a plain `["node"]` pathMap throws `Branch condition returned unknown or null
+  destination` at runtime (LangGraph resolves `ends[r]` and `ends[Symbol(__end__)]` is
+  `undefined`). Fix: pass `["node", END]`. Type signature allows `(N | typeof END)[]`.
+  `src/agent/graph/graph.ts` now does this for both conditional edges.
+- **Node names cannot collide with state channels.** `addNode("report", ...)` throws at
+  build time because `report` is a channel; node renamed to `report_node` and `next`
+  value updated to match.
+- **Live storefront reality (pre-existing, not a migration regression):**
+  `thread-shopping.netlify.app` ("Therads") is a client-side SPA with **no search box**
+  (the `navigate → search` step always times out in `Navigator.search`, exactly as it
+  did under `AgentRunner`), prices render as `₹NaN` (its own data fetch is broken, so
+  extraction yields confidence 0), and the Add-to-Cart button selector does not match.
+  Phase A equivalence is therefore demonstrated as *identical failures on the live site*,
+  plus green static verification and node-level tests of all five nodes. A full `DONE`
+  run with a live reconciliation report needs either a healthy storefront or the mock
+  storefront this phase assumed — revisit when one is available.
+
 ## 16. Out of scope (deferred)
 
 - LangGraph Platform / managed deployment (staying self-hosted; keep BullMQ + Express +

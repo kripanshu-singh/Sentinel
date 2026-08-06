@@ -20,6 +20,8 @@ Extract:
 - couponApplied: Boolean indicating if a coupon is active.
 - inventoryAvailable: Number indicating stock count. Default to 999 if not specified.
 - quantityRequested: Number of units requested. Default to 1.
+- confidence: Number 0..1 estimating how reliable this extraction is. Lower it
+  when fields are missing, ambiguous, or the page looks like the wrong product.
 
 Output ONLY a valid JSON object matching the requested schema. No prose, no markdown code blocks.`;
 
@@ -33,8 +35,9 @@ const EXTRACT_PRODUCT_SCHEMA = {
     couponApplied: { type: "boolean" },
     inventoryAvailable: { type: "number" },
     quantityRequested: { type: "number" },
+    confidence: { type: "number" },
   },
-  required: ["sku", "description", "unitPrice", "discountApplied", "couponApplied", "inventoryAvailable", "quantityRequested"],
+  required: ["sku", "description", "unitPrice", "discountApplied", "couponApplied", "inventoryAvailable", "quantityRequested", "confidence"],
 };
 
 const EXTRACT_INVOICE_SYSTEM_PROMPT = `You are a B2B order review extractor.
@@ -82,10 +85,15 @@ const EXTRACT_INVOICE_SCHEMA = {
   required: ["items", "summary"],
 };
 
+export interface ProductExtraction {
+  product: ExtractedProduct;
+  confidence: number; // 0..1
+}
+
 export async function extractProductFromDOM(
   html: string,
   targetProductName: string
-): Promise<ExtractedProduct> {
+): Promise<ProductExtraction> {
   const llm = getLLMProvider();
   
   // Truncate html to roughly 24k chars to stay safe with LLM context limit
@@ -105,7 +113,13 @@ ${truncatedHtml}
     { responseSchema: EXTRACT_PRODUCT_SCHEMA, temperature: 0.1 }
   );
 
-  return parseModelJSON<ExtractedProduct>(text);
+  const data = parseModelJSON<ExtractedProduct & { confidence?: number }>(text);
+  const confidence =
+    typeof data.confidence === "number"
+      ? Math.min(1, Math.max(0, data.confidence))
+      : 0.5;
+
+  return { product: data, confidence };
 }
 
 export interface ExtractedInvoice {
