@@ -10,15 +10,13 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { useRunStream } from "@/hooks/use-run-stream";
+import { buildPhases } from "@/lib/run-progress";
 import type { AgentEvent, Discrepancy, RunStatus, RunSummary } from "@/types";
 import {
   Bell,
   HelpCircle,
   ChevronRight,
   CheckCircle2,
-  Gavel,
-  ShoppingCart,
-  Search,
   Terminal,
   AlertTriangle,
   CheckCheck,
@@ -214,12 +212,7 @@ export default function LiveRunPage({
     !hitlResolved &&
     Boolean(hitlEvent || approvalRequest || status === "HITL_PENDING");
 
-  const STEPS = [
-    { label: "Search", done: true, icon: Search },
-    { label: "Reconcile", done: true, icon: CheckCheck },
-    { label: "HITL Check", done: hitlResolved, active: hasHITL, icon: Gavel },
-    { label: "Checkout", done: false, icon: ShoppingCart },
-  ];
+  const phases = buildPhases(events, status);
 
   async function postResolve(
     action: "approve" | "override" | "abort" | "custom",
@@ -347,50 +340,56 @@ export default function LiveRunPage({
 
         {/* Progress Stepper */}
         <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between shrink-0">
-          {STEPS.map((step, i) => {
-            const Icon = step.icon;
+          {phases.map((phase, i) => {
+            const Icon = phase.icon;
             return (
-              <div key={step.label} className="flex items-center flex-1">
+              <div key={phase.id} className="flex items-center flex-1">
                 <div className="flex flex-col items-center gap-1 min-w-20">
                   <div
                     className={cn(
                       "size-8 rounded-full flex items-center justify-center relative",
-                      step.done && "bg-primary text-primary-foreground",
-                      step.active &&
-                        !step.done &&
+                      phase.done && "bg-primary text-primary-foreground",
+                      phase.active &&
+                        !phase.done &&
                         "border-2 border-primary bg-primary/10 text-primary",
-                      !step.done &&
-                        !step.active &&
+                      phase.error && "bg-destructive/10 text-destructive border-2 border-destructive",
+                      !phase.done &&
+                        !phase.active &&
+                        !phase.error &&
                         "border-2 border-border bg-background text-muted-foreground opacity-50",
                     )}
                   >
-                    {step.done ? (
+                    {phase.done ? (
                       <CheckCheck className="size-4" />
+                    ) : phase.error ? (
+                      <XCircle className="size-4" />
                     ) : (
                       <Icon className="size-4" />
                     )}
-                    {step.active && !step.done && (
+                    {phase.active && !phase.done && (
                       <span className="absolute -top-1 -right-1 size-3 bg-destructive rounded-full border-2 border-card animate-pulse" />
                     )}
                   </div>
                   <span
                     className={cn(
                       "text-xs font-medium",
-                      step.active && !step.done
+                      phase.active && !phase.done
                         ? "text-primary font-bold"
-                        : step.done
+                        : phase.done
                           ? "text-foreground"
-                          : "text-muted-foreground",
+                          : phase.error
+                            ? "text-destructive"
+                            : "text-muted-foreground",
                     )}
                   >
-                    {step.label}
+                    {phase.label}
                   </span>
                 </div>
-                {i < STEPS.length - 1 && (
+                {i < phases.length - 1 && (
                   <div
                     className={cn(
                       "flex-1 h-px mx-2",
-                      step.done ? "bg-primary" : "bg-border",
+                      phase.done ? "bg-primary" : "bg-border",
                     )}
                   />
                 )}
