@@ -64,6 +64,41 @@ export const GoalInputSchema = z.object({
 export type GoalInput = z.infer<typeof GoalInputSchema>;
 
 // ---------------------------------------------------------------------------
+// Intent gatekeeper — POST /api/intent
+// Every prompt is classified before a run is enqueued so chitchat never
+// launches a browser session. The request body is a GoalInput; the response is
+// one of three routes: CONVERSATIONAL (direct reply), CAPABILITY_QUERY (help),
+// or AUTOMATION_TASK (a run was started and a runId returned).
+// ---------------------------------------------------------------------------
+
+export const UserIntentSchema = z.enum([
+  "CONVERSATIONAL",
+  "CAPABILITY_QUERY",
+  "AUTOMATION_TASK",
+]);
+
+export const CapabilitySchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  example: z.string(),
+});
+
+export const CapabilityHelpSchema = z.object({
+  intro: z.string(),
+  capabilities: z.array(CapabilitySchema),
+});
+
+export const IntentResponseSchema = z.discriminatedUnion("intent", [
+  z.object({ intent: z.literal("CONVERSATIONAL"), reply: z.string().min(1) }),
+  z.object({ intent: z.literal("CAPABILITY_QUERY"), help: CapabilityHelpSchema }),
+  z.object({ intent: z.literal("AUTOMATION_TASK"), runId: z.string().min(1) }),
+]);
+
+export type UserIntent = z.infer<typeof UserIntentSchema>;
+export type IntentResponse = z.infer<typeof IntentResponseSchema>;
+export type CapabilityHelp = z.infer<typeof CapabilityHelpSchema>;
+
+// ---------------------------------------------------------------------------
 // AgentEvent — validated when received from worker over SSE
 // ---------------------------------------------------------------------------
 

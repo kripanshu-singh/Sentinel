@@ -121,7 +121,7 @@ export class AgentRunner {
 
         switch (step.kind) {
           case "navigate": {
-            const url = step.params?.url as string ?? "https://demo.opencart.com";
+            const url = step.params?.url as string ?? "https://thread-shopping.netlify.app/";
             await this.logEvent("NAVIGATE", "Navigating", `Opening url: ${url}`, "pending");
             await this.navigator.navigate(url);
             await this.logEvent("NAVIGATE", "Navigation complete", `Loaded ${url}`, "success");

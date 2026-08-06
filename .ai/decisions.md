@@ -6,6 +6,23 @@ respect these decisions; if a decision is wrong, change the record first, then t
 
 ## Product & Architecture
 
+### ADR-010 — Intent gatekeeper LLM call lives in the frontend (exception to ADR-002)
+- **Status:** Accepted (2026-08-06)
+- **Context:** An agent that launches a browser session on every message wastes a
+  Playwright session on chitchat ("hi", "2+2"). Every prompt should be classified
+  before a run is enqueued. A per-prompt request/response LLM call fits serverless
+  naturally — it needs no long-lived process, no browser, no state.
+- **Decision:** The Next.js app owns a lightweight intent gatekeeper: a Zod-validated
+  `POST /api/intent` route that classifies the prompt with a cheap LLM (Gemini Flash
+  via `GEMINI_API_KEY`) into `CONVERSATIONAL | CAPABILITY_QUERY | AUTOMATION_TASK`.
+  Only `AUTOMATION_TASK` enqueues a run with the worker; the other two return a direct
+  text reply or structured help. This is the **single exception** to ADR-002's "no LLM
+  in the frontend" rule — all orchestration/reasoning LLM calls remain in the worker.
+- **Consequences:** The classifier is a thin, stateless service behind an interface
+  (`src/server/intent-classifier.ts`) with a rule-based fallback when the LLM is
+  unreachable. `architecture.md`'s "no LLM logic in this repo" wording is amended to
+  reflect this exception.
+
 ### ADR-001 — Next.js + shadcn/ui (base-nova) foundation
 - **Status:** Accepted (2026-08-06)
 - **Context:** Need a fast, type-safe frontend with a modern design system for the B2B

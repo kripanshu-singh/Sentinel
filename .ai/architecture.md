@@ -47,8 +47,11 @@ deliberate; it is driven by the hard constraints of an *acting* agent, not by ta
 ### Layer responsibilities
 
 - **Next.js frontend** — goal input, live run timeline, HITL modal, result/report table with
-  CSV export. The only "API" here is a thin proxy layer (`src/server/`) that validates input
-  with Zod and talks to the worker. No Playwright, no LLM logic in this repo.
+  CSV export. The "API" here is a thin proxy layer (`src/server/`) that validates input
+  with Zod and talks to the worker. No Playwright, no agent-orchestration LLM logic in this
+  repo — the sole exception is the intent gatekeeper (`src/server/intent-classifier.ts`,
+  `POST /api/intent`), a stateless per-prompt classifier that decides whether a prompt is a
+  browser task before a run is enqueued (see ADR-010).
 - **Worker service** — owns the agent loop: plan → act → observe → check rules → (pause for
   HITL) → resume. Owns the Playwright browser, LLM orchestration, and the rule engine. Streams
   events down; accepts resolutions up.

@@ -14,7 +14,22 @@ import {
   RefreshCcw,
   Bell,
   HelpCircle,
+  Bot,
+  Sparkles,
 } from "lucide-react";
+
+type AssistantMessage =
+  | {
+      kind: "conversational";
+      reply: string;
+    }
+  | {
+      kind: "help";
+      help: {
+        intro: string;
+        capabilities: { title: string; description: string; example: string }[];
+      };
+    };
 
 const SUGGESTED_WORKFLOWS = [
   {
@@ -51,10 +66,13 @@ export default function GoalInputPage() {
   const [fallback, setFallback] = useState("default_wholesale");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [assistantMessage, setAssistantMessage] =
+    useState<AssistantMessage | null>(null);
   const router = useRouter();
 
   function handleWorkflowClick(workflowGoal: string) {
     setGoal(workflowGoal);
+    setAssistantMessage(null);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -64,7 +82,7 @@ export default function GoalInputPage() {
     setSubmitError(null);
 
     try {
-      const res = await fetch("/api/runs", {
+      const res = await fetch("/api/intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -81,8 +99,24 @@ export default function GoalInputPage() {
         throw new Error(body.error ?? `Server error ${res.status}`);
       }
 
-      const { runId } = await res.json() as { runId: string };
-      router.push(`/runs/${runId}`);
+      const data = await res.json() as {
+        intent: "CONVERSATIONAL" | "CAPABILITY_QUERY" | "AUTOMATION_TASK";
+        reply?: string;
+        help?: AssistantMessage & { kind: "help" };
+        runId?: string;
+      };
+
+      if (data.intent === "AUTOMATION_TASK") {
+        router.push(`/runs/${data.runId}`);
+        return;
+      }
+
+      if (data.intent === "CAPABILITY_QUERY" && data.help) {
+        setAssistantMessage({ kind: "help", help: data.help.help });
+      } else {
+        setAssistantMessage({ kind: "conversational", reply: data.reply ?? "" });
+      }
+      setIsSubmitting(false);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to start run";
       setSubmitError(message);
@@ -140,6 +174,52 @@ export default function GoalInputPage() {
             </p>
 
             <form onSubmit={handleSubmit} className="w-full flex flex-col gap-6">
+              {/* Assistant reply for non-task prompts */}
+              {assistantMessage?.kind === "conversational" && (
+                <div className="w-full flex items-start gap-3 bg-card border border-border rounded-xl p-4">
+                  <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <Bot className="size-4" />
+                  </div>
+                  <p className="text-sm text-foreground leading-relaxed">
+                    {assistantMessage.reply}
+                  </p>
+                </div>
+              )}
+
+              {assistantMessage?.kind === "help" && (
+                <div className="w-full bg-card border border-border rounded-xl p-5 flex flex-col gap-4">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="size-4 text-primary" />
+                    <p className="text-sm font-medium text-foreground">
+                      {assistantMessage.help.intro}
+                    </p>
+                  </div>
+                  <ul className="flex flex-col gap-2">
+                    {assistantMessage.help.capabilities.map((capability) => (
+                      <li key={capability.title}>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleWorkflowClick(capability.example)
+                          }
+                          className="w-full text-left flex flex-col gap-1 bg-accent/50 border border-border rounded-lg px-4 py-3 hover:border-primary/50 transition-colors"
+                        >
+                          <span className="text-sm font-semibold text-foreground">
+                            {capability.title}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {capability.description}
+                          </span>
+                          <span className="text-xs text-primary truncate">
+                            {capability.example}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* Goal textarea */}
               <div className="w-full relative group">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/30 to-primary/10 rounded-2xl blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-500 pointer-events-none" />
