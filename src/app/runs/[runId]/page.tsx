@@ -56,40 +56,47 @@ function AgentStreamRow({
   return (
     <div
       className={cn(
-        "flex gap-3 text-xs font-mono py-1.5",
+        "rounded-xl p-3 text-xs font-mono space-y-2",
         event.status === "error" &&
-          "bg-destructive/5 text-destructive -mx-3 px-3 rounded border border-destructive/20",
+          "bg-destructive/5 text-destructive border border-destructive/20",
         event.status === "pending" &&
-          "bg-primary/5 text-primary -mx-3 px-3 rounded border-l-2 border-primary",
+          "bg-primary/5 text-primary border-l-2 border-primary",
       )}
     >
-      <span className="text-muted-foreground shrink-0">{event.timestamp}</span>
-      <div className="flex items-start gap-1.5">
-        <span
-          className={cn(
-            "font-bold shrink-0",
-            event.status === "success" && "text-primary",
-            event.status === "error" && "text-destructive",
-            event.status === "pending" && "text-primary",
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-muted-foreground">{event.timestamp}</span>
+        <div className="flex items-center gap-2">
+          {showSpinner && (
+            <span className="size-3 rounded-full border-2 border-primary/30 border-t-primary animate-spin shrink-0" />
           )}
-        >
-          [{label}]
-        </span>
-        <span className="text-foreground/80 leading-relaxed">
-          {event.detail}
-        </span>
-        {showSpinner && (
-          <span className="size-3 rounded-full border-2 border-primary/30 border-t-primary animate-spin shrink-0 mt-0.5" />
-        )}
+          <span
+            className={cn(
+              "font-bold uppercase tracking-wide",
+              event.status === "success" && "text-primary",
+              event.status === "error" && "text-destructive",
+              event.status === "pending" && "text-primary",
+            )}
+          >
+            [{label}]
+          </span>
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <p className="text-foreground/80 leading-relaxed">{event.detail}</p>
         {screenshot && (
-          <Image
-            src={screenshot}
-            alt={event.title}
-            width={40}
-            height={40}
-            unoptimized
-            className="size-10 rounded border border-border object-cover shrink-0"
-          />
+          <div className="flex items-center gap-3">
+            <Image
+              src={screenshot}
+              alt={event.title}
+              width={40}
+              height={40}
+              unoptimized
+              className="size-10 rounded border border-border object-cover"
+            />
+            <span className="text-[11px] text-muted-foreground leading-snug">
+              Screenshot evidence
+            </span>
+          </div>
         )}
       </div>
     </div>
@@ -299,7 +306,7 @@ export default function LiveRunPage({
         )}
 
         {/* Progress Stepper */}
-        <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between shrink-0">
           {STEPS.map((step, i) => {
             const Icon = step.icon;
             return (
@@ -355,7 +362,7 @@ export default function LiveRunPage({
         {/* Three-pane layout */}
         <div className="flex-1 grid grid-cols-12 gap-5 min-h-0">
           {/* Left pane: Agent stream */}
-          <div className="col-span-3 bg-card border border-border rounded-xl flex flex-col overflow-hidden">
+          <div className="col-span-3 bg-card border border-border rounded-xl overflow-hidden h-[640px]">
             <div className="px-4 py-3 border-b border-border bg-muted/40 flex items-center justify-between">
               <h2 className="text-sm font-semibold flex items-center gap-2">
                 <Terminal className="size-4" />
@@ -366,7 +373,7 @@ export default function LiveRunPage({
               </span>
             </div>
             <div
-              className="flex-1 overflow-y-auto p-3 flex flex-col gap-0.5"
+              className="h-full min-h-0 overflow-y-auto p-3 flex flex-col gap-2"
               style={{ scrollbarWidth: "thin" }}
             >
               {error && (
@@ -399,9 +406,9 @@ export default function LiveRunPage({
           </div>
 
           {/* Center pane: live browser capture */}
-          <div className="col-span-6 bg-card border border-border rounded-xl flex flex-col overflow-hidden">
+          <div className="col-span-6 bg-card border border-border rounded-xl flex flex-col overflow-hidden min-h-0">
             {/* Browser chrome */}
-            <div className="px-3 py-2 border-b border-border bg-muted/40 flex items-center gap-2">
+            <div className="px-3 py-2 border-b border-border bg-muted/40 flex items-center gap-2 shrink-0">
               <div className="flex gap-1.5">
                 <div className="size-3 rounded-full bg-destructive/70" />
                 <div className="size-3 rounded-full bg-muted-foreground/40" />
@@ -414,7 +421,7 @@ export default function LiveRunPage({
             </div>
 
             {/* Live screenshot from the worker */}
-            <div className="flex-1 bg-white relative overflow-hidden flex items-center justify-center">
+            <div className="flex-1 min-h-0 bg-background relative overflow-hidden flex items-center justify-center">
               {screenshot ? (
                 <Image
                   src={screenshot}
@@ -435,7 +442,7 @@ export default function LiveRunPage({
           </div>
 
           {/* Right pane: HITL control */}
-          <div className="col-span-3 flex flex-col gap-4">
+          <div className="col-span-3 flex flex-col gap-4 min-h-0">
             {/* HITL Alert */}
             {hasHITL && (
               <div className="bg-card border-2 border-destructive/30 rounded-xl overflow-hidden shadow-lg">
