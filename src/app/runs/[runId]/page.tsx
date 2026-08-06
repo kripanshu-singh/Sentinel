@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { useRunStream } from "@/hooks/use-run-stream";
-import type { AgentEvent } from "@/types";
+import type { AgentEvent, RunStatus, RunSummary } from "@/types";
 import {
   Bell,
   HelpCircle,
@@ -89,6 +90,26 @@ export default function LiveRunPage({
 
   const { events, isConnected, error } = useRunStream(runId ?? "");
 
+  const TERMINAL_STATUSES = new Set<RunStatus>(["DONE", "FAILED", "ABORTED"]);
+
+  const { data: summary } = useQuery({
+    queryKey: ["run", runId],
+    queryFn: async (): Promise<RunSummary> => {
+      const res = await fetch(`/api/runs/${encodeURIComponent(runId ?? "")}`);
+      if (!res.ok) throw new Error("Failed to fetch run status");
+      return res.json();
+    },
+    enabled: !!runId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status && TERMINAL_STATUSES.has(status) ? false : 3000;
+    },
+  });
+
+  const status = summary?.status;
+  const isTerminal = !!status && TERMINAL_STATUSES.has(status);
+  const lastErrorEvent = [...events].reverse().find((e) => e.status === "error");
+
   const hasHITL = events.some((e) => e.type === "HITL") && !hitlResolved;
 
   const STEPS = [
@@ -139,10 +160,23 @@ export default function LiveRunPage({
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>Agent Runs</span>
             <ChevronRight className="size-4" />
-            <span className="text-foreground font-semibold">Run ID: PRQ-8992</span>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary ml-1">
-              {isConnected ? "Live" : "Connecting…"}
-            </span>
+            <span className="text-foreground font-semibold">Run ID: {runId ?? "…"}</span>
+            {isTerminal ? (
+              <span
+                className={cn(
+                  "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ml-1",
+                  status === "DONE" && "bg-primary/10 text-primary",
+                  (status === "FAILED" || status === "ABORTED") &&
+                    "bg-destructive/10 text-destructive"
+                )}
+              >
+                {status}
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary ml-1">
+                {isConnected ? "Live" : "Connecting…"}
+              </span>
+            )}
           </div>
         </div>
           <div className="flex items-center gap-3">
@@ -159,6 +193,32 @@ export default function LiveRunPage({
         </header>
 
         <main className="flex-1 flex flex-col gap-5 p-6 overflow-hidden">
+          {/* Terminal-state banner */}
+          {status === "FAILED" && (
+            <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 flex items-start gap-3">
+              <AlertTriangle className="size-5 text-destructive shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-bold text-destructive">Run failed</h3>
+                <p className="text-xs text-destructive/80 mt-0.5">
+                  {lastErrorEvent?.detail ??
+                    "The goal could not be executed. Please try again with more detail."}
+                </p>
+              </div>
+            </div>
+          )}
+          {status === "DONE" && (
+            <div className="bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 flex items-center gap-3">
+              <CheckCircle2 className="size-5 text-primary shrink-0" />
+              <p className="text-sm font-semibold text-primary">Run complete</p>
+            </div>
+          )}
+          {status === "ABORTED" && (
+            <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 flex items-center gap-3">
+              <XCircle className="size-5 text-destructive shrink-0" />
+              <p className="text-sm font-semibold text-destructive">Run aborted</p>
+            </div>
+          )}
+
           {/* Progress Stepper */}
           <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between">
             {STEPS.map((step, i) => {
@@ -428,7 +488,7 @@ export default function LiveRunPage({
               {/* View Result link */}
               {hitlResolved && (
                 <Link
-                  href="/runs/1/result"
+                  href={`/runs/${encodeURIComponent(runId ?? "")}/result`}
                   className={cn(buttonVariants({ variant: "outline" }), "w-full")}
                 >
                   View Result Report →

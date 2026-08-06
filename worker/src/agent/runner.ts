@@ -96,6 +96,17 @@ export class AgentRunner {
       const plan = await planGoal(this.input);
       await this.logEvent("NAVIGATE", "Plan generated", `Decomposed into ${plan.length} steps`, "success", { plan });
 
+      if (plan.length === 0) {
+        await this.logEvent(
+          "NAVIGATE",
+          "Goal too vague",
+          "Could not decompose the goal into actionable steps. Please specify the product, quantity, and any other relevant details (e.g. vendor, delivery window).",
+          "error"
+        );
+        await this.transition("FAILED");
+        return;
+      }
+
       // Initialize browser session
       await this.transition("NAVIGATING");
       await this.logEvent("NAVIGATE", "Starting browser", "Initializing headless browser viewport...", "pending");

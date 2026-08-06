@@ -1,9 +1,28 @@
 export type RunStatus =
   | "PENDING"
-  | "RUNNING"
-  | "PAUSED_HITL"
+  | "PARSED"
+  | "NAVIGATING"
+  | "EXTRACTING"
+  | "CHECKING"
+  | "HITL_PENDING"
+  | "RESUME"
+  | "FORM_FILLING"
+  | "VALIDATING"
+  | "RECOVERING"
+  | "DRAFT_READY"
   | "DONE"
-  | "ABORTED";
+  | "ABORTED"
+  | "FAILED";
+
+export interface RunSummary {
+  runId: string;
+  status: RunStatus;
+  goal: string;
+  createdAt: string;
+  updatedAt: string;
+  report?: ReconciliationReport;
+  currentApprovalRequest?: unknown;
+}
 
 export type AgentEventType =
   | "NAVIGATE"

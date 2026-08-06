@@ -18,6 +18,10 @@ Each step must have:
 - description: plain English description of this step
 - params: optional key-value pairs (e.g. url, query, field names, quantities)
 
+If the goal is too vague to act on — for example it does not name a product,
+a quantity, or an action — return an EMPTY array []. Do not invent products,
+quantities, or URLs. Do not return placeholder or "validate only" plans.
+
 Output ONLY a valid JSON array of step objects. No prose, no markdown.`;
 
 const STEP_SCHEMA = {
