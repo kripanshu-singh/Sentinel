@@ -490,7 +490,7 @@ export default function GoalInputPage() {
                     <h3 className="text-sm font-semibold text-foreground mb-1">
                       {workflow.title}
                     </h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
                       {workflow.description}
                     </p>
                   </button>
