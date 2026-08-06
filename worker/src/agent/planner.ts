@@ -240,7 +240,8 @@ const MAX_PLAN_ATTEMPTS = 3;
  */
 export async function planGoal(
   input: GoalInput,
-  failureContext?: string
+  failureContext?: string,
+  options?: { skipApprovalInjection?: boolean }
 ): Promise<PlanResult> {
   const fallbackPlan = getFallbackPlan(input);
   if (!fallbackPlan.needsClarification) {
@@ -295,7 +296,9 @@ Generate the step plan.`.trim();
       // Backstop: if the goal asked for human confirmation but the model omitted
       // the pause step, insert one before the first checkout step so the agent
       // always brings the operator into the loop before the high-stakes action.
-      orderedPlan = injectApprovalStep(orderedPlan, input.goal);
+      if (!options?.skipApprovalInjection) {
+        orderedPlan = injectApprovalStep(orderedPlan, input.goal);
+      }
 
       return {
         goal: typeof result.goal === "string" ? result.goal : input.goal,

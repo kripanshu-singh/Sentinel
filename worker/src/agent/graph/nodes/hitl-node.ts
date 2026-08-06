@@ -84,6 +84,46 @@ export async function hitlNode(
 
   await transition(runId, "RESUME");
 
+  // Custom instruction: the operator typed their own directive instead of a
+  // fixed decision. Route through the replan node so the LLM revises the plan
+  // to follow it, then continue execution.
+  if (resolution.action === "custom" && resolution.instruction) {
+    await emitEvent(
+      runId,
+      "HITL",
+      "Instruction received",
+      `Operator: ${resolution.instruction}`,
+      "success",
+      { instruction: resolution.instruction }
+    );
+    await transition(runId, "RECOVERING");
+    await emitEvent(
+      runId,
+      "RECOVER",
+      "Replanning with operator instruction",
+      "Revising the plan to follow the operator's instruction.",
+      "pending",
+      { instruction: resolution.instruction }
+    );
+    return {
+      resolution,
+      status: "RECOVERING",
+      pendingHITL: false,
+      requiresApproval: false,
+      approvalHandled: true,
+      replanContext: [
+        {
+          node: "replan",
+          reason: "human_instruction",
+          retry: 1,
+          detail: resolution.instruction,
+          timestamp: new Date().toISOString(),
+        },
+      ],
+      next: "replan",
+    };
+  }
+
   if (resolution.action === "override" && resolution.overrideTarget != null) {
     if (currentProduct) {
       const updated = recheck(currentProduct.product, input, resolution.overrideTarget);

@@ -27,6 +27,7 @@ import {
   Lock,
   LoaderCircle,
   ExternalLink,
+  Send,
 } from "lucide-react";
 
 const EVENT_LABELS: Record<string, string> = {
@@ -132,6 +133,7 @@ export default function LiveRunPage({
   const [previewScreenshot, setPreviewScreenshot] = useState<string | null>(
     null,
   );
+  const [instruction, setInstruction] = useState("");
   const previewOverlayRef = useRef<HTMLDivElement | null>(null);
 
   // Unwrap async params once on mount
@@ -220,7 +222,7 @@ export default function LiveRunPage({
   ];
 
   async function postResolve(
-    action: "approve" | "override" | "abort",
+    action: "approve" | "override" | "abort" | "custom",
     body: object = {},
   ) {
     if (!runId) return;
@@ -256,6 +258,13 @@ export default function LiveRunPage({
     const target = parseFloat(overrideTarget);
     if (!Number.isFinite(target) || target <= 0) return;
     await postResolve("override", { overrideTarget: target });
+    setHitlResolved(true);
+  }
+
+  async function handleCustomInstruction() {
+    const trimmed = instruction.trim();
+    if (!trimmed) return;
+    await postResolve("custom", { instruction: trimmed });
     setHitlResolved(true);
   }
 
@@ -593,6 +602,31 @@ export default function LiveRunPage({
                       <XCircle className="size-4" />
                       Abort Task
                     </Button>
+                    <div className="flex flex-col gap-2 border-t border-border pt-3">
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                        Or type your own instruction
+                      </span>
+                      <textarea
+                        value={instruction}
+                        onChange={(e) => setInstruction(e.target.value)}
+                        rows={3}
+                        placeholder="e.g. Change the quantity to 3 units and continue."
+                        className="w-full resize-none px-3 py-2 border border-border rounded-lg bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all"
+                      />
+                      <Button
+                        size="sm"
+                        className="w-full gap-2"
+                        disabled={isResolving || !instruction.trim()}
+                        onClick={handleCustomInstruction}
+                      >
+                        {isResolving ? (
+                          <span className="size-3.5 rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground animate-spin" />
+                        ) : (
+                          <Send className="size-4" />
+                        )}
+                        Send Instruction
+                      </Button>
+                    </div>
                     {resolveError && (
                       <p
                         role="alert"

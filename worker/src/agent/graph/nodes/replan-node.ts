@@ -33,13 +33,27 @@ export async function replanNode(
     "pending"
   );
 
-  const contextText = replanContext
-    .map((e) => `- node=${e.node}, reason=${e.reason}, retry=${e.retry}: ${e.detail}`)
-    .join("\n");
+  const humanInstruction = replanContext.find(
+    (e) => e.reason === "human_instruction"
+  )?.detail;
+
+  // A human instruction is the operator directing the run; fed to the planner as
+  // the primary revised requirement. Failure context is the same structured list
+  // otherwise (Phase C).
+  const contextText = humanInstruction
+    ? `The human operator gave this instruction — treat it as the highest-priority requirement for the revised plan: ${humanInstruction}`
+    : replanContext
+        .map((e) => `- node=${e.node}, reason=${e.reason}, retry=${e.retry}: ${e.detail}`)
+        .join("\n");
 
   let planResult;
   try {
-    planResult = await planGoal(input, contextText);
+    // When a human already gave an instruction at the approval gate, don't
+    // re-inject a pause_for_approval step into the revised plan — they've
+    // already engaged, and re-pausing would block them again.
+    planResult = await planGoal(input, contextText, {
+      skipApprovalInjection: Boolean(humanInstruction),
+    });
   } catch (error: unknown) {
     return failRun(
       runId,

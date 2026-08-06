@@ -55,8 +55,10 @@ export interface Discrepancy {
 }
 
 export interface ApprovalResolution {
-  action: "approve" | "override" | "abort";
+  action: "approve" | "override" | "abort" | "custom";
   overrideTarget?: number;
+  /** Free-form operator instruction sent with a "custom" resolution. */
+  instruction?: string;
 }
 
 export interface ApprovalRequest {

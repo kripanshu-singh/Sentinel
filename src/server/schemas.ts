@@ -145,6 +145,10 @@ export const ApprovalResolutionSchema = z.discriminatedUnion("action", [
     overrideTarget: z.number().positive(),
   }),
   z.object({ action: z.literal("abort") }),
+  z.object({
+    action: z.literal("custom"),
+    instruction: z.string().min(1).max(500),
+  }),
 ]);
 
 export type ApprovalResolution = z.infer<typeof ApprovalResolutionSchema>;

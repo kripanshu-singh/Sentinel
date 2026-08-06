@@ -75,8 +75,12 @@ export function buildSentinelGraph() {
     )
     .addConditionalEdges(
       "hitl",
-      (s: SentinelStateValue) => (s.next === "end" ? END : "execute"),
-      ["execute", END]
+      (s: SentinelStateValue) => {
+        if (s.next === "end") return END;
+        if (s.next === "replan") return "replan";
+        return "execute";
+      },
+      ["execute", "replan", END]
     )
     .addConditionalEdges(
       "replan",

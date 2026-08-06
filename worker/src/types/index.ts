@@ -77,11 +77,13 @@ export interface Discrepancy {
   severity: "low" | "medium" | "high";
 }
 
-export type ApprovalAction = "approve" | "override" | "abort";
+export type ApprovalAction = "approve" | "override" | "abort" | "custom";
 
 export interface ApprovalResolution {
   action: ApprovalAction;
   overrideTarget?: number;
+  /** Free-form operator instruction sent with a "custom" resolution. */
+  instruction?: string;
 }
 
 export interface ApprovalRequest {
