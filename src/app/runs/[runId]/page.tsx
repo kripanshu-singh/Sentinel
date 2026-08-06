@@ -26,6 +26,7 @@ import {
   Edit3,
   Lock,
   LoaderCircle,
+  ExternalLink,
 } from "lucide-react";
 
 const EVENT_LABELS: Record<string, string> = {
@@ -84,19 +85,21 @@ function AgentStreamRow({
       <div className="flex flex-col gap-2">
         <p className="text-foreground/80 leading-relaxed">{event.detail}</p>
         {screenshot && (
-          <div className="flex items-center gap-3">
+          <a
+            href={screenshot}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex rounded overflow-hidden border border-border hover:ring-2 hover:ring-primary/30 transition-shadow"
+          >
             <Image
               src={screenshot}
               alt={event.title}
-              width={40}
-              height={40}
+              width={120}
+              height={90}
               unoptimized
-              className="size-10 rounded border border-border object-cover"
+              className="block object-cover"
             />
-            <span className="text-[11px] text-muted-foreground leading-snug">
-              Screenshot evidence
-            </span>
-          </div>
+          </a>
         )}
       </div>
     </div>
