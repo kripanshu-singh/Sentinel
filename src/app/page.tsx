@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { SidebarInset } from "@/components/ui/sidebar";
 import {
@@ -16,6 +15,7 @@ import {
   HelpCircle,
   Bot,
   Sparkles,
+  PencilLine,
 } from "lucide-react";
 
 type ConversationTurn = { role: "user" | "assistant"; content: string };
@@ -56,12 +56,6 @@ const SUGGESTED_WORKFLOWS = [
   },
 ];
 
-const FALLBACK_OPTIONS = [
-  { value: "default_wholesale", label: "Default wholesale tier" },
-  { value: "best_available", label: "Best available code" },
-  { value: "abort", label: "Abort" },
-];
-
 export default function GoalInputPage() {
   const [goal, setGoal] = useState("");
   const [targetPrice, setTargetPrice] = useState("");
@@ -78,6 +72,17 @@ export default function GoalInputPage() {
   function handleWorkflowClick(workflowGoal: string) {
     setGoal(workflowGoal);
     setAssistantMessage(null);
+  }
+
+  function handleNewWorkflow() {
+    setGoal("");
+    setTargetPrice("");
+    setVariancePct("10");
+    setDiscountCode("");
+    setFallback("default_wholesale");
+    setSubmitError(null);
+    setAssistantMessage(null);
+    setConversation([]);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -147,7 +152,16 @@ export default function GoalInputPage() {
       {/* Top Bar */}
       <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="flex items-center gap-4">
-          <SidebarTrigger />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="gap-2 text-muted-foreground hover:text-foreground"
+            onClick={handleNewWorkflow}
+          >
+            <PencilLine className="size-4" />
+            New workflow
+          </Button>
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
             <span className="hover:text-primary cursor-pointer transition-colors">
               Reconciliation
