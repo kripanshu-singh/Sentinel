@@ -5,17 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import {
-  Avatar,
-  AvatarFallback,
-} from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { SentinelNavbar } from "@/components/sentinel-navbar";
 import {
   Play,
   Paperclip,
@@ -25,9 +15,6 @@ import {
   Workflow,
   Bot,
   Sparkles,
-  ShieldCheck,
-  Plus,
-  Bell,
 } from "lucide-react";
 
 type ConversationTurn = { role: "user" | "assistant"; content: string };
@@ -204,64 +191,7 @@ export default function GoalInputPage() {
 
   return (
     <SidebarInset>
-      {/* Navbar */}
-      <header className="sticky top-0 z-20 flex items-center justify-between h-14 px-5 bg-background/80 backdrop-blur-md border-b border-border">
-        {/* Left: Brand */}
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center justify-center size-7 rounded-lg bg-primary/10">
-            <ShieldCheck className="size-4 text-primary" aria-hidden="true" />
-          </div>
-          <span className="text-sm font-semibold tracking-tight text-foreground">
-            Sentinel
-          </span>
-          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-mono">
-            v0.1
-          </Badge>
-        </div>
-
-        {/* Right: actions */}
-        <div className="flex items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleNewWorkflow}
-                className="gap-1.5 text-muted-foreground"
-              >
-                <Plus className="size-3.5" aria-hidden="true" />
-                New run
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Start a new procurement run</TooltipContent>
-          </Tooltip>
-
-          <Separator orientation="vertical" className="h-5 mx-1" />
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-8 text-muted-foreground relative"
-                aria-label="Notifications"
-              >
-                <Bell className="size-4" aria-hidden="true" />
-                <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Notifications</TooltipContent>
-          </Tooltip>
-
-          <Avatar size="sm" className="ml-1 cursor-pointer">
-            <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
-              EA
-            </AvatarFallback>
-          </Avatar>
-        </div>
-      </header>
+      <SentinelNavbar onNewRun={handleNewWorkflow} />
 
       {/* Main Canvas */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 md:px-8 py-12 relative overflow-hidden">

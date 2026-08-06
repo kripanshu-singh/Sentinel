@@ -5,17 +5,14 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { SentinelNavbar } from "@/components/sentinel-navbar";
 import { useRunStream } from "@/hooks/use-run-stream";
 import { buildPhases } from "@/lib/run-progress";
 import type { AgentEvent, Discrepancy, RunStatus, RunSummary } from "@/types";
 import {
-  Bell,
-  HelpCircle,
-  ChevronRight,
   CheckCircle2,
   Terminal,
   AlertTriangle,
@@ -277,46 +274,24 @@ export default function LiveRunPage({
 
   return (
     <SidebarInset>
-      {/* Top Bar */}
-      <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="flex items-center gap-4">
-          <SidebarTrigger />
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>Agent Runs</span>
-            <ChevronRight className="size-4" />
-            <span className="text-foreground font-semibold">
-              Run ID: {runId ?? "…"}
-            </span>
-            {isTerminal ? (
-              <span
-                className={cn(
-                  "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ml-1",
-                  status === "DONE" && "bg-primary/10 text-primary",
-                  (status === "FAILED" || status === "ABORTED") &&
-                    "bg-destructive/10 text-destructive",
-                )}
-              >
-                {status}
-              </span>
-            ) : (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary ml-1">
-                {isConnected ? "Live" : "Connecting…"}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="text-muted-foreground hover:text-primary transition-colors">
-            <Bell className="size-4" />
-          </button>
-          <button className="text-muted-foreground hover:text-primary transition-colors">
-            <HelpCircle className="size-4" />
-          </button>
-          <div className="size-8 rounded-full bg-muted border border-border flex items-center justify-center">
-            <span className="text-primary text-xs font-semibold">EA</span>
-          </div>
-        </div>
-      </header>
+      <SentinelNavbar
+        breadcrumbs={[
+          { label: "Runs", href: "/" },
+          { label: runId ? `Run ${runId.slice(0, 8)}…` : "…" },
+        ]}
+        statusBadge={
+          isTerminal
+            ? {
+                label: status ?? "",
+                variant:
+                  status === "DONE" ? "primary" : "destructive",
+              }
+            : {
+                label: isConnected ? "Live" : "Connecting…",
+                variant: "primary",
+              }
+        }
+      />
 
       <main className="flex-1 flex flex-col gap-5 p-6 overflow-hidden">
         {/* Terminal-state banner */}
