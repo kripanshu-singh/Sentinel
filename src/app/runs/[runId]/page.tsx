@@ -398,12 +398,13 @@ export default function LiveRunPage({
         </div>
 
         {/* Three-pane resizable layout */}
+        <div className="flex-1 min-h-0 w-full rounded-xl border border-border shadow-xs overflow-hidden">
         <ResizablePanelGroup
           orientation="horizontal"
-          className="flex-1 min-h-0 h-full w-full rounded-xl border border-border bg-background shadow-xs overflow-hidden"
+          className="h-full w-full bg-background"
         >
           {/* Left panel: Agent stream */}
-          <ResizablePanel defaultSize={28} minSize={22} maxSize={38} className="bg-card flex flex-col min-h-0">
+          <ResizablePanel defaultSize={28} minSize={22} maxSize={38} className="bg-card flex flex-col overflow-hidden">
             <div className="px-4 py-3 border-b border-border bg-muted/20 flex items-center justify-between shrink-0">
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                 <Terminal className="size-3.5 text-primary" />
@@ -458,7 +459,7 @@ export default function LiveRunPage({
           <ResizableHandle withHandle />
 
           {/* Center panel: live browser capture */}
-          <ResizablePanel defaultSize={44} minSize={30} maxSize={60} className="bg-background flex flex-col min-h-0">
+          <ResizablePanel defaultSize={44} minSize={30} maxSize={60} className="bg-background flex flex-col overflow-hidden">
             {/* Browser chrome */}
             <div className="px-4 py-2.5 border-b border-border bg-muted/20 flex items-center gap-3 shrink-0">
               <div className="flex gap-1.5 shrink-0">
@@ -499,7 +500,7 @@ export default function LiveRunPage({
           <ResizableHandle withHandle />
 
           {/* Right panel: HITL control */}
-          <ResizablePanel defaultSize={28} minSize={22} maxSize={38} className="bg-card flex flex-col min-h-0">
+          <ResizablePanel defaultSize={28} minSize={22} maxSize={38} className="bg-card flex flex-col overflow-hidden">
             <div className="px-4 py-3 border-b border-border bg-muted/20 flex items-center shrink-0">
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Control Panel
@@ -705,6 +706,7 @@ export default function LiveRunPage({
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
+        </div>
       </main>
       {previewScreenshot && (
         <div
