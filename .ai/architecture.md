@@ -26,9 +26,9 @@ deliberate; it is driven by the hard constraints of an *acting* agent, not by ta
 
 ```
 ┌───────────────────────────────────┐          ┌──────────────────────────────────────┐
-│   Next.js (this repo)  Frontend   │          │   Worker / Backend (separate repo)   │
-│   - Goal input screen             │          │   - Agent orchestration (state       │
-│   - Live run screen (event stream)│          │     machine / step loop)             │
+│   Next.js (this repo)  Frontend   │          │   Worker / Backend (in-tree `worker/`)│
+│   - Goal input screen             │          │   - Agent orchestration (LangGraph.js │
+│   - Live run screen (event stream)│          │     StateGraph, see ADR-011)          │
 │   - HITL approval modal           │          │   - LLM calls (Gemini 2.5 Flash,     │
 │   - Result screen (table + CSV)   │  HTTP/SSE │     OpenRouter/Groq/Ollama fallback) │
 │   - Thin API routes (Zod-validated)│◄────────►│   - Playwright browser session      │
@@ -52,8 +52,12 @@ deliberate; it is driven by the hard constraints of an *acting* agent, not by ta
   repo — the sole exception is the intent gatekeeper (`src/server/intent-classifier.ts`,
   `POST /api/intent`), a stateless per-prompt classifier that decides whether a prompt is a
   browser task before a run is enqueued (see ADR-010).
-- **Worker service** — owns the agent loop: plan → act → observe → check rules → (pause for
-  HITL) → resume. Owns the Playwright browser, LLM orchestration, and the rule engine. Streams
+- **Worker service** (`worker/`, in-tree) — owns the agent graph: a LangGraph.js
+  `StateGraph` that runs `plan → execute (step machine) ⇄ extract/validate → report`,
+  with a HITL gate (`validate → hitl`) and a bounded replan loop
+  (`validate/execute → replan → execute`) — see ADR-011 and
+  `.ai/langgraph-migration.md`. Owns the Playwright browser (via `SessionManager`,
+  state stores only a `sessionId`), LLM orchestration, and the rule engine. Streams
   events down; accepts resolutions up.
 - **PostgreSQL** — durable records: agent runs, approvals, discrepancies, generated reports.
 - **Redis** — job queue for runs, ephemeral run state, and pub/sub used to fan events to
@@ -73,23 +77,54 @@ deliberate; it is driven by the hard constraints of an *acting* agent, not by ta
 
 ```
 PARSED ──► NAVIGATING ──► EXTRACTING ──► CHECKING
-                                          │
-                     threshold crossed? ──┤ no ──► (auto-continue)
-                                   │ yes
-                                   ▼
-                              HITL_PENDING ◄── emits approval request, waits
-                                   │  resolve: approve | override | abort
-                                   ├─ approve ──► RESUME
-                                   ├─ override ─► CHECKING (recompute against new target)
-                                   └─ abort ────► ABORTED
+                                           │
+                 low confidence / missing? ─┤ yes ──► RECOVERING (replan, per-node cap)
+                                           │ no              │ revised plan
+                                           │                 └──► NAVIGATING (replay)
+                      threshold crossed? ──┤ no ──► (auto-continue)
+                                    │ yes
+                                    ▼
+                               HITL_PENDING ◄── emits approval request, waits
+                                    │  resolve: approve | override | abort
+                                    ├─ approve ──► RESUME
+                                    ├─ override ─► CHECKING (recompute against new target)
+                                    └─ abort ────► ABORTED
    RESUME ──► FORM_FILLING ──► VALIDATING
-                                   │  coupon/field failure?
-                                   ├─ no ──► DRAFT_READY ──► DONE
-                                   └─ yes ► RECOVERING (fallback policy) ──► DRAFT_READY
+                                    │  coupon/field failure?
+                                    ├─ no ──► DRAFT_READY ──► DONE
+                                    └─ yes ► RECOVERING (fallback policy) ──► DRAFT_READY
+                                        │  step error (bounded replan) ─► RECOVERING ─► retry
 ```
 
 `ABORTED`, `DONE`, and `FAILED` are terminal. `FAILED` is used only for unrecoverable
-engineering errors; business rule failures always route through `RECOVERING` or `HITL_PENDING`.
+engineering errors or a replan budget exhausted after 2 retries; business rule failures
+always route through `RECOVERING` or `HITL_PENDING`. The worker implements this state
+machine as a LangGraph.js `StateGraph` (`worker/src/agent/graph/`) — see ADR-011.
+
+## Worker module layout (`worker/`, in-tree)
+
+```
+worker/src/
+  index.ts          # Express server + BullMQ worker bootstrap
+  routes/           # /runs, /runs/:id, /runs/:id/resolve, /runs/:id/stream
+  queue/jobs.ts     # BullMQ job handler → runGraph(runId, input)
+  agent/
+    graph/          # LangGraph.js StateGraph (ADR-011)
+      state.ts      #   SentinelState schema + reducers
+      graph.ts      #   buildSentinelGraph() + runGraph()
+      emit.ts       #   shared side effects (DB insert + Redis pub/sub)
+      retry.ts      #   MAX_RETRIES_PER_NODE, retryUpdate(), failRun()
+      nodes/        #   plan | execute | extract | validate | hitl | replan | report_node
+    actions/        # tiny action executors (navigate/search/addToCart/coupon/fill/screenshot)
+    session/        # SessionManager — browser lifecycle outside graph state
+    planner.ts      # LLM goal → PlanResult (+ failure context for replan)
+    navigator.ts    # Playwright wrapper (reused)
+    extractor.ts    # DOM → { product, confidence } / invoice
+    rule-engine.ts  # checkProduct / recheck (pure rules)
+    coupon.ts, form-filler.ts
+  storage/          # db.ts (Postgres schema), redis.ts (queue, pub/sub, BLPOP HITL)
+  types/            # worker-side mirror of the shared contract
+```
 
 ## Module Boundaries (Next.js app)
 
@@ -144,5 +179,7 @@ shapes. Changing them is a cross-service change — update every consumer.
   they can be mocked in tests.
 - **No secrets in the browser bundle.** API keys, LLM credentials, DB URLs live only in the
   worker and server env.
-- **The worker is out of tree.** Unless a change is explicitly about the shared contract
-  (`src/types/`), worker work belongs in its own repository.
+- **The worker lives in-tree at `worker/`.** It is a separate service *process* (own port,
+  own BullMQ + Playwright) but shares this repository, so its code is reviewed, tested, and
+  versioned with the frontend (see ADR-011). The shared contract in `src/types/` is the
+  seam between them.

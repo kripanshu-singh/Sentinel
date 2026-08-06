@@ -15,13 +15,13 @@ Status legend: `[x] done · [~] in progress · [ ] planned`
 - [ ] HITL modal: `ApprovalRequest` → **Approve & Continue / Override Target / Abort** → resolution sent back.
 - [ ] Result screen: invoice `Table`, discrepancy/human-confirmed flags, CSV export.
 
-## Phase 2 — Worker service (separate repo)
-- [ ] Agent step loop (state machine per `.ai/architecture.md`): plan → act → observe → check → pause → resume.
-- [ ] Playwright browser session + storefront navigation/search/extraction.
-- [ ] Rule engine: variance, margin, coupon-required checks against `BusinessRule`s.
-- [ ] LLM orchestration: Gemini 2.5 Flash primary, OpenRouter/Groq/Ollama fallback, structured output.
-- [ ] SSE event stream down + WebSocket/HTTP HITL resolution up; Redis pub/sub + queue.
-- [ ] Graceful recovery: coupon/field failures → `RECOVERING` fallback policy.
+## Phase 2 — Worker service (in-tree `worker/`)
+- [x] Agent orchestration as a LangGraph.js `StateGraph` (ADR-011): `plan → execute ⇄ extract/validate → report`, HITL gate, bounded replan loop (`worker/src/agent/graph/`). Replaced the old `AgentRunner` step-loop.
+- [x] Playwright browser session + storefront navigation/search/extraction (via `SessionManager` + action executors).
+- [x] Rule engine: variance, margin, coupon-required checks against `GoalInput` (`worker/src/agent/rule-engine.ts`).
+- [x] LLM orchestration: Gemini 2.5 Flash primary, OpenRouter/Groq/Ollama fallback, structured output.
+- [x] SSE event stream down + HTTP HITL resolution up; Redis pub/sub + BullMQ queue.
+- [x] Graceful recovery: coupon/field failures → `RECOVERING` fallback policy; extraction/step failures → bounded replan → `FAILED` at cap.
 
 ## Phase 3 — Reconciliation engine
 - [ ] Normalized invoice/line-item extraction from the final review screen.

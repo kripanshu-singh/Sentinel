@@ -1,6 +1,8 @@
 # Sentinel — Worker Migration Plan: LangGraph.js Orchestration
 
-**Status:** Draft (design review — no code changes yet)
+**Status:** Complete — all four phases landed (A: linear graph, B: HITL edge,
+C: replan loop, D: cleanup) on 2026-08-06. `AgentRunner` is deleted; the worker is
+orchestrated by a LangGraph.js `StateGraph` (ADR-011, Accepted).
 **Date:** 2026-08-06
 **Scope:** Replace the hand-rolled `AgentRunner` step-loop in `worker/` with a
 LangGraph.js `StateGraph`. No frontend contract changes unless explicitly listed.
@@ -340,9 +342,14 @@ to `replan` (`nodeRetries.execute` 1→2) then FAILED at cap; `replan` produces 
 revised plan (→ `execute`, `stepIndex: 0`) or FAILED on empty plan. Final-invoice
 sanity mode (§6) is deferred — report node already gates the invoice before commit.
 
-**Phase D — Cleanup**
+**Phase D — Cleanup** ✅ done (2026-08-06)
 Delete `runner.ts`; update `.ai/architecture.md` (worker in-tree + graph),
 `decisions.md` (new ADR, Status: Accepted), `roadmap.md` Phase 2 items. Full re-verify.
+`runner.ts` deleted; `architecture.md` (diagram, worker responsibilities, lifecycle +
+replan, worker module layout, in-tree convention), `roadmap.md` Phase 2 (in-tree + done),
+and this plan all updated. ADR-011 was already recorded as Accepted in `decisions.md`.
+Worker `npm run lint`/`build` and repo `npm run lint`/`build` all green; graph still
+compiles with 7 nodes.
 
 ## 15. Risks & tradeoffs
 
@@ -398,20 +405,10 @@ Delete `runner.ts`; update `.ai/architecture.md` (worker in-tree + graph),
 - Surfacing `PlanResult` (risk/confidence/steps) in the UI.
 - Python rewrite.
 
-## 17. Proposed ADR (append to `.ai/decisions.md` when approved)
+## 17. ADR
 
-```
-### ADR-011 — Worker orchestration on LangGraph.js (in-tree worker/)
-- Status: Proposed (2026-08-06)
-- Context: AgentRunner's linear switch cannot express validator-driven replan loops.
-- Decision: Orchestrate the worker with LangGraph.js StateGraph. Deterministic edges for the
-  happy path; conditional edges only for validate→replan (per-node retry cap) and
-  validate→HITL. SessionManager owns browser lifecycle (state stores sessionId only);
-  action executors keep nodes small. Keep Redis BLPOP HITL for MVP (swappable to
-  interrupt() without graph changes), keep LLMProvider and event streaming, keep the shared
-  frontend contract unchanged. Worker stays in-tree at worker/.
-- Consequences: worker/ gains @langchain/langgraph; runner.ts is removed; .ai docs updated.
-```
+Recorded in `.ai/decisions.md` as **ADR-011 — Worker orchestration on LangGraph.js
+(in-tree worker/)**, **Status: Accepted (2026-08-06)**. Excerpt from the decision record:
 
 ## 18. Open questions (non-blocking)
 
