@@ -50,6 +50,7 @@ export default function GoalInputPage() {
   const [discountCode, setDiscountCode] = useState("");
   const [fallback, setFallback] = useState("default_wholesale");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const router = useRouter();
 
   function handleWorkflowClick(workflowGoal: string) {
@@ -60,8 +61,33 @@ export default function GoalInputPage() {
     e.preventDefault();
     if (!goal.trim()) return;
     setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 800));
-    router.push("/runs/1");
+    setSubmitError(null);
+
+    try {
+      const res = await fetch("/api/runs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          goal: goal.trim(),
+          targetUnitPrice: targetPrice ? parseFloat(targetPrice) : undefined,
+          varianceThresholdPct: parseFloat(variancePct) || 10,
+          discountCode: discountCode.trim() || undefined,
+          fallbackPolicy: fallback,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json() as { error?: string };
+        throw new Error(body.error ?? `Server error ${res.status}`);
+      }
+
+      const { runId } = await res.json() as { runId: string };
+      router.push(`/runs/${runId}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to start run";
+      setSubmitError(message);
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -161,6 +187,13 @@ export default function GoalInputPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Submit error */}
+              {submitError && (
+                <p role="alert" className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-2">
+                  {submitError}
+                </p>
+              )}
 
               {/* Business rules */}
               <fieldset className="bg-card border border-border rounded-xl p-5 flex flex-col gap-4">

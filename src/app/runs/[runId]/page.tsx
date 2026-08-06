@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -71,12 +71,23 @@ function AgentStreamRow({ event }: { event: AgentEvent }) {
   );
 }
 
-export default function LiveRunPage() {
+export default function LiveRunPage({
+  params,
+}: {
+  params: Promise<{ runId: string }>;
+}) {
   const router = useRouter();
-  const [runId] = useState("1");
-  const { events, isConnected, error } = useRunStream(runId);
+  const [runId, setRunId] = useState<string | null>(null);
   const [hitlResolved, setHitlResolved] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+
+  // Unwrap async params once on mount
+  useEffect(() => {
+    params.then((p) => setRunId(p.runId));
+  }, [params]);
+
+  const { events, isConnected, error } = useRunStream(runId ?? "");
 
   const hasHITL = events.some((e) => e.type === "HITL") && !hitlResolved;
 
@@ -87,17 +98,36 @@ export default function LiveRunPage() {
     { label: "Checkout", done: false, icon: ShoppingCart },
   ];
 
-  async function handleApprove() {
+  async function postResolve(action: "approve" | "abort", body: object = {}) {
+    if (!runId) return;
     setIsResolving(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setHitlResolved(true);
+    setResolveError(null);
+    try {
+      const res = await fetch(`/api/runs/${encodeURIComponent(runId)}/resolve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, ...body }),
+      });
+      if (!res.ok) {
+        const data = await res.json() as { error?: string };
+        throw new Error(data.error ?? `Error ${res.status}`);
+      }
+    } catch (err: unknown) {
+      setResolveError(err instanceof Error ? err.message : "Resolution failed");
+      setIsResolving(false);
+      return;
+    }
     setIsResolving(false);
   }
 
+  async function handleApprove() {
+    await postResolve("approve");
+    setHitlResolved(true);
+  }
+
   async function handleAbort() {
-    setIsResolving(true);
-    await new Promise((r) => setTimeout(r, 800));
-    router.push("/runs/1/result");
+    await postResolve("abort");
+    if (runId) router.push(`/runs/${encodeURIComponent(runId)}/result`);
   }
 
   return (
@@ -358,6 +388,11 @@ export default function LiveRunPage() {
                         <XCircle className="size-4" />
                         Abort Task
                       </Button>
+                      {resolveError && (
+                        <p role="alert" className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded px-2 py-1">
+                          {resolveError}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
