@@ -38,11 +38,23 @@ export class Navigator {
     await page.goto(url, { waitUntil: "networkidle" });
   }
 
-  async search(query: string, selector = 'input[type="search"], input[name="q"], input[placeholder*="Search" i]'): Promise<void> {
+  async search(query: string): Promise<void> {
     const page = this.getPage();
-    await page.waitForSelector(selector, { timeout: 10000 });
-    await page.fill(selector, query);
-    await page.press(selector, "Enter");
+    const searchInput = page
+      .locator('input[type="search"], input[name="q"], input[placeholder*="Search" i]')
+      .first();
+
+    try {
+      await searchInput.waitFor({ state: "visible", timeout: 3000 });
+    } catch {
+      // Storefronts without a search box (e.g. Sauce Demo) expose the full
+      // product grid; the extractor picks the matching product from it.
+      await page.locator(".inventory_list").waitFor({ timeout: 10000 });
+      return;
+    }
+
+    await searchInput.fill(query);
+    await searchInput.press("Enter");
     await page.waitForLoadState("networkidle");
   }
 

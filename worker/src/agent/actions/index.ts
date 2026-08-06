@@ -8,7 +8,7 @@
 
 import type { Page } from "playwright";
 import type { Navigator } from "../navigator.js";
-import { updateCartQuantity, clickAddToCart, fillCheckoutForm } from "../form-filler.js";
+import { updateCartQuantity, clickAddToCart, completeCheckout, loginToStore } from "../form-filler.js";
 import { applyCouponCode, handleCouponFallback } from "../coupon.js";
 import type { FallbackPolicy } from "../../types/index.js";
 
@@ -20,6 +20,10 @@ export interface ActionContext {
 export interface ActionResult {
   url?: string;
   screenshot?: string;
+}
+
+export interface LoginActionResult extends ActionResult {
+  authenticated: boolean;
 }
 
 export interface CouponActionResult extends ActionResult {
@@ -40,6 +44,15 @@ async function screenshotOf(page: Page): Promise<string | undefined> {
 export async function navigate(ctx: ActionContext, url: string): Promise<ActionResult> {
   await ctx.navigator.navigate(url);
   return { url, screenshot: await screenshotOf(ctx.page) };
+}
+
+export async function login(
+  ctx: ActionContext,
+  username: string,
+  password: string
+): Promise<LoginActionResult> {
+  const authenticated = await loginToStore(ctx.page, username, password);
+  return { authenticated, screenshot: await screenshotOf(ctx.page) };
 }
 
 export async function search(ctx: ActionContext, query: string): Promise<ActionResult> {
@@ -73,7 +86,7 @@ export async function fillForm(
   ctx: ActionContext,
   fields: Record<string, string>
 ): Promise<ActionResult> {
-  await fillCheckoutForm(ctx.page, fields);
+  await completeCheckout(ctx.page, fields);
   return { screenshot: await screenshotOf(ctx.page) };
 }
 

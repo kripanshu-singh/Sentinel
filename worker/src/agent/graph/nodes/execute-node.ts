@@ -21,15 +21,16 @@ import { failRun, MAX_RETRIES_PER_NODE, retryUpdate } from "../retry.js";
 import type { StepPlan } from "../../../types/index.js";
 import type { SentinelStateUpdate, SentinelStateValue } from "../state.js";
 
-const DEFAULT_STOREFRONT_URL = "https://thread-shopping.netlify.app/";
+const DEFAULT_STOREFRONT_URL = "https://www.saucedemo.com/";
+
+// Public demo credentials for Sauce Demo (standard_user / secret_sauce) — not secrets.
+const SAUCEDEMO_USERNAME = "standard_user";
+const SAUCEDEMO_PASSWORD = "secret_sauce";
 
 const SHIPPING_FIELDS = {
   firstName: "Sentinel",
   lastName: "Reconciler",
-  address: "123 Automated Blvd",
-  city: "San Francisco",
   postalCode: "94103",
-  email: "operator@sentinel-recon.ai",
 };
 
 function quantityFromGoal(goal: string): number {
@@ -81,7 +82,27 @@ export async function executeNode(
       await emitEvent(runId, "NAVIGATE", "Navigating", `Opening url: ${url}`, "pending");
       const result = await actions.navigate(ctx, url);
       await emitEvent(runId, "NAVIGATE", "Navigation complete", `Loaded ${url}`, "success");
-      return { ...base, currentURL: result.url ?? url, currentScreenshot: result.screenshot ?? null };
+
+      // Portals gate the catalog behind a login form (Sauce Demo does). Sign in
+      // with the demo account so the product listing is reachable; no-op if the
+      // storefront exposes no login form.
+      const loginResult = await actions.login(ctx, SAUCEDEMO_USERNAME, SAUCEDEMO_PASSWORD);
+      if (loginResult.authenticated) {
+        await emitEvent(
+          runId,
+          "NAVIGATE",
+          "Signed in",
+          "Authenticated to vendor portal with demo credentials",
+          "success",
+          { screenshot: loginResult.screenshot }
+        );
+      }
+
+      return {
+        ...base,
+        currentURL: result.url ?? url,
+        currentScreenshot: loginResult.screenshot ?? result.screenshot ?? null,
+      };
     }
 
     case "search": {
@@ -128,9 +149,9 @@ export async function executeNode(
 
     case "fill_form": {
       await transition(runId, "FORM_FILLING");
-      await emitEvent(runId, "FORM_FILL", "Filling checkout forms", "Populating shipping address & buyer details...", "pending");
+      await emitEvent(runId, "FORM_FILL", "Opening checkout", "Moving cart to checkout and filling the shipping form...", "pending");
       const result = await actions.fillForm(ctx, SHIPPING_FIELDS);
-      await emitEvent(runId, "FORM_FILL", "Forms populated", "Shipping and contact information updated", "success");
+      await emitEvent(runId, "FORM_FILL", "Checkout prepared", "Shipping details filled; order staged at the final review screen", "success");
       return { ...base, currentScreenshot: result.screenshot ?? null };
     }
 

@@ -32,11 +32,55 @@ export async function updateCartQuantity(
 
 export async function clickAddToCart(
   page: Page,
-  buttonSelector = 'button:has-text("Add to Cart"), button[id*="add-to-cart" i], .add-to-cart'
+  buttonSelector = 'button[id*="add-to-cart" i], button:has-text("Add to Cart"), .add-to-cart'
 ): Promise<void> {
-  await page.waitForSelector(buttonSelector, { timeout: 5000 });
-  await page.click(buttonSelector);
+  // `.first()` avoids Playwright strict-mode violations when the storefront
+  // renders several add-to-cart buttons at once (e.g. Sauce Demo inventory grid).
+  const button = page.locator(buttonSelector).first();
+  await button.waitFor({ timeout: 5000 });
+  await button.click();
   await page.waitForLoadState("networkidle");
+}
+
+/**
+ * Sign in to a login-gated storefront (Sauce Demo). No-op when the page shows
+ * no login form — returns false so callers can skip the auth event.
+ */
+export async function loginToStore(
+  page: Page,
+  username: string,
+  password: string
+): Promise<boolean> {
+  const loginButton = page.locator("#login-button");
+  if (!(await loginButton.isVisible().catch(() => false))) {
+    return false;
+  }
+  await page.fill("#user-name", username);
+  await page.fill("#password", password);
+  await loginButton.click();
+  await page.locator(".inventory_list").waitFor({ timeout: 15000 });
+  return true;
+}
+
+export async function openCartAndCheckout(page: Page): Promise<void> {
+  await page.locator("#shopping_cart_container").click();
+  await page.locator("#checkout").waitFor({ timeout: 10000 });
+  await page.locator("#checkout").click();
+  await page.locator("#first-name").waitFor({ timeout: 10000 });
+}
+
+export async function continueToReview(page: Page): Promise<void> {
+  await page.locator("#continue").click();
+  await page.locator(".checkout_summary_container").waitFor({ timeout: 10000 });
+}
+
+export async function completeCheckout(
+  page: Page,
+  fields: Record<string, string>
+): Promise<void> {
+  await openCartAndCheckout(page);
+  await fillCheckoutForm(page, fields);
+  await continueToReview(page);
 }
 
 export async function fillCheckoutForm(
@@ -49,7 +93,7 @@ export async function fillCheckoutForm(
     lastName: ['input[name*="last" i]', 'input[id*="last" i]', 'input[autocomplete*="family-name"]'],
     address: ['input[name*="address" i]', 'input[id*="address1" i]', 'input[autocomplete*="address-line1"]'],
     city: ['input[name*="city" i]', 'input[id*="city" i]', 'input[autocomplete*="address-level2"]'],
-    postalCode: ['input[name*="zip" i]', 'input[name*="post" i]', 'input[autocomplete*="postal-code"]'],
+    postalCode: ['input[id*="postal" i]', 'input[name*="zip" i]', 'input[name*="post" i]', 'input[autocomplete*="postal-code"]'],
     email: ['input[type="email"]', 'input[name*="email" i]'],
     phone: ['input[type="tel"]', 'input[name*="phone" i]'],
   };
