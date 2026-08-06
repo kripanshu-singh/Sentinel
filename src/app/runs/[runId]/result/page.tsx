@@ -40,7 +40,9 @@ const STATUS_CONFIG = {
 function exportCsv(runId: string, items: LineItem[]) {
   const escape = (v: string | number) => {
     const s = String(v);
-    return s.includes(",") || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
+    return s.includes(",") || s.includes('"')
+      ? `"${s.replace(/"/g, '""')}"`
+      : s;
   };
   const header = "SKU,Description,Qty,Unit Price,Discount,Line Total,Status";
   const rows = items.map((item) =>
@@ -54,7 +56,7 @@ function exportCsv(runId: string, items: LineItem[]) {
       item.status,
     ]
       .map(escape)
-      .join(",")
+      .join(","),
   );
   const csv = [header, ...rows].join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
@@ -85,6 +87,12 @@ export default function ResultPage({
       return res.json();
     },
     enabled: !!runId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      const report = query.state.data?.report;
+      return status === "DONE" && !report ? 2000 : false;
+    },
+    refetchOnWindowFocus: true,
   });
 
   const report = summary?.report;
@@ -102,7 +110,9 @@ export default function ResultPage({
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>Agent Runs</span>
             <ChevronRight className="size-4" />
-            <span className="text-foreground font-semibold">Run ID: {runId ?? "…"}</span>
+            <span className="text-foreground font-semibold">
+              Run ID: {runId ?? "…"}
+            </span>
             <ChevronRight className="size-4" />
             <span className="text-foreground font-semibold">Result Report</span>
           </div>
@@ -130,12 +140,17 @@ export default function ResultPage({
 
         {!isLoading && !report && (
           <div className="bg-card border border-border rounded-xl p-10 flex flex-col items-center gap-3 text-center">
-            <p className="text-sm font-semibold text-foreground">No report yet</p>
+            <p className="text-sm font-semibold text-foreground">
+              No report yet
+            </p>
             <p className="text-xs text-muted-foreground max-w-sm">
               The reconciliation report is generated when the run reaches the
               review screen. If the run just completed, refresh shortly.
             </p>
-            <Link href={`/runs/${encodeURIComponent(runId ?? "")}`} className="text-primary text-xs hover:underline mt-2">
+            <Link
+              href={`/runs/${encodeURIComponent(runId ?? "")}`}
+              className="text-primary text-xs hover:underline mt-2"
+            >
               ← Back to live run
             </Link>
           </div>
@@ -193,7 +208,13 @@ export default function ResultPage({
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-muted/50 border-b border-border">
-                        {["Kind", "Expected", "Actual", "Variance", "Severity"].map((col) => (
+                        {[
+                          "Kind",
+                          "Expected",
+                          "Actual",
+                          "Variance",
+                          "Severity",
+                        ].map((col) => (
                           <th
                             key={col}
                             className="text-left px-4 py-2.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap"
@@ -205,11 +226,16 @@ export default function ResultPage({
                     </thead>
                     <tbody>
                       {discrepancies.map((d, i) => (
-                        <tr key={i} className="border-b border-border last:border-0">
+                        <tr
+                          key={i}
+                          className="border-b border-border last:border-0"
+                        >
                           <td className="px-4 py-3 font-mono text-xs text-foreground uppercase">
                             {d.kind}
                           </td>
-                          <td className="px-4 py-3 font-mono">{String(d.expected)}</td>
+                          <td className="px-4 py-3 font-mono">
+                            {String(d.expected)}
+                          </td>
                           <td className="px-4 py-3 font-mono text-destructive">
                             {String(d.actual)}
                           </td>
@@ -223,7 +249,7 @@ export default function ResultPage({
                                 "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold",
                                 d.severity === "high"
                                   ? "bg-destructive/10 text-destructive"
-                                  : "bg-primary/10 text-primary"
+                                  : "bg-primary/10 text-primary",
                               )}
                             >
                               {d.severity}
@@ -254,22 +280,31 @@ export default function ResultPage({
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-muted/50 border-b border-border">
-                      {["SKU", "Description", "Qty", "Unit Price", "Discount", "Line Total", "Status"].map(
-                        (col) => (
-                          <th
-                            key={col}
-                            className="text-left px-4 py-2.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap"
-                          >
-                            {col}
-                          </th>
-                        )
-                      )}
+                      {[
+                        "SKU",
+                        "Description",
+                        "Qty",
+                        "Unit Price",
+                        "Discount",
+                        "Line Total",
+                        "Status",
+                      ].map((col) => (
+                        <th
+                          key={col}
+                          className="text-left px-4 py-2.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap"
+                        >
+                          {col}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
                     {lineItems.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="px-4 py-6 text-center text-xs text-muted-foreground">
+                        <td
+                          colSpan={7}
+                          className="px-4 py-6 text-center text-xs text-muted-foreground"
+                        >
                           No line items were extracted from the checkout review.
                         </td>
                       </tr>
@@ -282,8 +317,9 @@ export default function ResultPage({
                           key={item.sku}
                           className={cn(
                             "border-b border-border last:border-0 transition-colors",
-                            item.status === "flagged" && "bg-destructive/[0.03]",
-                            item.status === "confirmed" && "bg-primary/[0.02]"
+                            item.status === "flagged" &&
+                              "bg-destructive/[0.03]",
+                            item.status === "confirmed" && "bg-primary/[0.02]",
                           )}
                         >
                           <td className="px-4 py-3 font-mono text-xs text-muted-foreground whitespace-nowrap">
@@ -292,7 +328,9 @@ export default function ResultPage({
                           <td className="px-4 py-3 text-foreground max-w-[220px] truncate">
                             {item.description}
                           </td>
-                          <td className="px-4 py-3 text-right font-mono">{item.quantity}</td>
+                          <td className="px-4 py-3 text-right font-mono">
+                            {item.quantity}
+                          </td>
                           <td className="px-4 py-3 text-right font-mono">
                             ${item.unitPrice.toFixed(2)}
                           </td>
@@ -308,7 +346,7 @@ export default function ResultPage({
                             <span
                               className={cn(
                                 "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold",
-                                cfg.className
+                                cfg.className,
                               )}
                             >
                               <StatusIcon className="size-3" />
@@ -338,28 +376,43 @@ export default function ResultPage({
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-muted/50 border-b border-border">
-                        {["Channel", "Price / unit", "Discount", "Shipping", "Computed margin"].map(
-                          (col) => (
-                            <th
-                              key={col}
-                              className="text-left px-4 py-2.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap"
-                            >
-                              {col}
-                            </th>
-                          )
-                        )}
+                        {[
+                          "Channel",
+                          "Price / unit",
+                          "Discount",
+                          "Shipping",
+                          "Computed margin",
+                        ].map((col) => (
+                          <th
+                            key={col}
+                            className="text-left px-4 py-2.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap"
+                          >
+                            {col}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
                       {channels.map((ch) => (
-                        <tr key={ch.channel} className="border-b border-border last:border-0">
+                        <tr
+                          key={ch.channel}
+                          className="border-b border-border last:border-0"
+                        >
                           <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap">
                             {ch.channel}
                           </td>
-                          <td className="px-4 py-3 font-mono">${ch.price.toFixed(2)}</td>
-                          <td className="px-4 py-3 font-mono">${ch.discount.toFixed(2)}</td>
-                          <td className="px-4 py-3 font-mono">${ch.shipping.toFixed(2)}</td>
-                          <td className="px-4 py-3 font-mono">{ch.computedMargin.toFixed(1)}%</td>
+                          <td className="px-4 py-3 font-mono">
+                            ${ch.price.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 font-mono">
+                            ${ch.discount.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 font-mono">
+                            ${ch.shipping.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 font-mono">
+                            {ch.computedMargin.toFixed(1)}%
+                          </td>
                         </tr>
                       ))}
                     </tbody>
