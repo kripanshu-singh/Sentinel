@@ -52,11 +52,16 @@ export function checkProduct(
     const absPct = Math.abs(variancePct);
 
     if (absPct > 0.01) {
-      // Only flag non-trivial variance
+      // Only flag non-trivial variance. Any price ABOVE the target pauses for
+      // human approval (hard cap), regardless of how far over — that is what
+      // "if the price is higher than $25, pause" means. Prices below target
+      // auto-approve unless the variance is extreme.
       const severity: Discrepancy["severity"] =
-        absPct > rules.varianceThresholdPct * 2
-          ? "high"
-          : absPct > rules.varianceThresholdPct
+        actual > target
+          ? absPct > rules.varianceThresholdPct * 2
+            ? "high"
+            : "medium"
+          : absPct > rules.varianceThresholdPct * 2
           ? "medium"
           : "low";
 

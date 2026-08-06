@@ -9,6 +9,7 @@ import { nanoid } from "nanoid";
 import { db, runs, agentEvents, approvalRequests, reconciliationReports } from "../storage/db.js";
 import { eq } from "drizzle-orm";
 import { runsQueue } from "../queue/jobs.js";
+import { extractTargetPrice } from "../lib/goal-rules.js";
 import type { GoalInput, RunSummary } from "../types/index.js";
 
 const router = Router();
@@ -26,20 +27,25 @@ router.post("/", async (req: Request, res: Response) => {
 
   const runId = `PRQ-${nanoid(6).toUpperCase()}`;
 
+  // Derive the target price from the prompt when the caller didn't set one
+  // explicitly (e.g. "If the price is higher than $25, pause and ask for
+  // approval" → targetUnitPrice = 25).
+  const targetUnitPrice = input.targetUnitPrice ?? extractTargetPrice(input.goal);
+
   try {
     // 1. Create run record in Database
     await db.insert(runs).values({
       runId,
       goal: input.goal,
       status: "PENDING",
-      targetUnitPrice: input.targetUnitPrice,
+      targetUnitPrice,
       varianceThresholdPct: input.varianceThresholdPct,
       discountCode: input.discountCode,
       fallbackPolicy: input.fallbackPolicy,
     });
 
     // 2. Add job to Queue
-    await runsQueue.add(runId, { runId, input });
+    await runsQueue.add(runId, { runId, input: { ...input, targetUnitPrice } });
 
     res.status(201).json({ runId });
   } catch (err: unknown) {
