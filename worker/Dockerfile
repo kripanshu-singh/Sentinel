@@ -21,7 +21,10 @@ RUN npm run build
 # (runs as pwuser, uid 1000). The Navigator already launches with
 # --no-sandbox, so Chromium works unprivileged.
 # ---------------------------------------------------------------------------
-FROM mcr.microsoft.com/playwright:v1.50.1-jammy AS runtime
+# Keep this base-image tag in lockstep with the pinned `playwright` version in
+# package.json — otherwise the JS package and the bundled Chromium differ and
+# browserType.launch fails (e.g. missing chromium_headless_shell-<rev>).
+FROM mcr.microsoft.com/playwright:v1.62.1-jammy AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
