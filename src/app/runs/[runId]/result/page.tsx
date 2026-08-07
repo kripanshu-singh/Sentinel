@@ -141,8 +141,28 @@ export default function ResultPage({
       <main className="flex-1 p-6 flex flex-col gap-6 max-w-5xl mx-auto w-full">
         {isLoading && (
           <div className="flex flex-col gap-6">
-            <Skeleton className="h-40 w-full" />
-            <Skeleton className="h-72 w-full" />
+            <div className="rounded-xl border border-border bg-card p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="size-11 rounded-xl" />
+                  <div className="flex flex-col gap-1.5">
+                    <Skeleton className="h-5 w-40" />
+                    <Skeleton className="h-3 w-56" />
+                  </div>
+                </div>
+                <Skeleton className="h-9 w-28 rounded-lg" />
+              </div>
+              <Skeleton className="mt-5 h-4 w-full max-w-3xl" />
+              <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-px overflow-hidden rounded-lg border border-border bg-border">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="bg-card px-4 py-3 flex flex-col gap-1.5">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-6 w-20" />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <Skeleton className="h-72 w-full rounded-xl" />
           </div>
         )}
 
