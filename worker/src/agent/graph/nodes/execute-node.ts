@@ -234,11 +234,18 @@ export async function executeNode(
     }
 
     case "apply_coupon": {
-      if (!input.discountCode) {
+      const couponCode =
+        input.discountCode ||
+        (step.params?.code as string | undefined) ||
+        (step.params?.couponCode as string | undefined);
+
+      if (!couponCode) {
+        // No coupon in the goal or plan — skip silently (no discount requested).
         return base;
       }
-      await emitEvent(runId, "VALIDATE", "Applying discount code", `Attempting promo application: ${input.discountCode}`, "pending");
-      const couponResult = await actions.applyCoupon(ctx, input.discountCode);
+
+      await emitEvent(runId, "VALIDATE", "Applying discount code", `Attempting promo application: ${couponCode}`, "pending");
+      const couponResult = await actions.applyCoupon(ctx, couponCode);
 
       if (!couponResult.success) {
         await emitEvent(runId, "VALIDATE", "Promo code failed", couponResult.errorMessage ?? "Invalid coupon", "error", { screenshot: couponResult.screenshot, errorMessage: couponResult.errorMessage });
@@ -274,7 +281,22 @@ export async function executeNode(
       await emitEvent(runId, "FORM_FILL", "Opening checkout", "Moving cart to checkout and filling the shipping form...", "pending");
       const result = await actions.fillForm(ctx, SHIPPING_FIELDS);
       await emitEvent(runId, "FORM_FILL", "Checkout prepared", "Shipping details filled; order staged at the final review screen", "success", { screenshot: result.screenshot });
-      return { ...base, currentScreenshot: result.screenshot ?? null };
+
+      // Capture the order review screen explicitly so the live panel shows
+      // the final staged order as visual evidence before the report is drafted.
+      const reviewScreenshot = await actions.captureScreenshot(ctx);
+      if (reviewScreenshot) {
+        await emitEvent(
+          runId,
+          "FORM_FILL",
+          "Order review captured",
+          "Screenshot of the final order review screen taken for the reconciliation report.",
+          "success",
+          { screenshot: reviewScreenshot }
+        );
+      }
+
+      return { ...base, currentScreenshot: reviewScreenshot ?? result.screenshot ?? null };
     }
 
     case "validate": {
