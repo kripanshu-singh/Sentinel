@@ -28,6 +28,7 @@ import {
   Camera,
   Send,
   ChevronRight,
+  CornerDownRight,
 } from "lucide-react";
 
 const EVENT_LABELS: Record<string, string> = {
@@ -215,6 +216,7 @@ export default function LiveRunPage({
     | undefined;
 
   const latestHITLEvent = [...events].reverse().find((e) => e.type === "HITL");
+  const steerEvents = events.filter((e) => e.type === "STEER");
 
   useEffect(() => {
     if (!previewScreenshot) return;
@@ -704,14 +706,39 @@ export default function LiveRunPage({
             {/* Always-visible live steering control (ADR-012) */}
             <SteerControl runId={runId ?? ""} isTerminal={isTerminal} />
 
-            {/* Run goal details card */}
-            <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2 shrink-0" id="tour-run-goal">
-              <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Run Goal
-              </h4>
-              <p className="text-xs text-foreground leading-relaxed font-sans">
-                {summary?.goal ?? "…"}
-              </p>
+            {/* Run goal details card (with active operator steers) */}
+            <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3 shrink-0" id="tour-run-goal">
+              <div className="flex flex-col gap-1">
+                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Original Goal
+                </h4>
+                <p className="text-xs text-foreground leading-relaxed font-sans">
+                  {summary?.goal ?? "…"}
+                </p>
+              </div>
+
+              {steerEvents.length > 0 && (
+                <div className="flex flex-col gap-2 pt-2.5 border-t border-border">
+                  <h4 className="text-[11px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    <Send className="size-3" />
+                    Active Operator Steers ({steerEvents.length})
+                  </h4>
+                  <div className="flex flex-col gap-1.5">
+                    {steerEvents.map((st) => {
+                      const text = (st.evidence?.instruction as string) ?? st.detail;
+                      return (
+                        <div
+                          key={st.id}
+                          className="text-xs text-foreground bg-primary/5 border border-primary/20 rounded-lg p-2 flex items-start gap-2"
+                        >
+                          <CornerDownRight className="size-3.5 text-primary shrink-0 mt-0.5" />
+                          <span className="leading-snug">{text}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* View Result link */}
