@@ -6,6 +6,7 @@ import { QueryProvider } from "@/components/query-provider";
 import { TourProvider } from "@/components/onboarding/tour-provider";
 import "./globals.css";
 import CommandPalette from "@/components/command-palette";
+import { Analytics } from "@vercel/analytics/next"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
