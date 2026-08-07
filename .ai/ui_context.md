@@ -80,9 +80,19 @@ Purpose: show the agent working in real time, and pause for human approval when 
 - **Header row:** run title, live status `Badge` (from `RunStatus`), elapsed time.
 - **Event timeline** — a vertical list of `AgentEvent` rows, newest-first. Each row:
   `Badge`/icon for the step (`NAVIGATE | SEARCH | EXTRACT | CHECK | HITL | FORM_FILL |
-  VALIDATE | RECOVER | DRAFT`), a `title`, a `detail`, and a timestamp (`text-muted-foreground`,
+  VALIDATE | RECOVER | DRAFT | STEER`), a `title`, a `detail`, and a timestamp (`text-muted-foreground`,
   `text-sm`). Use `Separator` between rows. The currently executing step shows a `Spinner`.
   Terminal states get a status `Badge` (success/destructive/secondary).
+- **Steering control** — an **always-visible** (not gated on HITL) control on the live run
+  screen, independent of the approval modal (ADR-012). It lets the operator redirect the agent
+  at any time. It contains a `Field`+`FieldLabel` textarea ("Steer the agent") + a `FieldDescription`
+  explaining the instruction takes effect at the next step boundary, and a primary `Button`
+  "Send instruction" with `SendIcon`/`data-icon="inline-start"`. While sending, show a `Spinner`
+  and `disabled`. On success, clear the field and show a transient confirmation (e.g. a `Badge`
+  or `Alert`:"Sent — Sentinel will apply this at its next step"). On error, show a
+  `destructive` alert with retry. Disable the whole control when the run is terminal
+  (`DONE`/`FAILED`/`ABORTED`). This is a `"use client"` control. When a `STEER` event arrives
+  on the timeline via SSE, it renders as an acknowledged step row.
 - **Streaming:** a `"use client"` hook (`useRunStream`) subscribes via SSE and appends events.
   Handle reconnect silently; never flicker or lose the timeline. Loading state = `Skeleton`
   rows. Error state = `Alert` with retry.
@@ -122,6 +132,9 @@ Purpose: show the final draft invoice/report and export it.
   starting a run, submitting HITL resolution, CSV export. Keys: `["run", runId]`,
   `["report", runId]`, `["runs"]`.
 - **`useRunStream`** (custom hook) for SSE live events. Only the timeline subscribes.
+- **React Query** for server state: `useQuery` for run summary / report; `useMutation` for
+  starting a run, submitting HITL resolution, **sending a steer**, CSV export. Keys: `["run", runId]`,
+  `["report", runId]`, `["runs"]`.
 - **Composition over props-drilling:** screens compose feature components; shared bits live in
   `src/components/`. Feature code owns its own data hooks.
 - **Loading/empty/error are first-class:** every data-backed view implements all three.

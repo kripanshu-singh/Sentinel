@@ -39,6 +39,7 @@ export const AgentEventTypeSchema = z.enum([
   "VALIDATE",
   "RECOVER",
   "DRAFT",
+  "STEER",
 ]);
 
 export const AgentEventStatusSchema = z.enum(["success", "error", "pending"]);
@@ -153,6 +154,16 @@ export const ApprovalResolutionSchema = z.discriminatedUnion("action", [
 ]);
 
 export type ApprovalResolution = z.infer<typeof ApprovalResolutionSchema>;
+
+// ---------------------------------------------------------------------------
+// Live steering — validated on POST /api/runs/[runId]/steer (ADR-012)
+// ---------------------------------------------------------------------------
+
+export const SteerInstructionSchema = z.object({
+  instruction: z.string().min(1, "An instruction is required").max(500),
+});
+
+export type SteerInstruction = z.infer<typeof SteerInstructionSchema>;
 
 // ---------------------------------------------------------------------------
 // Worker responses — validated before touching downstream code

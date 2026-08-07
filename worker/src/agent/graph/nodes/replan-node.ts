@@ -33,9 +33,9 @@ export async function replanNode(
     "pending"
   );
 
-  const humanInstruction = replanContext.find(
-    (e) => e.reason === "human_instruction"
-  )?.detail;
+  const humanInstruction = replanContext
+    .filter((e) => e.reason === "human_instruction")
+    .pop()?.detail;
 
   // A human instruction is the operator directing the run; fed to the planner as
   // the primary revised requirement. Failure context is the same structured list

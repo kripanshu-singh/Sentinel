@@ -13,6 +13,8 @@ Status legend: `[x] done · [~] in progress · [ ] planned`
 - [ ] Create-run flow: Zod-validated API route → worker start → route to `/runs/[runId]`.
 - [ ] Live run screen: SSE timeline of `AgentEvent`s via `useRunStream`.
 - [ ] HITL modal: `ApprovalRequest` → **Approve & Continue / Override Target / Abort** → resolution sent back.
+- [x] **Live steering (ADR-012):** always-visible "Steer the agent" control on the live run
+      screen; `STEER` event; instruction folded into the plan at the next step boundary.
 - [ ] Result screen: invoice `Table`, discrepancy/human-confirmed flags, CSV export.
 
 ## Phase 2 — Worker service (in-tree `worker/`)

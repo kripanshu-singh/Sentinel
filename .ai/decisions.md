@@ -6,6 +6,31 @@ respect these decisions; if a decision is wrong, change the record first, then t
 
 ## Product & Architecture
 
+### ADR-012 — Live steering: operator instruction channel at step boundaries
+- **Status:** Accepted (2026-08-07)
+- **Context:** HITL pauses only at a formal `validate → hitl` gate (a crossed
+  threshold or an explicit `pause_for_approval`). Between gates the agent runs
+  autonomously and the operator has no way to redirect it — a wrong product, an
+  overlooked quantity, or a change of plan is unrecoverable until the next pause.
+  A LangGraph `interrupt()` + checkpointer would solve this properly but is a
+  deferred production-hardening item (see ADR-011 and `.ai/langgraph-migration.md`
+  §8). We need steering now, with the existing BLPOP/no-checkpointer stack.
+- **Decision:** Add an **asynchronous steer channel**: the frontend pushes a
+  free-form instruction to the worker via a new `POST /runs/:id/steer` route,
+  which stores it on a per-run Redis list (`run:{runId}:steer`). The graph's
+  `execute` node drains that queue **at every step boundary**; when a steer is
+  pending, it emits a `STEER` event (acknowledgement in the timeline) and routes
+  to the existing `replan` node, which already treats `human_instruction` entries
+  in `replanContext` as the highest-priority requirement. No checkpointer needed;
+  the steer takes effect within one step's execution latency.
+- **Consequences:** `AgentEventType` gains `STEER` (additive; the timeline label
+  map already falls back to the raw string). The frontend gains an always-visible
+  "Steer the agent" control on the live run screen (independent of the HITL
+  modal). Steers are applied as plan revisions, never as live mutations of an
+  in-flight step — a step that already started completes, then the next one
+  honors the steer. `STEER` is acknowledged even for terminal runs' post-mortem
+  review, but the steer route rejects steers for `DONE`/`FAILED`/`ABORTED` runs.
+
 ### ADR-011 — Worker orchestration on LangGraph.js (in-tree worker/)
 - **Status:** Accepted (2026-08-06)
 - **Context:** `AgentRunner`'s linear switch over a `StepPlan[]` cannot express

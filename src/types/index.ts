@@ -23,7 +23,8 @@ export type AgentEventType =
   | "FORM_FILL"
   | "VALIDATE"
   | "RECOVER"
-  | "DRAFT";
+  | "DRAFT"
+  | "STEER";
 
 export interface AgentEvent {
   id: string;
@@ -35,6 +36,11 @@ export interface AgentEvent {
   status?: "success" | "error" | "pending";
   /** Worker-attached structured payload: screenshots, URLs, products, discrepancies. */
   evidence?: Record<string, unknown>;
+}
+
+/** A live operator redirect, pushed via POST /api/runs/[runId]/steer (ADR-012). */
+export interface SteerInstruction {
+  instruction: string;
 }
 
 export interface GoalInput {

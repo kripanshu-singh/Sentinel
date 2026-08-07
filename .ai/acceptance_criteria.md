@@ -75,6 +75,25 @@ AC-N. Non-functional: <constraint>.
 - [ ] AC-6. Non-functional: an unhandled timeout in `HITL_PENDING` is surfaced as an `Alert`
       with a retry, never a silent hang.
 
+## Feature: Live steering
+
+- [ ] AC-1. Given a running (non-terminal) run, when the operator types a free-form steer in
+      the live run screen, then a `POST /api/runs/[runId]/steer` is sent and the control
+      confirms "Sent — Sentinel will apply this at its next step".
+- [ ] AC-2. Given a steer in flight, when the worker acknowledges it, then the run emits a
+      `STEER` event whose `evidence.instruction` equals the operator's text, and it appears
+      in the timeline as an acknowledged row.
+- [ ] AC-3. Given a pending steer, when the `execute` node reaches the next step boundary,
+      then the instruction is folded into the plan via the `replan` node (treated as
+      highest-priority requirement).
+- [ ] AC-4. Given a terminal run (`DONE`/`FAILED`/`ABORTED`), when the operator tries to
+      steer, the control is `disabled` and the route rejects the action.
+- [ ] AC-5. Given a sending steer, when the UI waits on the worker, then the button is
+      `disabled` and a `Spinner` shows; network/worker errors surface as a `destructive`
+      alert with retry, never a silent hang.
+- [ ] AC-6. Non-functional: the steering control is always visible on the live run screen and
+      works independently of whether a HITL modal is open.
+
 ## Feature: Cart building & form filling
 
 - [ ] AC-1. Given an approved price, when the agent adds quantities (e.g. 5 × Almond Milk, 10 ×

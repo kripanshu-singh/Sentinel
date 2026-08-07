@@ -48,6 +48,11 @@ export function hitlKey(runId: string): string {
   return `run:${runId}:hitl`;
 }
 
+/** Key for the live-steering queue (ADR-012): operator instructions, FIFO. */
+export function steerKey(runId: string): string {
+  return `run:${runId}:steer`;
+}
+
 // ---------------------------------------------------------------------------
 // Run state
 // ---------------------------------------------------------------------------
@@ -154,4 +159,37 @@ export async function signalHITLResolution(
   await redis.rpush(key, JSON.stringify(resolution));
   // TTL so orphaned keys don't accumulate
   await redis.expire(key, 3600);
+}
+
+// ---------------------------------------------------------------------------
+// Live steering queue (ADR-012)
+// ---------------------------------------------------------------------------
+
+/**
+ * Queue an operator steer instruction for a run. Called by POST /runs/:id/steer.
+ * The `execute` node drains the queue at step boundaries; order is FIFO.
+ */
+export async function queueSteer(
+  runId: string,
+  instruction: string
+): Promise<void> {
+  const key = steerKey(runId);
+  await redis.rpush(key, instruction);
+  // TTL so orphaned keys don't accumulate (instructions outlive a short run)
+  await redis.expire(key, 3600);
+}
+
+/**
+ * Drain (LPOP) all pending steer instructions for a run, FIFO. Returns an empty
+ * array when nothing is queued. Non-blocking — never stalls a step boundary.
+ */
+export async function drainSteers(runId: string): Promise<string[]> {
+  const key = steerKey(runId);
+  const instructions: string[] = [];
+  while (true) {
+    const next = await redis.lpop(key);
+    if (next == null) break;
+    instructions.push(next);
+  }
+  return instructions;
 }

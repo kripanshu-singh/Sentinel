@@ -20,8 +20,9 @@ import type { ActionContext } from "../../actions/index.js";
 import { emitEvent, transition } from "../emit.js";
 import { failRun, MAX_RETRIES_PER_NODE, retryUpdate } from "../retry.js";
 import { extractQuantityForProduct } from "../../../lib/goal-rules.js";
+import { drainSteers } from "../../../storage/redis.js";
 import type { StepPlan } from "../../../types/index.js";
-import type { SentinelStateUpdate, SentinelStateValue } from "../state.js";
+import type { ReplanEntry, SentinelStateUpdate, SentinelStateValue } from "../state.js";
 
 const DEFAULT_STOREFRONT_URL = "https://www.saucedemo.com/";
 
@@ -98,6 +99,36 @@ export async function executeNode(
   }
   if (!planResult) {
     return { next: "end" };
+  }
+
+  // Drain live operator steer instructions at step boundaries (ADR-012)
+  const pendingSteers = await drainSteers(runId);
+  if (pendingSteers.length > 0) {
+    const steerEntries: ReplanEntry[] = [];
+    for (const instruction of pendingSteers) {
+      await emitEvent(
+        runId,
+        "STEER",
+        "Operator steer received",
+        instruction,
+        "success",
+        { instruction }
+      );
+      steerEntries.push({
+        node: "execute",
+        reason: "human_instruction",
+        retry: 0,
+        detail: instruction,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    await transition(runId, "RECOVERING");
+    return {
+      sessionId: runId,
+      replanContext: steerEntries,
+      status: "RECOVERING",
+      next: "replan",
+    };
   }
 
   const plan = planResult.plan;

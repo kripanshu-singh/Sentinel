@@ -35,7 +35,8 @@ export type AgentEventType =
   | "FORM_FILL"
   | "VALIDATE"
   | "RECOVER"
-  | "DRAFT";
+  | "DRAFT"
+  | "STEER";
 
 export type AgentEventStatus = "success" | "error" | "pending";
 
@@ -48,6 +49,14 @@ export interface AgentEvent {
   timestamp: string;
   status?: AgentEventStatus;
   evidence?: Record<string, unknown>;
+}
+
+/**
+ * A live operator redirect (ADR-012). Sent via POST /runs/:id/steer and drained
+ * by the `execute` node at step boundaries. Mirrors src/types/index.ts.
+ */
+export interface SteerInstruction {
+  instruction: string;
 }
 
 // ---------------------------------------------------------------------------

@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { SentinelNavbar } from "@/components/sentinel-navbar";
+import { SteerControl } from "@/components/run/steer-control";
 import { useRunStream } from "@/hooks/use-run-stream";
 import { buildPhases } from "@/lib/run-progress";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +40,7 @@ const EVENT_LABELS: Record<string, string> = {
   VALIDATE: "VALIDATE",
   RECOVER: "RECOVER",
   DRAFT: "DRAFT",
+  STEER: "STEER",
 };
 
 type StreamTone = "done" | "live" | "error";
@@ -698,6 +700,9 @@ export default function LiveRunPage({
                 </div>
               </div>
             )}
+
+            {/* Always-visible live steering control (ADR-012) */}
+            <SteerControl runId={runId ?? ""} isTerminal={isTerminal} />
 
             {/* Run goal details card */}
             <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2 shrink-0" id="tour-run-goal">

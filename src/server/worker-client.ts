@@ -160,6 +160,26 @@ export async function resolveHITL(
 }
 
 // ---------------------------------------------------------------------------
+// Live steering (ADR-012)
+// ---------------------------------------------------------------------------
+
+/**
+ * Send a free-form steer instruction to the worker. The `execute` node drains
+ * the per-run steer queue at step boundaries and folds it into the plan via the
+ * replan node. Acknowledged on the timeline as a `STEER` event.
+ */
+export async function sendSteer(
+  runId: string,
+  instruction: string
+): Promise<void> {
+  const res = await workerFetch(`/runs/${encodeURIComponent(runId)}/steer`, {
+    method: "POST",
+    body: JSON.stringify({ instruction }),
+  });
+  WorkerSuccessResponseSchema.parse(await res.json());
+}
+
+// ---------------------------------------------------------------------------
 // Worker wake (Render free-tier spin-down)
 // ---------------------------------------------------------------------------
 

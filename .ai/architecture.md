@@ -69,7 +69,9 @@ deliberate; it is driven by the hard constraints of an *acting* agent, not by ta
   run screen subscribes and renders each step as it happens. One-way, simple, resilient to
   reconnects.
 - **WebSocket / HTTP (frontend → worker):** used for HITL resolution (`approve`, `override`,
-  `abort`) and start/cancel of runs. Bidirectional and rare, so it stays cheap.
+  `abort`), **live steering** (`POST /runs/:id/steer` — a free-form operator instruction fed to
+  the worker at the next step boundary, see ADR-012), and start/cancel of runs. Bidirectional
+  and rare, so it stays cheap.
 - **Thin REST (frontend API):** create a run, fetch a run's summary, fetch the final report.
   These are validated with Zod in `src/server/` and proxied to the worker/storage.
 
@@ -158,7 +160,10 @@ shapes. Changing them is a cross-service change — update every consumer.
   FORM_FILLING | VALIDATING | RECOVERING | DRAFT_READY | DONE | ABORTED | FAILED`.
 - `AgentEvent` — one streamed step: `{ id, runId, step, status, title, detail, evidence?,
   at }` where `step` is `NAVIGATE | SEARCH | EXTRACT | CHECK | HITL | FORM_FILL | VALIDATE |
-  RECOVER | DRAFT`.
+  RECOVER | DRAFT | STEER`. `STEER` acknowledges a live operator instruction (ADR-012);
+  its `evidence.instruction` carries the text.
+- `SteerInstruction` — a live operator redirect: `{ instruction }`, pushed via
+  `POST /runs/:id/steer` and drained by the `execute` node at step boundaries.
 - `Discrepancy` — `{ kind: "price"|"discount"|"inventory"|"margin", expected, actual,
   variancePct, threshold, severity }`.
 - `ApprovalRequest` — `{ id, runId, title, detail, discrepancies[], resolution? }`.
