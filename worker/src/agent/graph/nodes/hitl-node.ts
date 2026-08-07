@@ -18,9 +18,10 @@ import { nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
 import { db, approvalRequests } from "../../../storage/db.js";
 import { waitForHITLResolution } from "../../../storage/redis.js";
-import { recheck } from "../../rule-engine.js";
+import { recheck, recheckSubtotal } from "../../rule-engine.js";
 import { emitEvent, transition } from "../emit.js";
 import type { ApprovalResolution } from "../../../types/index.js";
+import type { RuleCheckResult } from "../../rule-engine.js";
 import type { SentinelStateUpdate, SentinelStateValue } from "../state.js";
 
 export async function hitlNode(
@@ -125,13 +126,31 @@ export async function hitlNode(
   }
 
   if (resolution.action === "override" && resolution.overrideTarget != null) {
-    if (currentProduct) {
-      const updated = recheck(currentProduct.product, input, resolution.overrideTarget);
+    // The combined-subtotal gate (validate-node sets status VALIDATING before
+    // routing here) overrides a SUBTOTAL limit: recheck the aggregate against
+    // the new subtotal target. Any other gate overrides a per-unit price.
+    const isSubtotalGate = state.status === "VALIDATING";
+    let updated: RuleCheckResult | null = null;
+
+    if (isSubtotalGate) {
+      const items = (state.extractedProducts ?? []).map((p) => ({
+        lineTotal: (p.product.unitPrice ?? 0) * (p.product.quantityRequested ?? 1),
+      }));
+      updated = recheckSubtotal(items, input, resolution.overrideTarget);
+    } else if (currentProduct) {
+      updated = recheck(currentProduct.product, input, resolution.overrideTarget);
+    }
+
+    const targetLabel = isSubtotalGate
+      ? `Subtotal target set to $${resolution.overrideTarget}`
+      : `Operator set target to $${resolution.overrideTarget}`;
+
+    if (updated) {
       await emitEvent(
         runId,
         "HITL",
         "Target overridden",
-        `Operator set target to $${resolution.overrideTarget}`,
+        targetLabel,
         "success",
         {
           discrepancies: updated.discrepancies,
@@ -142,7 +161,7 @@ export async function hitlNode(
       await emitEvent(
         runId,
         "CHECK",
-        "Target overridden - rules satisfied",
+        isSubtotalGate ? "Subtotal rechecked - rules satisfied" : "Target overridden - rules satisfied",
         "Continuing task execution.",
         "success",
         { discrepancies: updated.discrepancies }

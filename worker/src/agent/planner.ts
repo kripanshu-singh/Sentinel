@@ -7,6 +7,7 @@
  */
 
 import { getLLMProvider, parseModelJSON, type LLMMessage } from "../llm/client.js";
+import { extractQuantityForProduct } from "../lib/goal-rules.js";
 import type { GoalInput, StepPlan } from "../types/index.js";
 
 export interface PlanResult {
@@ -142,6 +143,40 @@ export function injectApprovalStep(plan: StepPlan[], goal: string): StepPlan[] {
   return beforeIndex === -1
     ? [...plan, pauseStep]
     : [...plan.slice(0, beforeIndex), pauseStep, ...plan.slice(beforeIndex)];
+}
+
+/**
+ * Ensure every add_to_cart step carries a concrete per-product quantity. The LLM
+ * prompt asks for it, but this backstop derives it from the goal ("5 units of X")
+ * so multi-product runs never drop a quantity the operator explicitly requested.
+ */
+export function backfillQuantities(plan: StepPlan[], goal: string): StepPlan[] {
+  return plan.map((step) => {
+    if (step.kind !== "add_to_cart") return step;
+    if (typeof step.params?.quantity === "number") return step;
+    const productName =
+      (step.params?.targetName as string | undefined) ??
+      (step.params?.query as string | undefined);
+    const qty = extractQuantityForProduct(goal, productName);
+    return { ...step, params: { ...step.params, quantity: qty } };
+  });
+}
+
+/**
+ * Backstop for a resilient report: guarantee the final reconciliation report is
+ * drafted (and that a combined-subtotal goal actually gets a subtotal gate
+ * evaluated) even if the LLM planner omitted these steps.
+ */
+export function ensureTerminalSteps(plan: StepPlan[], input: GoalInput): StepPlan[] {
+  const next = [...plan];
+  const hasDraft = next.some((s) => s.kind === "draft_report");
+  if (!hasDraft) {
+    next.push({ kind: "draft_report", description: "Draft the final reconciliation report", params: {} });
+  }
+  if (input.targetSubtotal !== undefined && !next.some((s) => s.kind === "validate")) {
+    next.push({ kind: "validate", description: "Validate the combined cart subtotal against the target", params: {} });
+  }
+  return next;
 }
 
 const SYSTEM_PROMPT = `You are a B2B procurement automation planner.
@@ -382,6 +417,11 @@ Generate the step plan.`.trim();
       if (!options?.skipApprovalInjection) {
         orderedPlan = injectApprovalStep(orderedPlan, input.goal);
       }
+
+      // Resilience backstops: concrete quantities + a guaranteed report draft
+      // (and subtotal gate when a combined-subtotal goal needs one).
+      orderedPlan = backfillQuantities(orderedPlan, input.goal);
+      orderedPlan = ensureTerminalSteps(orderedPlan, input);
 
       return {
         goal: typeof result.goal === "string" ? result.goal : input.goal,

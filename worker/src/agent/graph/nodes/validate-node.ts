@@ -13,13 +13,12 @@
  * report node already gates the invoice before commit.
  */
 
-import { checkProduct } from "../../rule-engine.js";
+import { checkProduct, checkSubtotal } from "../../rule-engine.js";
 import { emitEvent, transition } from "../emit.js";
 import { failRun, MAX_RETRIES_PER_NODE, retryUpdate } from "../retry.js";
 import type { SentinelStateUpdate, SentinelStateValue } from "../state.js";
 import { extractInvoiceFromDOM } from "../../extractor.js";
 import { sessionManager } from "../../session/session-manager.js";
-import type { Discrepancy } from "../../../types/index.js";
 
 const MIN_CONFIDENCE = 0.75;
 
@@ -58,29 +57,9 @@ export async function validateNode(
     }
 
     const actualSubtotal = invoice.items.reduce((sum, item) => sum + item.lineTotal, 0);
-    const discrepancies: Discrepancy[] = [];
-
-    if (targetSubtotal !== undefined) {
-      const variancePct = ((actualSubtotal - targetSubtotal) / targetSubtotal) * 100;
-      const absPct = Math.abs(variancePct);
-
-      if (absPct > 0.01) {
-        const severity = actualSubtotal > targetSubtotal
-          ? absPct > input.varianceThresholdPct * 2 ? "high" : "medium"
-          : absPct > input.varianceThresholdPct * 2 ? "medium" : "low";
-
-        discrepancies.push({
-          kind: "price",
-          expected: targetSubtotal,
-          actual: actualSubtotal,
-          variancePct: Math.round(variancePct * 100) / 100,
-          threshold: input.varianceThresholdPct,
-          severity,
-        });
-      }
-    }
-
-    const requiresHITL = discrepancies.some(d => d.severity === "medium" || d.severity === "high");
+    const subCheck = checkSubtotal(invoice.items, input);
+    const discrepancies = subCheck.discrepancies;
+    const requiresHITL = subCheck.requiresHITL;
 
     if (requiresHITL) {
       const lastResolution = state.resolution;

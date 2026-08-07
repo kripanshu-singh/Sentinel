@@ -141,3 +141,62 @@ export function recheck(
 ): RuleCheckResult {
   return checkProduct(product, { ...rules, targetUnitPrice: overrideTarget });
 }
+
+export interface SubtotalItem {
+  lineTotal: number;
+}
+
+/**
+ * Evaluate the COMBINED cart subtotal against the business rules (multi-product).
+ * Any variance above the auto-approve threshold → HITL. This is the aggregate
+ * gate for goals like "combined subtotal must not exceed $50".
+ */
+export function checkSubtotal(
+  items: SubtotalItem[],
+  rules: GoalInput
+): RuleCheckResult {
+  const discrepancies: Discrepancy[] = [];
+  const actualSubtotal = items.reduce((sum, item) => sum + (item.lineTotal ?? 0), 0);
+  const target = rules.targetSubtotal;
+
+  if (target !== undefined && actualSubtotal > target) {
+    const variancePct = target > 0 ? ((actualSubtotal - target) / target) * 100 : 0;
+    const absPct = Math.abs(variancePct);
+
+    // A combined-subtotal gate is a CEILING ("must not exceed $50"): going over
+    // always pauses (medium/high by how far over), going under never does.
+    const severity: Discrepancy["severity"] =
+      absPct > rules.varianceThresholdPct * 2 ? "high" : "medium";
+
+    discrepancies.push({
+      kind: "price",
+      expected: target,
+      actual: Math.round(actualSubtotal * 100) / 100,
+      variancePct: Math.round(variancePct * 100) / 100,
+      threshold: rules.varianceThresholdPct,
+      severity,
+    });
+  }
+
+  const requiresHITL = discrepancies.some(
+    (d) => d.severity === "medium" || d.severity === "high"
+  );
+
+  return {
+    discrepancies,
+    requiresHITL,
+    autoContinue: !requiresHITL,
+  };
+}
+
+/**
+ * Recompute the combined subtotal discrepancy after a human overrides the
+ * subtotal target (usually because they accept the higher total).
+ */
+export function recheckSubtotal(
+  items: SubtotalItem[],
+  rules: GoalInput,
+  overrideTarget: number
+): RuleCheckResult {
+  return checkSubtotal(items, { ...rules, targetSubtotal: overrideTarget });
+}

@@ -36,6 +36,43 @@ export function extractTargetSubtotal(goal: string): number | undefined {
   return undefined;
 }
 
+/**
+ * Extract the requested quantity for a SPECIFIC product from a multi-product
+ * goal, e.g. "5 units of Organic Almond Milk and 10 units of Oat Milk" →
+ * `extractQuantityForProduct(goal, "Oat Milk")` returns 10.
+ *
+ * Falls back to 1 (single-unit default) when no quantity is tied to the product.
+ * The product name is matched as a whole word so "Milk" never absorbs
+ * "Almond Milk"'s quantity.
+ */
+export function extractQuantityForProduct(
+  goal: string,
+  productName?: string
+): number {
+  if (!goal || !productName) return 1;
+  const name = productName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  // Matches, in order: "N units of X", "N X units", "N X", "X N units", "N x X"
+  const PATTERNS: RegExp[] = [
+    new RegExp(`(\\d+(?:\\.\\d+)?)\\s*(?:units?|qty|quantity|packs?)\\s*(?:of|×|x)?\\s*${name}\\b`, "i"),
+    new RegExp(`${name}\\b\\s*(?:units?|qty|quantity)?\\s*(\\d+(?:\\.\\d+)?)`, "i"),
+    new RegExp(`(\\d+(?:\\.\\d+)?)\\s*(?:x|×)\\s*${name}\\b`, "i"),
+    // Bare "N <product>" — the most common phrasing the LLM does not decorate.
+    new RegExp(`\\b(\\d+(?:\\.\\d+)?)\\s+${name}\\b`, "i"),
+  ];
+
+  for (const pattern of PATTERNS) {
+    const match = pattern.exec(goal);
+    if (match?.[1]) {
+      const value = parseFloat(match[1]);
+      if (Number.isFinite(value) && value > 0) {
+        return Math.round(value);
+      }
+    }
+  }
+  return 1;
+}
+
 export function extractTargetPrice(goal: string): number | undefined {
   if (!goal) return undefined;
 

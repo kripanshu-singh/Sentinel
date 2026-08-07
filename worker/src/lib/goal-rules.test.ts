@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { extractTargetPrice, extractTargetSubtotal } from "./goal-rules.js";
+import { extractTargetPrice, extractTargetSubtotal, extractQuantityForProduct } from "./goal-rules.js";
 
 test("extracts target subtotal correctly", () => {
   const goal1 = "Procure the Fleece Jacket and Bike Light. Verify combined subtotal does not exceed $50.00. Pause if variance > 10%.";
@@ -30,4 +30,20 @@ test("extracts target unit price correctly and ignores subtotal targets", () => 
   const subtotal3 = extractTargetSubtotal(goal3);
   assert.equal(price3, 25.00);
   assert.equal(subtotal3, 100.00);
+});
+
+test("extracts per-product quantities in multi-product goals", () => {
+  const goal =
+    "Build a cart with 5 units of Organic Almond Milk and 10 units of Oat Milk, apply SUMMER20.";
+  assert.equal(extractQuantityForProduct(goal, "Organic Almond Milk"), 5);
+  assert.equal(extractQuantityForProduct(goal, "Oat Milk"), 10);
+  // Whole-word matching: "Milk" must not steal "Oat Milk"'s 10.
+  assert.equal(extractQuantityForProduct(goal, "Milk"), 1);
+
+  assert.equal(extractQuantityForProduct("Buy 3 Fleece Jacket and 2 Bike Light", "Fleece Jacket"), 3);
+  assert.equal(extractQuantityForProduct("Buy 3 Fleece Jacket and 2 Bike Light", "Bike Light"), 2);
+
+  assert.equal(extractQuantityForProduct("Add a Backpack", "Backpack"), 1);
+  assert.equal(extractQuantityForProduct("", "Backpack"), 1);
+  assert.equal(extractQuantityForProduct("Any goal", undefined), 1);
 });

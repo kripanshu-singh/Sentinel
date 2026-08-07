@@ -19,6 +19,7 @@ import * as actions from "../../actions/index.js";
 import type { ActionContext } from "../../actions/index.js";
 import { emitEvent, transition } from "../emit.js";
 import { failRun, MAX_RETRIES_PER_NODE, retryUpdate } from "../retry.js";
+import { extractQuantityForProduct } from "../../../lib/goal-rules.js";
 import type { StepPlan } from "../../../types/index.js";
 import type { SentinelStateUpdate, SentinelStateValue } from "../state.js";
 
@@ -37,6 +38,22 @@ const SHIPPING_FIELDS = {
 function quantityFromGoal(goal: string): number {
   const match = goal.match(/(\d+)\s*unit/i);
   return match ? parseInt(match[1], 10) : 1;
+}
+
+function productNameFromStep(step: StepPlan, goal: string): string | undefined {
+  const name =
+    (step.params?.targetName as string | undefined) ??
+    (step.params?.query as string | undefined);
+  return name ?? goal;
+}
+
+function quantityForStep(step: StepPlan, goal: string): number {
+  const planQty = step.params?.quantity;
+  if (typeof planQty === "number" && Number.isFinite(planQty) && planQty > 0) {
+    return Math.round(planQty);
+  }
+  const productName = productNameFromStep(step, goal);
+  return extractQuantityForProduct(goal, productName);
 }
 
 /**
@@ -161,7 +178,7 @@ export async function executeNode(
     }
 
     case "add_to_cart": {
-      const qty = quantityFromGoal(input.goal);
+      const qty = quantityForStep(step, input.goal);
       let productName: string | undefined;
       for (let i = stepIndex; i >= 0; i--) {
         const s = plan[i];

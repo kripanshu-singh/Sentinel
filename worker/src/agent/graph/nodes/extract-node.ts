@@ -37,6 +37,28 @@ function targetNameFromPlan(
   );
 }
 
+/**
+ * Find the quantity the plan asks to add for a given target product. Multi-product
+ * goals can request different quantities per item, so the extractor must not
+ * assume 1 unit for every product. Falls back to 1 when the plan doesn't say.
+ */
+function quantityForTarget(plan: StepPlan[], targetName: string): number {
+  const normalized = targetName.trim().toLowerCase();
+  for (const step of plan) {
+    if (step.kind !== "add_to_cart") continue;
+    const name =
+      (step.params?.targetName as string | undefined) ??
+      (step.params?.query as string | undefined);
+    if (name && name.trim().toLowerCase() === normalized) {
+      const qty = step.params?.quantity;
+      if (typeof qty === "number" && Number.isFinite(qty) && qty > 0) {
+        return Math.round(qty);
+      }
+    }
+  }
+  return 1;
+}
+
 export async function extractNode(
   state: SentinelStateValue
 ): Promise<SentinelStateUpdate> {
@@ -54,6 +76,13 @@ export async function extractNode(
   const session = await sessionManager.get(runId);
   const html = await session.navigator.getDOMSnapshot();
   const { product, confidence } = await extractProductFromDOM(html, targetName);
+
+  // Carry the exact quantity the plan requested for THIS product so the report's
+  // subtotal reflects real quantities, not a blanket "1 unit".
+  const qty = quantityForTarget(planResult?.plan ?? [], targetName);
+  if (qty > 1) {
+    product.quantityRequested = qty;
+  }
 
   await emitEvent(
     runId,
