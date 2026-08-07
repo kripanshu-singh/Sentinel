@@ -14,7 +14,9 @@ import { startQueueWorker } from "./queue/jobs.js";
 import { createTablesIfNotExist } from "./storage/db.js";
 
 const app = express();
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
+// Render's default health-check probe port for web services is 10000, so fall
+// back to that when PORT is not injected (never default to an arbitrary port).
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 10000;
 
 // Middlewares
 app.use(cors());
