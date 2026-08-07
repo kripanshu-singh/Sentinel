@@ -115,7 +115,7 @@ export function SteerControl({ runId, isTerminal }: SteerControlProps) {
       {steerMutation.isError && (
         <Alert variant="destructive" className="text-xs py-2">
           <AlertCircle className="size-4" />
-          <AlertTitle className="text-xs font-semibold">Failed to send steer</AlertTitle>
+          <AlertTitle className="text-xs font-semibold">Failed to steer the agent</AlertTitle>
           <AlertDescription className="text-[11px] flex flex-col gap-1.5 mt-1">
             <span>{steerMutation.error?.message ?? "An unexpected error occurred."}</span>
             <Button

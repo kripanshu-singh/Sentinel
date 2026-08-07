@@ -37,6 +37,7 @@ import {
   ExternalLink,
   Globe,
   FileText,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTour } from "@/components/onboarding/tour-provider";
@@ -189,13 +190,35 @@ export function SentinelNavbar({
                 variant="ghost"
                 size="sm"
                 className="gap-1.5 text-muted-foreground"
+                onClick={() => window.dispatchEvent(new CustomEvent("sentinel:open-command-palette"))}
+              />
+            }
+          >
+            <Search className="size-3.5" aria-hidden="true" />
+            <span className="hidden sm:inline">Commands</span>
+            <span className="hidden sm:inline ml-2"><Kbd /></span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            Open the command palette (Cmd/Ctrl+K)
+          </TooltipContent>
+        </Tooltip>
+
+        <Separator orientation="vertical" className="mx-1 self-center" />
+
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-muted-foreground"
                 onClick={startTour}
               />
             }
           >
             <Compass className="size-3.5" aria-hidden="true" />
             <span className="hidden sm:inline">Tour</span>
-            <span className="hidden sm:inline ml-2"><Kbd /></span>
           </TooltipTrigger>
           <TooltipContent side="bottom">
             Take a quick tour of this screen

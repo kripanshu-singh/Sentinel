@@ -757,7 +757,7 @@ export default function LiveRunPage({
                 <div className="flex flex-col gap-2 pt-2.5 border-t border-border">
                   <h4 className="text-[11px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
                     <Send className="size-3" />
-                    Active Operator Steers ({steerEvents.length})
+                    Active Operator Instructions ({steerEvents.length})
                   </h4>
                   <div className="flex flex-col gap-1.5">
                     {steerEvents.map((st) => {
