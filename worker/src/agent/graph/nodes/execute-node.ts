@@ -179,17 +179,25 @@ export async function executeNode(
 
     case "add_to_cart": {
       const qty = quantityForStep(step, input.goal);
-      let productName: string | undefined;
+      // Prefer the ACTUAL product the agent extracted (real DOM title + sku) over
+      // the user's phrasing. A plan step may say "infant dress" while the
+      // storefront names it "Sauce Labs Onesie" — clicking by plan text falls
+      // through to the generic first-button fallback and adds the WRONG product.
+      const extracted = state.currentProduct?.product;
+      let productName = extracted?.description;
+      const sku = extracted?.sku;
+      const aliases: string[] = [];
       for (let i = stepIndex; i >= 0; i--) {
         const s = plan[i];
         const name = (s?.params?.targetName ?? s?.params?.query) as string | undefined;
         if (name) {
-          productName = name;
+          aliases.push(name);
+          productName ??= name;
           break;
         }
       }
       await emitEvent(runId, "FORM_FILL", "Adding items to cart", `Adding quantity: ${qty}${productName ? ` for "${productName}"` : ""}`, "pending");
-      const result = await actions.addToCart(ctx, qty, productName);
+      const result = await actions.addToCart(ctx, qty, productName, sku, aliases);
       await emitEvent(runId, "FORM_FILL", "Cart updated", `${productName ?? "Items"} successfully loaded into session cart`, "success", { screenshot: result.screenshot });
       return { ...base, currentScreenshot: result.screenshot ?? null };
     }

@@ -51,32 +51,74 @@ function sauceDemoAddToCartSelector(productName: string): string {
 export async function clickAddToCart(
   page: Page,
   productName?: string,
+  sku?: string,
+  aliases: string[] = [],
 ): Promise<void> {
   const GENERIC_SELECTOR =
     'button[id*="add-to-cart" i], button:has-text("Add to Cart"), button:has-text("Add to cart"), .add-to-cart';
 
+  // "primary" is the ACTUAL extracted product name (real DOM title). "aliases"
+  // are secondary names (user's phrasing / plan query) tried when no exact hit.
+  const candidates = [productName, ...aliases].filter((n): n is string => Boolean(n));
+
   // Strategy 1: SauceDemo data-test attribute (most reliable — no search needed)
-  if (productName) {
-    const dataTestSel = sauceDemoAddToCartSelector(productName);
+  for (const name of candidates) {
+    const dataTestSel = sauceDemoAddToCartSelector(name);
     try {
       const btn = page.locator(dataTestSel).first();
-      if (await btn.isVisible({ timeout: 3000 })) {
+      if (await btn.isVisible({ timeout: 1500 })) {
         await btn.click();
         await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
         return;
       }
     } catch {
-      // Not a SauceDemo page or selector not found — fall through
+      // Not a SauceDemo page or selector not found — try next name
+    }
+  }
+
+  // Strategy 1b: some storefronts key their add-to-cart button by SKU/data-test
+  if (sku) {
+    const skuSel = sauceDemoAddToCartSelector(sku);
+    try {
+      const btn = page.locator(skuSel).first();
+      if (await btn.isVisible({ timeout: 1500 })) {
+        await btn.click();
+        await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
+        return;
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  // Strategy 2: Find the product card by name, click the Add-to-Cart inside it
+  const cardSelectors = [".inventory_item", ".product-card", ".product-item", ".card"];
+  for (const sel of cardSelectors) {
+    for (const name of candidates) {
+      try {
+        const card = page.locator(sel).filter({ hasText: name }).first();
+        if (await card.isVisible({ timeout: 1500 })) {
+          const btn = card.locator(GENERIC_SELECTOR).first();
+          if (await btn.isVisible({ timeout: 1500 })) {
+            await btn.click();
+            await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
+            return;
+          }
+        }
+      } catch {
+        // Try next card selector
+      }
     }
 
-    // Strategy 2: Find the product card by name, click the Add-to-Cart inside it
-    const cardSelectors = [".inventory_item", ".product-card", ".product-item", ".card"];
-    for (const sel of cardSelectors) {
+    // Strategy 2b: match the card by sku (SauceDemo titles carry data-test="<sku>-title-link")
+    if (sku) {
       try {
-        const card = page.locator(sel).filter({ hasText: productName }).first();
-        if (await card.isVisible({ timeout: 2000 })) {
+        const card = page
+          .locator(`${sel}:has([data-test*="${sku}" i])`)
+          .first();
+        if (await card.isVisible({ timeout: 1500 })) {
           const btn = card.locator(GENERIC_SELECTOR).first();
-          if (await btn.isVisible({ timeout: 2000 })) {
+          if (await btn.isVisible({ timeout: 1500 })) {
             await btn.click();
             await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
             return;
@@ -88,7 +130,14 @@ export async function clickAddToCart(
     }
   }
 
-  // Strategy 3: Generic fallback (single-product pages or unknown storefronts)
+  // Strategy 3: Generic last resort. Only reached when NO name/sku matched — on a
+  // multi-product storefront this clicks the first button and is likely WRONG, so
+  // log it loudly for the report to surface.
+  if (candidates.length > 0 || sku) {
+    console.warn(
+      `[form-filler] No precise add-to-cart match for "${(candidates.join('", "') || sku)}"; using first visible button (may add the wrong item).`
+    );
+  }
   const button = page.locator(GENERIC_SELECTOR).first();
   await button.waitFor({ state: "visible", timeout: 10000 });
   await button.click();
