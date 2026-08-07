@@ -17,12 +17,16 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+const appUrl =
+  process.env.NEXT_PUBLIC_APP_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "https://trysentinel-agent.vercel.app");
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
-  ),
+  metadataBase: new URL(appUrl),
   title: "Sentinel — B2B Procurement Agent",
   description:
     "AI-powered B2B vendor order & discrepancy reconciliation agent. Execute procurement workflows with human-in-the-loop guardrails.",
@@ -42,12 +46,16 @@ export const metadata: Metadata = {
     title: "Sentinel — B2B Procurement Agent",
     description:
       "AI-powered B2B vendor order & discrepancy reconciliation agent. Execute procurement workflows with human-in-the-loop guardrails.",
+    url: appUrl,
+    siteName: "Sentinel",
+    locale: "en_US",
     type: "website",
     images: [
       {
         url: "/og.png",
         width: 1200,
         height: 630,
+        type: "image/png",
         alt: "Sentinel — B2B Procurement Agent",
       },
     ],
