@@ -18,6 +18,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+  ),
   title: "Sentinel — B2B Procurement Agent",
   description:
     "AI-powered B2B vendor order & discrepancy reconciliation agent. Execute procurement workflows with human-in-the-loop guardrails.",
@@ -32,6 +36,27 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     title: "Sentinel",
+  },
+  openGraph: {
+    title: "Sentinel — B2B Procurement Agent",
+    description:
+      "AI-powered B2B vendor order & discrepancy reconciliation agent. Execute procurement workflows with human-in-the-loop guardrails.",
+    type: "website",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Sentinel — B2B Procurement Agent",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Sentinel — B2B Procurement Agent",
+    description:
+      "AI-powered B2B vendor order & discrepancy reconciliation agent. Execute procurement workflows with human-in-the-loop guardrails.",
+    images: ["/og.png"],
   },
 };
 
