@@ -156,9 +156,9 @@ export default function LandingPage() {
         />
 
         {/* Overline */}
-        <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-6 relative z-10">
+        {/* <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-6 relative z-10">
           B2B Procurement Agent
-        </p>
+        </p> */}
 
         {/* Headline */}
         <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight text-foreground max-w-3xl leading-[1.1] mb-6 relative z-10">
