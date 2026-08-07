@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { QueryProvider } from "@/components/query-provider";
+import { TourProvider } from "@/components/onboarding/tour-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -36,7 +37,7 @@ export default function RootLayout({
         <QueryProvider>
           <TooltipProvider>
             <SidebarProvider defaultOpen={true}>
-              {children}
+              <TourProvider>{children}</TourProvider>
             </SidebarProvider>
           </TooltipProvider>
         </QueryProvider>

@@ -16,6 +16,7 @@ import {
   Bot,
   Sparkles,
 } from "lucide-react";
+import { useTour } from "@/components/onboarding/tour-provider";
 
 type ConversationTurn = { role: "user" | "assistant"; content: string };
 
@@ -86,6 +87,7 @@ const SUGGESTED_WORKFLOWS: SuggestedWorkflow[] = [
 ];
 
 export default function GoalInputPage() {
+  const { start: startTour } = useTour();
   const [goal, setGoal] = useState("");
   const [targetPrice, setTargetPrice] = useState("");
   const [targetSubtotal, setTargetSubtotal] = useState("");
@@ -209,11 +211,19 @@ export default function GoalInputPage() {
           <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground mb-2 text-center">
             Sentinel
           </h1>
-          <p className="text-base text-muted-foreground mb-10 text-center max-w-xl">
+          <p className="text-base text-muted-foreground mb-3 text-center max-w-xl" id="tour-subtitle">
             B2B Vendor Order &amp; Discrepancy Reconciliation Agent. Describe
             your procurement task — Sentinel executes it with human-in-the-loop
             guardrails.
           </p>
+          <button
+            type="button"
+            onClick={startTour}
+            className="mb-10 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
+          >
+            <Sparkles className="size-3.5" />
+            Take the 2-minute tour
+          </button>
 
           <form onSubmit={handleSubmit} className="w-full flex flex-col gap-6">
             {/* Assistant reply for non-task prompts */}
@@ -261,7 +271,7 @@ export default function GoalInputPage() {
             )}
 
             {/* Goal textarea */}
-            <div className="w-full relative group">
+            <div className="w-full relative group" id="tour-goal">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/30 to-primary/10 rounded-2xl blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-500 pointer-events-none" />
               <div className="relative bg-card rounded-xl border border-border overflow-hidden flex flex-col shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
                 <label htmlFor="goal" className="sr-only">
@@ -293,6 +303,7 @@ export default function GoalInputPage() {
                   </div>
                   <Button
                     type="submit"
+                    id="tour-start"
                     disabled={!goal.trim() || isSubmitting}
                     className="gap-2"
                     size="sm"
@@ -319,7 +330,7 @@ export default function GoalInputPage() {
             )}
 
             {/* Business rules */}
-            <fieldset className="bg-card border border-border rounded-xl p-5 flex flex-col gap-4 shadow-sm">
+            <fieldset className="bg-card border border-border rounded-xl p-5 flex flex-col gap-4 shadow-sm" id="tour-rules">
               <legend className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2">
                 Business Rules
               </legend>
@@ -430,7 +441,7 @@ export default function GoalInputPage() {
           </form>
 
           {/* Suggested workflows */}
-          <div className="w-full mt-10">
+          <div className="w-full mt-10" id="tour-quickstart">
             <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mb-4">
               Suggested Workflows
             </p>
