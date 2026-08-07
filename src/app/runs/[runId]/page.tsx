@@ -23,32 +23,43 @@ import {
   Edit3,
   Lock,
   LoaderCircle,
-  ExternalLink,
+  Camera,
   Send,
   ChevronRight,
 } from "lucide-react";
 
 const EVENT_LABELS: Record<string, string> = {
-  NAVIGATE: "NAV",
+  NAVIGATE: "NAVIGATE",
   SEARCH: "SEARCH",
-  EXTRACT: "PARSE",
-  CHECK: "EVAL",
-  HITL: "HALT",
-  FORM_FILL: "FILL",
+  EXTRACT: "EXTRACT",
+  CHECK: "CHECK",
+  HITL: "HITL",
+  FORM_FILL: "FORM_FILL",
   VALIDATE: "VALIDATE",
   RECOVER: "RECOVER",
   DRAFT: "DRAFT",
 };
 
+type StreamTone = "done" | "live" | "error";
+
+function streamTone(status: AgentEvent["status"]): StreamTone {
+  if (status === "error") return "error";
+  if (status === "pending") return "live";
+  return "done";
+}
+
 function AgentStreamRow({
   event,
   showSpinner,
+  isLast,
   onOpenScreenshot,
 }: {
   event: AgentEvent;
   showSpinner: boolean;
+  isLast: boolean;
   onOpenScreenshot?: () => void;
 }) {
+  const tone = streamTone(event.status);
   const label = EVENT_LABELS[event.type] ?? event.type;
   const screenshot =
     typeof event.evidence?.screenshot === "string"
@@ -56,61 +67,70 @@ function AgentStreamRow({
       : undefined;
 
   return (
-    <div
-      className={cn(
-        "rounded-lg p-3 text-xs font-mono border border-border/40 bg-muted/20 transition-all",
-        event.status === "error" &&
-          "bg-destructive/5 text-destructive border border-destructive/20",
-        event.status === "pending" &&
-          "bg-primary/5 text-primary border-l-2 border-primary border-t-border/10 border-r-border/10 border-b-border/10",
-      )}
-    >
-      <div className="flex items-center justify-between gap-3 mb-1.5">
-        <span className="text-[10px] text-muted-foreground font-sans">{event.timestamp}</span>
-        <div className="flex items-center gap-1.5">
-          {showSpinner && (
-            <span className="size-3 rounded-full border-2 border-primary/30 border-t-primary animate-spin shrink-0" />
+    <div className="relative flex gap-3 pb-3 last:pb-0">
+      {/* node + connecting rail */}
+      <div className="relative w-4 shrink-0">
+        <span
+          aria-hidden
+          className={
+            tone === "error"
+              ? "absolute left-0 mt-1 size-2 rounded-full bg-destructive"
+              : tone === "live"
+                ? "absolute left-0 mt-1 size-2 rounded-full bg-primary/45 animate-pulse"
+                : "absolute left-0 mt-1 size-2 rounded-full bg-primary"
+          }
+        >
+          {tone === "live" && showSpinner && (
+            <span className="absolute -inset-0.5 rounded-full border-2 border-primary/25 border-t-primary animate-spin" />
           )}
-          <span
+        </span>
+        {!isLast && (
+          <span aria-hidden className="absolute left-[3px] top-5 bottom-0 w-px bg-border/60" />
+        )}
+      </div>
+
+      {/* content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline justify-between gap-3">
+          <p
             className={cn(
-              "font-bold uppercase tracking-wider text-[10px]",
-              event.status === "success" && "text-primary",
-              event.status === "error" && "text-destructive",
-              event.status === "pending" && "text-primary",
+              "text-[13px] font-medium leading-snug font-sans",
+              tone === "error" ? "text-destructive" : "text-foreground",
             )}
           >
-            [{label}]
+            {event.title}
+          </p>
+          <span
+            className={cn(
+              "shrink-0 font-mono text-[10px] tracking-wider",
+              tone === "error"
+                ? "text-destructive"
+                : tone === "live"
+                  ? "text-primary"
+                  : "text-muted-foreground",
+            )}
+          >
+            {label}
           </span>
         </div>
-      </div>
-      <div className="flex flex-col gap-2">
-        <p className="text-foreground/90 leading-relaxed font-sans text-xs">{event.detail}</p>
-        {screenshot && (
-          <button
-            type="button"
-            onClick={onOpenScreenshot}
-            className="group inline-flex items-center gap-2 rounded-lg border border-border bg-card p-1.5 shadow-2xs transition hover:border-primary/50 hover:shadow-xs"
-          >
-            <div className="relative h-12 w-20 overflow-hidden rounded border border-border/80 bg-background">
-              <Image
-                src={screenshot}
-                alt={event.title}
-                fill
-                unoptimized
-                className="object-cover grayscale group-hover:grayscale-0 transition duration-300"
-              />
-            </div>
-            <div className="flex flex-col text-left font-sans">
-              <span className="text-[10px] font-semibold text-foreground">
-                View screenshot
-              </span>
-              <span className="text-[9px] text-muted-foreground">
-                Click to expand
-              </span>
-            </div>
-            <ExternalLink className="size-3 text-muted-foreground ml-auto group-hover:text-primary transition-colors" />
-          </button>
-        )}
+        <p className="mt-0.5 text-xs font-sans leading-relaxed text-muted-foreground">
+          {event.detail}
+        </p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="font-mono text-[10px] text-muted-foreground/70">
+            {event.timestamp}
+          </span>
+          {screenshot && (
+            <button
+              type="button"
+              onClick={onOpenScreenshot}
+              className="group inline-flex items-center gap-1.5 font-mono text-[10px] text-primary transition-colors hover:text-primary/80"
+            >
+              <Camera className="size-3.5" />
+              View capture
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -401,14 +421,17 @@ export default function LiveRunPage({
             <div className="px-4 py-3 border-b border-border bg-muted/40 flex items-center justify-between shrink-0">
               <h2 className="text-sm font-semibold flex items-center gap-2">
                 <Terminal className="size-4 text-primary" />
-                Agent Stream
+                Run log
               </h2>
-              <span className="text-[10px] font-mono bg-accent text-accent-foreground px-1.5 py-0.5 rounded font-medium">
-                v2.4.1
+              <span className="text-[10px] font-mono text-muted-foreground flex items-center gap-1.5">
+                {isConnected && (
+                  <span className="inline-block size-1.5 rounded-full bg-primary animate-pulse" />
+                )}
+                {events.length} event{events.length === 1 ? "" : "s"}
               </span>
             </div>
             <div
-              className="flex-1 overflow-y-auto p-3 flex flex-col gap-2 min-h-0"
+              className="flex-1 overflow-y-auto px-3 py-3 min-h-0"
               style={{ scrollbarWidth: "thin" }}
             >
               {error && (
@@ -426,10 +449,11 @@ export default function LiveRunPage({
                   ))}
                 </div>
               )}
-              {events.map((event) => (
+              {events.map((event, i) => (
                 <AgentStreamRow
                   key={event.id}
                   event={event}
+                  isLast={i === events.length - 1}
                   showSpinner={
                     event.status === "pending" &&
                     event.id === latestPendingId &&
