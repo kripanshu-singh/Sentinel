@@ -119,7 +119,7 @@ export default function ResultPage({
     <SidebarInset>
       <SentinelNavbar
         breadcrumbs={[
-          { label: "Runs", href: "/" },
+          // { label: "Runs", href: "/" },
           {
             label: runId ? `Run ${runId.slice(0, 8)}…` : "…",
             href: runId ? `/runs/${encodeURIComponent(runId)}` : undefined,

@@ -307,7 +307,7 @@ export default function LiveRunPage({
     <SidebarInset className="h-dvh overflow-hidden flex flex-col">
       <SentinelNavbar
         breadcrumbs={[
-          { label: "Runs", href: "/" },
+          // { label: "Runs", href: "/" },
           { label: runId ? `Run ${runId.slice(0, 8)}…` : "…" },
         ]}
         statusBadge={

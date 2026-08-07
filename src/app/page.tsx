@@ -191,7 +191,7 @@ export default function GoalInputPage() {
 
   return (
     <SidebarInset>
-      <SentinelNavbar onNewRun={handleNewWorkflow} />
+      <SentinelNavbar onNewRun={handleNewWorkflow} /> 
 
       {/* Main Canvas */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 md:px-8 py-12 relative overflow-hidden">
