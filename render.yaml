@@ -21,7 +21,10 @@ services:
     healthCheckPath: /health
     autoDeploy: true
     envVars:
-      # Render injects PORT automatically; the worker binds it (default 3001).
+      # Explicitly set PORT so the health check and the app agree on the same port.
+      # Render free tier uses 10000 by default when PORT is not set in render.yaml.
+      - key: PORT
+        value: "10000"
       # One concurrent run only — 512 MB / 0.1 CPU cannot host multiple Chromiums.
       - key: WORKER_CONCURRENCY
         value: "1"

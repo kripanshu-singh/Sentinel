@@ -31,6 +31,8 @@ RUN npm ci --omit=dev
 COPY --chown=1000:1000 --from=build /app/dist ./dist
 
 ENV PLAYWRIGHT_HEADLESS=true
-EXPOSE 3001
+# PORT is injected by Render at runtime (default 10000 on free tier).
+# Do NOT hardcode EXPOSE here — Render will auto-detect the bound port.
+ENV PORT=3001
 
 CMD ["node", "dist/index.js"]
