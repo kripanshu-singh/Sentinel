@@ -56,7 +56,7 @@ export function SteerControl({ runId, isTerminal }: SteerControlProps) {
           htmlFor="steer-instruction-input"
           className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
         >
-          Steer the agent
+          Operator Instruction
         </label>
         <p className="text-[11px] text-muted-foreground leading-normal">
           Provide a live operator redirect. Instruction takes effect at the next step boundary.

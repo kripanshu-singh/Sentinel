@@ -113,22 +113,20 @@ export default function CommandPalette() {
         disabled: !hasGoalText,
       });
 
-      // 3. Steer the Agent
+      // 3. Go to Live Run
       list.push({
         id: "focus-steer",
-        title: "Steer the Agent",
+        title: "Go to Live Run",
         subtitle: activeRunId
-          ? `Open active run (${activeRunId.slice(0, 8)}...) and send redirect instruction`
-          : "No active run — focus goal input to start one",
+          ? `Open active run (${activeRunId.slice(0, 8)}...)`
+          : "No active run available",
         run: () => {
           if (activeRunId) {
             router.push(`/runs/${encodeURIComponent(activeRunId)}`);
             window.setTimeout(() => dispatch("sentinel:focus-steer"), 250);
-          } else {
-            const el = document.getElementById("goal");
-            if (el) el.focus();
           }
         },
+        disabled: !activeRunId,
       });
 
       // 4. Open Result Report
@@ -166,11 +164,11 @@ export default function CommandPalette() {
         },
       });
     } else if (isLiveRunPage && runIdFromUrl) {
-      // 1. Steer the Agent
+      // 1. Focus Operator Input
       list.push({
         id: "focus-steer",
-        title: "Steer the Agent",
-        subtitle: "Focus the input to send a live redirect instruction to the agent",
+        title: "Focus Operator Input",
+        subtitle: "Focus the input field to send a redirect instruction to the agent",
         run: () => {
           dispatch("sentinel:focus-steer");
         },
