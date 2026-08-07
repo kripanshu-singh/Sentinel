@@ -34,11 +34,11 @@ test("extracts target unit price correctly and ignores subtotal targets", () => 
 
 test("extracts per-product quantities in multi-product goals", () => {
   const goal =
-    "Build a cart with 5 units of Organic Almond Milk and 10 units of Oat Milk, apply SUMMER20.";
-  assert.equal(extractQuantityForProduct(goal, "Organic Almond Milk"), 5);
-  assert.equal(extractQuantityForProduct(goal, "Oat Milk"), 10);
-  // Whole-word matching: "Milk" must not steal "Oat Milk"'s 10.
-  assert.equal(extractQuantityForProduct(goal, "Milk"), 1);
+    "Build a cart with 5 units of Sauce Labs Backpack and 10 units of Sauce Labs Fleece Jacket.";
+  assert.equal(extractQuantityForProduct(goal, "Sauce Labs Backpack"), 5);
+  assert.equal(extractQuantityForProduct(goal, "Sauce Labs Fleece Jacket"), 10);
+  // Whole-word matching: "Backpack" must not steal "Sauce Labs Backpack"'s 5.
+  assert.equal(extractQuantityForProduct(goal, "Backpack"), 1);
 
   assert.equal(extractQuantityForProduct("Buy 3 Fleece Jacket and 2 Bike Light", "Fleece Jacket"), 3);
   assert.equal(extractQuantityForProduct("Buy 3 Fleece Jacket and 2 Bike Light", "Bike Light"), 2);

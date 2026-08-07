@@ -288,7 +288,7 @@ export async function routeIntent(
 
 export const CONVERSATIONAL_REPLIES = [
   "Hello! I can help you run browser tasks like ordering products, checking prices, or researching vendors. What would you like me to do?",
-  "I'm a browser agent specialized in multi-step web tasks. Try giving me a goal like: \"Add 5 units of Organic Almond Milk to cart and check the price.\"",
+  "I'm a browser agent specialized in multi-step web tasks. Try giving me a goal like: \"Add Sauce Labs Backpack to cart and check the price.\"",
   "Nice to meet you. Please give me a browser task when you're ready.",
 ];
 
@@ -299,19 +299,19 @@ export const CAPABILITY_HELP = {
       title: "Search vendor portals",
       description: "Find specific product pricing across storefronts.",
       example:
-        "Search the vendor portal for the unit price of Organic Almond Milk 1L.",
+        "Search the vendor portal for the price of Sauce Labs Fleece Jacket.",
     },
     {
       title: "Compare actual vs target",
       description: "Compare real web prices against PO target prices and flag variance.",
       example:
-        "Go to the vendor portal and verify unit price for Almond Milk 1L under $4.50.",
+        "Go to the vendor portal and verify price for Sauce Labs Backpack under $35.00.",
     },
     {
       title: "Pause for human approval",
       description: "Interrupt before high-stakes actions when variance exceeds your threshold.",
       example:
-        "Compare the price of Oat Milk across 2 stores and flag any gap above 15%.",
+        "Check the price of Sauce Labs Onesie and flag any variance above 10%.",
     },
   ],
 } as const;

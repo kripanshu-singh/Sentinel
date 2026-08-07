@@ -10,7 +10,7 @@
 /**
  * Extract a target/maximum unit price from a goal prompt, e.g.
  *   "If the price is higher than $25, pause and ask for approval"
- *   "verify unit price for Almond Milk 1L under $4.50"
+ *   "verify unit price for Sauce Labs Backpack under $25.00"
  *   "budget of $120"
  *
  * Only the first numeric match wins; the phrasing is matched from strongest to
@@ -38,12 +38,12 @@ export function extractTargetSubtotal(goal: string): number | undefined {
 
 /**
  * Extract the requested quantity for a SPECIFIC product from a multi-product
- * goal, e.g. "5 units of Organic Almond Milk and 10 units of Oat Milk" →
- * `extractQuantityForProduct(goal, "Oat Milk")` returns 10.
+ * goal, e.g. "5 units of Sauce Labs Backpack and 10 units of Sauce Labs Fleece Jacket" →
+ * `extractQuantityForProduct(goal, "Sauce Labs Fleece Jacket")` returns 10.
  *
  * Falls back to 1 (single-unit default) when no quantity is tied to the product.
- * The product name is matched as a whole word so "Milk" never absorbs
- * "Almond Milk"'s quantity.
+ * The product name is matched as a whole word so "Backpack" never absorbs
+ * "Sauce Labs Backpack"'s quantity.
  */
 export function extractQuantityForProduct(
   goal: string,

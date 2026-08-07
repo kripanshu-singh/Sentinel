@@ -292,7 +292,7 @@ export default function GoalInputPage() {
                   value={goal}
                   onChange={(e) => setGoal(e.target.value)}
                   className="w-full min-h-[140px] resize-none border-none bg-transparent p-5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-0 focus:outline-none"
-                  placeholder="Build a cart with 5 units of Organic Almond Milk and 10 units of Oat Milk, apply SUMMER20, and fill the shipping form."
+                  placeholder="Add Sauce Labs Backpack and Sauce Labs Fleece Jacket to cart, and fill the shipping form."
                 />
                 <div className="flex justify-between items-center px-4 py-3 bg-muted/30 border-t border-border">
                   <div className="flex items-center gap-1">
