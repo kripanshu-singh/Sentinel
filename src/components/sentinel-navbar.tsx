@@ -29,7 +29,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import {
-  ShieldCheck,
+
   Plus,
   ChevronRight,
   Compass,
@@ -79,10 +79,10 @@ export function SentinelNavbar({
           className="flex items-center gap-2 shrink-0 group"
           aria-label="Sentinel home"
         >
-          <div className="flex items-center justify-center size-7 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-            <ShieldCheck className="size-4 text-primary" aria-hidden="true" />
+          <div className="">
+            <img src="/favicon.svg" alt="Sentinel logo" className="size-6" aria-hidden="true" />
           </div>
-          <span className="text-sm font-semibold tracking-tight text-foreground">
+          <span className="text-lg font-semibold tracking-tight text-foreground">
             Sentinel
           </span>
           <Badge

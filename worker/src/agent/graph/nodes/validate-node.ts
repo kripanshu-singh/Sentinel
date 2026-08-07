@@ -28,7 +28,7 @@ export async function validateNode(
   const { runId, input, currentProduct } = state;
 
   if (state.status === "FAILED" || state.status === "ABORTED") {
-    return { next: "execute" };
+    return { next: "end" };
   }
 
   await transition(runId, "CHECKING");

@@ -65,7 +65,7 @@ export async function extractNode(
   const { runId, input, planResult, stepIndex } = state;
 
   if (state.status === "FAILED" || state.status === "ABORTED") {
-    return { next: "validate" };
+    return { next: "end" };
   }
 
   const targetName = targetNameFromPlan(planResult?.plan ?? [], stepIndex, input.goal);

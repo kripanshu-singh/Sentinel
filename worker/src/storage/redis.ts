@@ -101,12 +101,19 @@ export function subscribeToRun(
 
   // ioredis: create a dedicated subscriber instance per subscription
   const sub = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
+  sub.on("error", (err: any) => {
+    /* ignore connection close errors on transient subscriber */
+  });
   sub.subscribe(channel);
   sub.on("message", listener);
 
   return async () => {
-    await sub.unsubscribe(channel);
-    sub.disconnect();
+    try {
+      await sub.unsubscribe(channel);
+      await sub.quit();
+    } catch {
+      sub.disconnect();
+    }
   };
 }
 
@@ -132,6 +139,9 @@ export async function waitForHITLResolution(
   // route) would queue behind the blocking command and never reach the server
   // until the timeout. Dedicated connection breaks that deadlock.
   const blocker = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
+  blocker.on("error", (err: any) => {
+    /* ignore connection close errors on transient blocker */
+  });
   try {
     // BLPOP blocks until an element is pushed or timeout expires
     const result = await blocker.blpop(key, timeoutSeconds);
@@ -143,7 +153,11 @@ export async function waitForHITLResolution(
       return null;
     }
   } finally {
-    blocker.disconnect();
+    try {
+      await blocker.quit();
+    } catch {
+      blocker.disconnect();
+    }
   }
 }
 

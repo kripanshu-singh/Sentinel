@@ -20,6 +20,18 @@ export const metadata: Metadata = {
   title: "Sentinel — B2B Procurement Agent",
   description:
     "AI-powered B2B vendor order & discrepancy reconciliation agent. Execute procurement workflows with human-in-the-loop guardrails.",
+  manifest: "/site.webmanifest",
+  icons: {
+    icon: [
+      { url: "/favicon-96x96.png", type: "image/png", sizes: "96x96" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    title: "Sentinel",
+  },
 };
 
 export default function RootLayout({
