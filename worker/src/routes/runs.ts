@@ -7,7 +7,7 @@
 import { Router, type Request, type Response } from "express";
 import { nanoid } from "nanoid";
 import { db, runs, agentEvents, approvalRequests, reconciliationReports } from "../storage/db.js";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { runsQueue } from "../queue/jobs.js";
 import { extractTargetPrice, extractTargetSubtotal } from "../lib/goal-rules.js";
 import type { GoalInput, RunSummary } from "../types/index.js";
@@ -79,11 +79,11 @@ router.get("/:id", async (req: Request, res: Response) => {
       .where(eq(reconciliationReports.runId, runId))
       .limit(1);
     
-    // 3. Load active approval request if paused
+    // 3. Load ACTIVE approval request if the run is paused (unresolved only).
     const approvalRows = await db
       .select()
       .from(approvalRequests)
-      .where(eq(approvalRequests.runId, runId))
+      .where(and(eq(approvalRequests.runId, runId), isNull(approvalRequests.resolution)))
       .limit(1);
 
     const summary: RunSummary = {

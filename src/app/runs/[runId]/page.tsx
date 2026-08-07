@@ -220,10 +220,12 @@ export default function LiveRunPage({
     approvalRequest?.detail ??
     "Manual intervention required.";
   const hasHITL =
+    !!status &&
     !hitlResolved &&
+    !isTerminal &&
     Boolean(
       (hitlEvent && hitlEvent.status === "pending") ||
-      approvalRequest ||
+      (approvalRequest && !approvalRequest.resolution) ||
       status === "HITL_PENDING"
     );
 
