@@ -81,6 +81,7 @@ export default function RootLayout({
             </SidebarProvider>
           </TooltipProvider>
         </QueryProvider>
+        <Analytics />
       </body>
     </html>
   );
