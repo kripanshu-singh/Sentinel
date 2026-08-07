@@ -39,24 +39,28 @@ function measureRect(id: string): Rect | null {
 /**
  * Track the bounding box of the active target. Returns `null` while no target
  * is active or before the first measurement lands.
+ *
+ * The returned `rect` is not tagged with the step id: when the step changes the
+ * box briefly holds the previous value rather than becoming `null`, so the
+ * spotlight element stays mounted and `motion` springs it between positions
+ * instead of snapping.
  */
 function useTargetRect(active: boolean, targetId: string | undefined) {
-  const [spot, setSpot] = useState<{ id: string; rect: Rect } | null>(null);
+  const [rect, setRect] = useState<Rect | null>(null);
 
   useEffect(() => {
     if (!active || !targetId) return;
     const measure = () => {
-      const rect = measureRect(targetId);
-      if (!rect) return;
-      setSpot((prev) =>
+      const next = measureRect(targetId);
+      setRect((prev) =>
         prev &&
-        prev.id === targetId &&
-        prev.rect.top === rect.top &&
-        prev.rect.left === rect.left &&
-        prev.rect.width === rect.width &&
-        prev.rect.height === rect.height
+        next &&
+        prev.top === next.top &&
+        prev.left === next.left &&
+        prev.width === next.width &&
+        prev.height === next.height
           ? prev
-          : { id: targetId, rect },
+          : next,
       );
     };
     const initial = window.requestAnimationFrame(measure);
@@ -73,9 +77,7 @@ function useTargetRect(active: boolean, targetId: string | undefined) {
     };
   }, [active, targetId]);
 
-  // Only trust measurements belonging to the currently active target, so a
-  // stale box from the previous step is never rendered.
-  return active && targetId && spot?.id === targetId ? spot.rect : null;
+  return rect;
 }
 
 const CARD_W = 384;
@@ -223,8 +225,8 @@ export function TourOverlay({
   // Rough card height for placement; measured lazily on the first paint is
   // unnecessary here since placement only needs to stay inside the viewport.
   const cardPos = useMemo(
-    () => placeCard(targetRect, 280),
-    [targetRect],
+    () => (step?.targetId ? placeCard(targetRect, 280) : placeCard(null, 280)),
+    [targetRect, step?.targetId],
   );
 
   if (!mounted) return null;
@@ -233,25 +235,21 @@ export function TourOverlay({
     <AnimatePresence>
       {active && step && (
         <div className="fixed inset-0 z-50 pointer-events-none">
-          {/* Spotlight: dims everything except the hole around the target. */}
+          {/* Spotlight: dims everything except the hole around the target.
+              No `key` here — the element must persist across steps so motion
+              springs the hole from one target to the next. */}
           {targetRect && (
             <motion.div
-              key={`spot-${step.id}`}
               aria-hidden
               className="fixed"
-              initial={{
-                top: targetRect.top - PAD,
-                left: targetRect.left - PAD,
-                width: targetRect.width + PAD * 2,
-                height: targetRect.height + PAD * 2,
-              }}
+              initial={false}
               animate={{
                 top: targetRect.top - PAD,
                 left: targetRect.left - PAD,
                 width: targetRect.width + PAD * 2,
                 height: targetRect.height + PAD * 2,
               }}
-              transition={{ type: "spring", stiffness: 300, damping: 28 }}
+              transition={{ type: "spring", stiffness: 280, damping: 26, mass: 0.9 }}
             >
               <span
                 className="block size-full rounded-3xl"
@@ -264,21 +262,25 @@ export function TourOverlay({
             </motion.div>
           )}
 
-          {/* Tooltip card, positioned next to the target. */}
-          <motion.div
-            className="pointer-events-auto fixed"
-            style={{ top: cardPos.top, left: cardPos.left }}
-            initial={false}
-          >
-            <TooltipCard
-              step={step}
-              index={index}
-              total={steps.length}
-              onClose={onClose}
-              onNext={onNext}
-              onPrevious={onPrevious}
-            />
-          </motion.div>
+          {/* Tooltip card — top/left live in `animate` so it glides with the
+              spotlight rather than snapping between steps. */}
+          {cardPos && (
+            <motion.div
+              className="pointer-events-auto fixed"
+              initial={false}
+              animate={{ top: cardPos.top, left: cardPos.left }}
+              transition={{ type: "spring", stiffness: 280, damping: 26, mass: 0.9 }}
+            >
+              <TooltipCard
+                step={step}
+                index={index}
+                total={steps.length}
+                onClose={onClose}
+                onNext={onNext}
+                onPrevious={onPrevious}
+              />
+            </motion.div>
+          )}
         </div>
       )}
     </AnimatePresence>,
