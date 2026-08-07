@@ -31,26 +31,35 @@ app.get("/health", (req: Request, res: Response) => {
 });
 
 // Initialization
-async function startServer() {
+function startServer() {
   console.log("[server] Starting Sentinel worker bootstrap...");
-  
-  try {
-    // 1. Ensure Postgres tables are created in development
-    await createTablesIfNotExist();
-    console.log("[db] Schema check complete");
 
-    // 2. Start BullMQ queue processor
-    startQueueWorker();
-    console.log("[queue] Background task worker listening for runs");
+  // 1. Start Express server FIRST so /health answers immediately. Render's
+  // deploy health check must never wait on the DB schema init below.
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`[server] Worker is listening at http://localhost:${PORT}`);
+  });
 
-    // 3. Start Express server
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`[server] Worker is listening at http://localhost:${PORT}`);
-    });
-  } catch (err) {
-    console.error("[server] Bootstrap crash:", err);
-    process.exit(1);
-  }
+  // 2. Boot background services without blocking the HTTP server.
+  const boot = async () => {
+    // Ensure Postgres tables are created (development; idempotent)
+    try {
+      await createTablesIfNotExist();
+      console.log("[db] Schema check complete");
+    } catch (err) {
+      console.error("[db] Schema check failed:", err);
+    }
+
+    // Start BullMQ queue processor
+    try {
+      startQueueWorker();
+      console.log("[queue] Background task worker listening for runs");
+    } catch (err) {
+      console.error("[queue] Failed to start background worker:", err);
+    }
+  };
+
+  boot();
 }
 
 startServer();
