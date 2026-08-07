@@ -79,7 +79,7 @@ const SUGGESTED_WORKFLOWS: SuggestedWorkflow[] = [
     description:
       "Find and buy a dress for the infant on a strict budget of $10.00.",
     goal: "So I need to buy the dress for the infant. And my budget is $10. So I want you to find the dress and add to cart and checkout.",
-    targetSubtotal: "10.00",
+    targetUnitPrice:"10.00",
     varianceThresholdPct: "0",
     fallbackPolicy: "abort",
   },

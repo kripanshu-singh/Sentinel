@@ -108,6 +108,15 @@ export default function ResultPage({
   const flaggedCount = lineItems.filter((i) => i.status === "flagged").length;
   const confirmedCount = lineItems.filter((i) => i.status === "confirmed").length;
 
+  // Budget context: the worker surfaces a numeric subtotal ceiling as a "price"
+  // discrepancy whose `expected` is the budget. If present, show it against the
+  // grand total so the reconciliation reads as "budget vs. actual".
+  const budgetDisc = discrepancies.find(
+    (d) => d.kind === "price" && typeof d.expected === "number",
+  );
+  const budget = budgetDisc ? Number(budgetDisc.expected) : undefined;
+  const overBudget = budget !== undefined && grandTotal > budget;
+
   const stats = [
     { label: "Line items", value: lineItems.length },
     { label: "Flagged", value: flaggedCount },
@@ -267,19 +276,45 @@ export default function ResultPage({
             <section className="bg-card border border-border rounded-xl overflow-hidden">
               <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-semibold text-foreground">
+                  <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
                     Reconciliation
+                    {budget !== undefined && (
+                      <span
+                        className={cn(
+                          "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold",
+                          overBudget
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-primary/10 text-primary",
+                        )}
+                      >
+                        Budget ${budget.toFixed(2)}
+                      </span>
+                    )}
                   </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Line items reconciled against the checkout review.
                   </p>
                 </div>
-                <span className="text-xs text-muted-foreground font-mono tabular-nums">
-                  Grand total:{" "}
-                  <span className="font-semibold text-foreground">
-                    ${grandTotal.toFixed(2)}
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-xs text-muted-foreground font-mono tabular-nums">
+                    Grand total:{" "}
+                    <span
+                      className={cn(
+                        "font-semibold",
+                        overBudget ? "text-destructive" : "text-foreground",
+                      )}
+                    >
+                      ${grandTotal.toFixed(2)}
+                    </span>
                   </span>
-                </span>
+                  {overBudget && budget !== undefined && (
+                    <span className="text-[11px] font-semibold text-destructive">
+                      {grandTotal.toFixed(2) > budget.toFixed(2)
+                        ? `Over budget by $${(grandTotal - budget).toFixed(2)}`
+                        : "Within budget"}
+                    </span>
+                  )}
+                </div>
               </div>
               <Table>
                 <TableHeader>

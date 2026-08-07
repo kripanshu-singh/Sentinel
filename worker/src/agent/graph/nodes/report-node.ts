@@ -8,6 +8,7 @@
 
 import { extractInvoiceFromDOM } from "../../extractor.js";
 import { sessionManager } from "../../session/session-manager.js";
+import { checkSubtotal } from "../../rule-engine.js";
 import { db, reconciliationReports } from "../../../storage/db.js";
 import { emitEvent, transition } from "../emit.js";
 import type { LineItem, ReconciliationReport } from "../../../types/index.js";
@@ -126,6 +127,32 @@ export async function reportNode(
     channels: invoiceData.channels ?? [],
     summary: invoiceData.summary,
   };
+
+  // ── Budget reconciliation (belt-and-suspenders) ─────────────────────────
+  // Ensure a numeric budget/subtotal ceiling is ALWAYS surfaced in the report,
+  // even if the graph's validate gate was skipped or already auto-passed. If the
+  // cart exceeds the budget, add the discrepancy and flag the offending items so
+  // the operator sees the budget was violated. Human-confirmed runs mark the
+  // items as such instead.
+  const targetSubtotal = input.targetSubtotal;
+  if (targetSubtotal !== undefined) {
+    const subCheck = checkSubtotal(
+      report.items.map((i) => ({ lineTotal: i.lineTotal })),
+      input
+    );
+    const overBudget = subCheck.discrepancies.some((d) => d.kind === "price");
+    if (overBudget) {
+      const subDisc = subCheck.discrepancies[0];
+      if (!report.discrepancies.some((d) => d.kind === subDisc.kind && d.expected === subDisc.expected)) {
+        report.discrepancies = [...report.discrepancies, subDisc];
+      }
+      const humanConfirmed = state.approvalHandled === true;
+      report.items = report.items.map((item) => ({
+        ...item,
+        status: humanConfirmed ? "confirmed" : "flagged",
+      }));
+    }
+  }
 
   await db.insert(reconciliationReports).values({
     runId: report.runId,

@@ -43,6 +43,13 @@ const REQUIRES_APPROVAL_RE =
 const CONDITIONAL_HITL_RE =
   /\bif\b[\s\S]{0,120}\b(?:subtotal|variance|price|cost|total)\b[\s\S]{0,120}\b(?:exceed|exceeds|exceeded|above|over|higher\s+than|greater\s+than|more\s+than|not\s+exceed)\b/i;
 
+// A goal that carries a numeric budget / subtotal ceiling ("budget is $5",
+// "subtotal under $50") is a CONDITIONAL approval: the rule engine evaluates it
+// and pauses with concrete expected/actual numbers. Injecting a bare
+// pause_for_approval on top of it produces a detail-free "just confirm?" gate.
+const BUDGET_RE =
+  /\b(?:budget|subtotal|total|combined)\b[\s\S]{0,40}?\$?\s*\d+(?:\.\d{1,2})?/i;
+
 function looksLikeSimpleShoppingGoal(goal: string): boolean {
   const normalized = goal.trim().toLowerCase();
   const hasShoppingVerb = /\b(add|buy|purchase|order|search|find|look for|pick|select|grab|get)\b/.test(normalized);
@@ -121,10 +128,10 @@ export function getFallbackPlan(input: GoalInput): PlanResult {
  * (fill_form) step so the operator is brought into the loop before the commit.
  */
 export function injectApprovalStep(plan: StepPlan[], goal: string): StepPlan[] {
-  // Goals that already tie approval to a condition (for example, a subtotal
-  // variance threshold) should not be forced into an unconditional pause. The
-  // business-rule evaluator handles the actual threshold check.
-  if (CONDITIONAL_HITL_RE.test(goal)) {
+  // Goals that already tie approval to a condition (a subtotal variance
+  // threshold, or any numeric budget ceiling) should not be forced into an
+  // unconditional pause. The business-rule evaluator handles the actual check.
+  if (CONDITIONAL_HITL_RE.test(goal) || BUDGET_RE.test(goal)) {
     return plan.filter((step) => step.kind !== "pause_for_approval");
   }
 
@@ -169,13 +176,26 @@ export function backfillQuantities(plan: StepPlan[], goal: string): StepPlan[] {
  */
 export function ensureTerminalSteps(plan: StepPlan[], input: GoalInput): StepPlan[] {
   const next = [...plan];
+  const hasValidate = next.some((s) => s.kind === "validate");
   const hasDraft = next.some((s) => s.kind === "draft_report");
+
+  if (input.targetSubtotal !== undefined && !hasValidate) {
+    next.push({ kind: "validate", description: "Validate the combined cart subtotal against the target", params: {} });
+  }
   if (!hasDraft) {
     next.push({ kind: "draft_report", description: "Draft the final reconciliation report", params: {} });
   }
-  if (input.targetSubtotal !== undefined && !next.some((s) => s.kind === "validate")) {
-    next.push({ kind: "validate", description: "Validate the combined cart subtotal against the target", params: {} });
+
+  // The combined-subtotal gate MUST run before the terminal report draft.
+  // `draft_report` routes straight to the report node (END), so if the validate
+  // step ended up after it the budget would never be checked. Order them.
+  const validateIdx = next.findIndex((s) => s.kind === "validate");
+  const draftIdx = next.findIndex((s) => s.kind === "draft_report");
+  if (validateIdx !== -1 && draftIdx !== -1 && validateIdx > draftIdx) {
+    const [validateStep] = next.splice(validateIdx, 1);
+    next.splice(draftIdx, 0, validateStep);
   }
+
   return next;
 }
 
@@ -416,6 +436,14 @@ Generate the step plan.`.trim();
       // always brings the operator into the loop before the high-stakes action.
       if (!options?.skipApprovalInjection) {
         orderedPlan = injectApprovalStep(orderedPlan, input.goal);
+      }
+
+      // A goal with a numeric budget is a CONDITIONAL approval the validator
+      // evaluates with real expected/actual numbers. A bare pause_for_approval
+      // (whether the LLM emitted it or one slipped past injection) would open a
+      // detail-free gate instead. Drop it — the subtotal catch feeds the HITL.
+      if (input.targetSubtotal !== undefined) {
+        orderedPlan = orderedPlan.filter((s) => s.kind !== "pause_for_approval");
       }
 
       // Resilience backstops: concrete quantities + a guaranteed report draft
