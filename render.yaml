@@ -1,0 +1,40 @@
+# Sentinel worker — Render blueprint
+#
+# Deploy: push this repo to GitHub, then "New +" → "Blueprint" → pick the repo,
+# or use the "Blueprints" tab in the dashboard.
+# Replace the `repo` below with your GitHub repo before deploying.
+#
+# Free-tier notes (see https://render.com/docs/free):
+#   - Spin-down after 15 min idle is disabled in practice by an external uptime
+#     ping (cron-job.org / UptimeRobot) hitting /health every ~10 minutes.
+#   - Do NOT use Render's free Postgres (expires in 30 days) or free Key Value
+#     (in-memory only). Use Neon for Postgres and Redis Cloud for Redis.
+services:
+  - type: web
+    name: sentinel-worker
+    runtime: docker
+    repo: https://github.com/your-org/sentinel
+    plan: free
+    region: oregon
+    dockerContext: ./worker
+    dockerfilePath: ./worker/Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # Render injects PORT automatically; the worker binds it (default 3001).
+      # One concurrent run only — 512 MB / 0.1 CPU cannot host multiple Chromiums.
+      - key: WORKER_CONCURRENCY
+        value: "1"
+      - key: PLAYWRIGHT_HEADLESS
+        value: "true"
+      # ── Secrets — set in the dashboard on first deploy (sync: false) ──
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        sync: false

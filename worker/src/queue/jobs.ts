@@ -24,7 +24,11 @@ export const runsQueue = new Queue("runs", {
 // Worker Setup
 // ---------------------------------------------------------------------------
 
+const DEFAULT_CONCURRENCY = 5;
+
 export function startQueueWorker(): Worker {
+  const concurrency = Number(process.env.WORKER_CONCURRENCY ?? DEFAULT_CONCURRENCY);
+
   const worker = new Worker(
     "runs",
     async (job: Job<{ runId: string; input: GoalInput }>) => {
@@ -37,7 +41,7 @@ export function startQueueWorker(): Worker {
       connection: {
         url: REDIS_URL,
       },
-      concurrency: 5, // Process up to 5 runs concurrently
+      concurrency, // Process up to N runs concurrently (see WORKER_CONCURRENCY)
     }
   );
 
