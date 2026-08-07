@@ -127,15 +127,21 @@ function placeCard(
   const below = spot.top + spot.height + PAD;
   const above = spot.top - cardH - PAD;
 
-  // Beside the spotlight, vertically centred on the target. Never cover it.
+  // Prefer below, then above. For small targets there is usually room, keeping
+  // the card clear of the element itself.
+  if (below + cardH + margin <= vh) {
+    return { top: below, left: overSpot() };
+  }
+  if (above >= margin) {
+    return { top: above, left: overSpot() };
+  }
+
+  // Tall targets (full-height run panels) have no room above/below, so pin the
+  // card alongside the spotlight — to the side, never on top of it.
   const right = spot.left + spot.width + PAD;
   const left = spot.left - CARD_W - PAD;
   const besideTop = () =>
     Math.min(Math.max(spot.top + spot.height / 2 - cardH / 2, margin), vh - cardH - margin);
-
-  // Place the card to the side whenever the surrounding layout allows it —
-  // targets like full-height run panels have no room above/below, so pin the
-  // card alongside instead of letting it sit on top of the element.
   if (right + CARD_W <= vw) {
     return { top: besideTop(), left: right };
   }
@@ -143,10 +149,8 @@ function placeCard(
     return { top: besideTop(), left: left };
   }
 
-  // Prefer below, then above, then fall back to centring vertically.
-  if (below + cardH + margin <= vh) return { top: below, left: overSpot() };
-  else if (above >= margin) return { top: above, left: overSpot() };
-  else return { top: Math.max(margin, vh / 2 - cardH / 2), left: overSpot() };
+  // Nothing fits beside or above/below — fall back to centring vertically.
+  return { top: Math.max(margin, vh / 2 - cardH / 2), left: overSpot() };
 }
 
 function TooltipCard({
