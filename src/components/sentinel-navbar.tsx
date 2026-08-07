@@ -19,8 +19,9 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { ShieldCheck, Plus, Bell, ChevronRight } from "lucide-react";
+import { ShieldCheck, Plus, ChevronRight, Compass } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTour } from "@/components/onboarding/tour-provider";
 
 /**
  * Breadcrumb segment shown in the center-left of the navbar.
@@ -50,6 +51,7 @@ export function SentinelNavbar({
   statusBadge,
   onNewRun,
 }: SentinelNavbarProps) {
+  const { start: startTour } = useTour();
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between h-14 px-5 bg-background/80 backdrop-blur-md border-b border-border">
       {/* Left: Brand + optional breadcrumbs */}
@@ -170,16 +172,18 @@ export function SentinelNavbar({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon"
-                className="size-8 text-muted-foreground relative"
-                aria-label="Notifications"
+                size="sm"
+                className="gap-1.5 text-muted-foreground"
+                onClick={startTour}
               />
             }
           >
-            <Bell className="size-4" aria-hidden="true" />
-            <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary" />
+            <Compass className="size-3.5" aria-hidden="true" />
+            <span className="hidden sm:inline">Tour</span>
           </TooltipTrigger>
-          <TooltipContent side="bottom">Notifications</TooltipContent>
+          <TooltipContent side="bottom">
+            Take a quick tour of this screen
+          </TooltipContent>
         </Tooltip>
 
         <Avatar size="sm" className="ml-1 cursor-pointer">

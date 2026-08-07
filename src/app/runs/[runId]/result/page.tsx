@@ -167,7 +167,7 @@ export default function ResultPage({
         {report && (
           <>
             {/* Summary hero */}
-            <div className="relative overflow-hidden rounded-xl border border-border bg-card">
+            <div className="relative overflow-hidden rounded-xl border border-border bg-card" id="tour-result-hero">
               <div className="px-6 py-6 flex flex-col gap-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3">
@@ -189,6 +189,7 @@ export default function ResultPage({
                   </div>
                   <Button
                     size="sm"
+                    id="tour-result-export"
                     className="gap-2"
                     onClick={() => exportCsv(report.runId, lineItems)}
                   >
@@ -221,7 +222,7 @@ export default function ResultPage({
 
             {/* Discrepancies */}
             {discrepancies.length > 0 && (
-              <section className="bg-card border border-border rounded-xl overflow-hidden">
+              <section className="bg-card border border-border rounded-xl overflow-hidden" id="tour-result-discrepancies">
                 <div className="px-5 py-4 border-b border-border">
                   <h2 className="text-sm font-semibold text-foreground">
                     Discrepancies
@@ -273,7 +274,7 @@ export default function ResultPage({
             )}
 
             {/* Reconciliation table */}
-            <section className="bg-card border border-border rounded-xl overflow-hidden">
+            <section className="bg-card border border-border rounded-xl overflow-hidden" id="tour-result-table">
               <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                 <div>
                   <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -410,7 +411,7 @@ export default function ResultPage({
 
             {/* Multi-channel comparison */}
             {channels.length > 0 && (
-              <section className="bg-card border border-border rounded-xl overflow-hidden">
+              <section className="bg-card border border-border rounded-xl overflow-hidden" id="tour-result-channels">
                 <div className="px-5 py-4 border-b border-border">
                   <h2 className="text-sm font-semibold text-foreground">
                     Channel Comparison

@@ -354,7 +354,7 @@ export default function LiveRunPage({
         )}
 
         {/* Progress Stepper */}
-        <div className="bg-card border border-border rounded-xl p-3 px-6 flex items-center justify-between shrink-0 shadow-2xs">
+        <div className="bg-card border border-border rounded-xl p-3 px-6 flex items-center justify-between shrink-0 shadow-2xs" id="tour-run-progress">
           <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             <span>Workflow Progress</span>
             <span className="text-[10px] text-muted-foreground/30">•</span>
@@ -417,7 +417,7 @@ export default function LiveRunPage({
         {/* Three-pane grid layout — smooth, distanced cards */}
         <div className="flex-1 grid grid-cols-12 gap-5 min-h-0">
           {/* Left pane: Agent stream */}
-          <div className="col-span-3 bg-card border border-border rounded-xl overflow-hidden flex flex-col min-h-0">
+          <div className="col-span-3 bg-card border border-border rounded-xl overflow-hidden flex flex-col min-h-0" id="tour-run-log">
             <div className="px-4 py-3 border-b border-border bg-muted/40 flex items-center justify-between shrink-0">
               <h2 className="text-sm font-semibold flex items-center gap-2">
                 <Terminal className="size-4 text-primary" />
@@ -474,7 +474,7 @@ export default function LiveRunPage({
           </div>
 
           {/* Center pane: live browser capture */}
-          <div className="col-span-6 bg-card border border-border rounded-xl flex flex-col overflow-hidden min-h-0">
+          <div className="col-span-6 bg-card border border-border rounded-xl flex flex-col overflow-hidden min-h-0" id="tour-run-capture">
             {/* Browser chrome */}
             <div className="px-4 py-2.5 border-b border-border bg-muted/40 flex items-center gap-3 shrink-0">
               <div className="flex gap-1.5 shrink-0">
@@ -511,7 +511,7 @@ export default function LiveRunPage({
           </div>
 
           {/* Right pane: HITL control */}
-          <div className="col-span-3 flex flex-col gap-4 min-h-0 overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
+          <div className="col-span-3 flex flex-col gap-4 min-h-0 overflow-y-auto" id="tour-run-hitl" style={{ scrollbarWidth: "thin" }}>
             {/* HITL Control Panel */}
             {hasHITL && (
               <div className="bg-card border-2 border-destructive/30 rounded-xl overflow-hidden shadow-lg shrink-0">
@@ -680,7 +680,7 @@ export default function LiveRunPage({
             )}
 
             {/* Run goal details card */}
-            <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2 shrink-0">
+            <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2 shrink-0" id="tour-run-goal">
               <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Run Goal
               </h4>
@@ -693,6 +693,7 @@ export default function LiveRunPage({
             {status === "DONE" && (
               <Link
                 href={`/runs/${encodeURIComponent(runId ?? "")}/result`}
+                id="tour-run-result"
                 className={cn(buttonVariants({ variant: "outline" }), "w-full gap-1.5 shrink-0")}
               >
                 View Result Report →

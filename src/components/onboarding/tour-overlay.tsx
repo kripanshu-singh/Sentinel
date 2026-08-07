@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@/components/ui/button";
@@ -47,9 +47,12 @@ function measureRect(id: string): Rect | null {
  */
 function useTargetRect(active: boolean, targetId: string | undefined) {
   const [rect, setRect] = useState<Rect | null>(null);
+  const cleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!active || !targetId) return;
+    let poll: number | undefined;
+
     const measure = () => {
       const next = measureRect(targetId);
       setRect((prev) =>
@@ -62,18 +65,35 @@ function useTargetRect(active: boolean, targetId: string | undefined) {
           ? prev
           : next,
       );
+      const el = document.getElementById(targetId);
+      if (!el) return;
+      window.addEventListener("resize", measure);
+      window.addEventListener("scroll", measure, { passive: true });
+      const ro = new ResizeObserver(measure);
+      ro.observe(el);
+      cleanupRef.current = () => {
+        window.removeEventListener("resize", measure);
+        window.removeEventListener("scroll", measure);
+        ro.disconnect();
+      };
     };
-    const initial = window.requestAnimationFrame(measure);
-    window.addEventListener("resize", measure);
-    window.addEventListener("scroll", measure, { passive: true });
-    const el = document.getElementById(targetId);
-    const ro = el ? new ResizeObserver(measure) : null;
-    ro?.observe(el as Element);
+
+    // Targets may render late (async data). Poll briefly until one exists, then
+    // measure and attach listeners once.
+    const find = () => {
+      if (document.getElementById(targetId)) {
+        measure();
+        return;
+      }
+      poll = window.setTimeout(find, 80);
+    };
+
+    const raf = window.requestAnimationFrame(find);
     return () => {
-      window.cancelAnimationFrame(initial);
-      window.removeEventListener("resize", measure);
-      window.removeEventListener("scroll", measure);
-      ro?.disconnect();
+      window.cancelAnimationFrame(raf);
+      if (poll) window.clearTimeout(poll);
+      cleanupRef.current?.();
+      cleanupRef.current = null;
     };
   }, [active, targetId]);
 
