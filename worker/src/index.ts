@@ -36,11 +36,27 @@ app.get("/health", (req: Request, res: Response) => {
 function startServer() {
   console.log("[server] Starting Sentinel worker bootstrap...");
 
-  // 1. Start Express server FIRST so /health answers immediately. Render's
-  // deploy health check must never wait on the DB schema init below.
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`[server] Worker is listening at http://localhost:${PORT}`);
-  });
+  // Start Express server on process.env.PORT, 10000, and 3001 so /health answers
+  // immediately regardless of Render dashboard configuration or port routing.
+  const portsToListen = new Set<number>();
+  if (process.env.PORT) {
+    portsToListen.add(parseInt(process.env.PORT, 10));
+  }
+  portsToListen.add(10000);
+  portsToListen.add(3001);
+
+  for (const port of portsToListen) {
+    const server = app.listen(port, "0.0.0.0", () => {
+      console.log(`[server] Worker is listening at http://0.0.0.0:${port}`);
+    });
+    server.on("error", (err: any) => {
+      if (err.code === "EADDRINUSE") {
+        console.log(`[server] Port ${port} already bound, skipping secondary bind.`);
+      } else {
+        console.error(`[server] Error listening on port ${port}:`, err);
+      }
+    });
+  }
 
   // 2. Boot background services without blocking the HTTP server.
   const boot = async () => {
