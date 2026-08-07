@@ -342,15 +342,22 @@ export default function LiveRunPage({
     return (
       <SidebarInset className="h-dvh overflow-hidden flex flex-col">
         <SentinelNavbar breadcrumbs={[{ label: "…" }]} />
-        <main className="flex-1 flex flex-col gap-5 p-6 overflow-hidden min-h-0">
+        <main className="flex-1 flex flex-col gap-5 p-4 md:p-6 overflow-hidden min-h-0">
           <Skeleton className="h-12 w-full shrink-0" />
-          <div className="flex-1 grid grid-cols-12 gap-5 min-h-0">
-            <Skeleton className="col-span-3 h-full" />
-            <Skeleton className="col-span-6 h-full" />
-            <div className="col-span-3 flex flex-col gap-4">
+          {/* Desktop skeleton: 3-column grid */}
+          <div className="hidden md:flex flex-1 gap-5 min-h-0">
+            <Skeleton className="w-1/4 h-full" />
+            <Skeleton className="flex-1 h-full" />
+            <div className="w-1/4 flex flex-col gap-4">
               <Skeleton className="h-40 w-full" />
               <Skeleton className="h-28 w-full" />
             </div>
+          </div>
+          {/* Mobile skeleton: stacked */}
+          <div className="flex flex-col flex-1 gap-4 md:hidden">
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-40 w-full" />
           </div>
         </main>
       </SidebarInset>
@@ -361,8 +368,7 @@ export default function LiveRunPage({
     <SidebarInset className="h-dvh overflow-hidden flex flex-col">
       <SentinelNavbar
         breadcrumbs={[
-          // { label: "Runs", href: "/" },
-          { label: runId ? `Run ${runId.slice(0, 8)}…` : "…" },
+          { label: runId ? `Run ${runId.slice(0, 6)}…` : "…" },
         ]}
         statusBadge={
           isTerminal
@@ -378,7 +384,7 @@ export default function LiveRunPage({
         }
       />
 
-      <main className="flex-1 flex flex-col gap-5 p-6 overflow-hidden min-h-0">
+      <main className="flex-1 flex flex-col gap-4 md:gap-5 p-4 md:p-6 overflow-hidden min-h-0">
         {/* Terminal-state banner */}
         {status === "FAILED" && (
           <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 flex items-start gap-3 shrink-0">
@@ -408,8 +414,8 @@ export default function LiveRunPage({
         )}
 
         {/* Progress Stepper */}
-        <div className="bg-card border border-border rounded-xl p-3 px-6 flex items-center justify-between shrink-0 shadow-2xs" id="tour-run-progress">
-          <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <div className="bg-card border border-border rounded-xl p-3 px-4 md:px-6 flex items-center justify-between shrink-0 shadow-2xs" id="tour-run-progress">
+          <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider shrink-0">
             <span>Workflow Progress</span>
             <span className="text-[10px] text-muted-foreground/30">•</span>
             <span className="text-foreground normal-case font-medium">
@@ -419,7 +425,7 @@ export default function LiveRunPage({
               {status !== "DONE" && status !== "FAILED" && status !== "ABORTED" && (isConnected ? "Running" : "Connecting…")}
             </span>
           </div>
-          <div className="flex items-center gap-3 md:gap-5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+          <div className="flex items-center gap-2 md:gap-5 overflow-x-auto w-full sm:w-auto" style={{ scrollbarWidth: "none" }}>
             {phases.map((phase, i) => {
               return (
                 <div key={phase.id} className="flex items-center gap-2 shrink-0">
@@ -468,10 +474,10 @@ export default function LiveRunPage({
           </div>
         </div>
 
-        {/* Three-pane grid layout — smooth, distanced cards */}
-        <div className="flex-1 grid grid-cols-12 gap-5 min-h-0">
-          {/* Left pane: Agent stream */}
-          <div className="col-span-3 bg-card border border-border rounded-xl overflow-hidden flex flex-col min-h-0" id="tour-run-log">
+        {/* Three-pane layout — desktop: side-by-side grid | mobile: vertical stack */}
+        <div className="flex-1 flex flex-col md:grid md:grid-cols-12 gap-4 md:gap-5 min-h-0 overflow-y-auto md:overflow-hidden" style={{ scrollbarWidth: "thin" }}>
+          {/* Left pane: Agent stream — full-width on mobile, 3/12 on desktop */}
+          <div className="md:col-span-3 bg-card border border-border rounded-xl overflow-hidden flex flex-col min-h-0 h-72 md:h-auto" id="tour-run-log">
             <div className="px-4 py-3 border-b border-border bg-muted/40 flex items-center justify-between shrink-0">
               <h2 className="text-sm font-semibold flex items-center gap-2">
                 <Terminal className="size-4 text-primary" />
@@ -527,8 +533,8 @@ export default function LiveRunPage({
             </div>
           </div>
 
-          {/* Center pane: live browser capture */}
-          <div className="col-span-6 bg-card border border-border rounded-xl flex flex-col overflow-hidden min-h-0" id="tour-run-capture">
+          {/* Center pane: live browser capture — full-width on mobile, 6/12 on desktop */}
+          <div className="md:col-span-6 bg-card border border-border rounded-xl flex flex-col overflow-hidden min-h-0 h-72 md:h-auto" id="tour-run-capture">
             {/* Browser chrome */}
             <div className="px-4 py-2.5 border-b border-border bg-muted/40 flex items-center gap-3 shrink-0">
               <div className="flex gap-1.5 shrink-0">
@@ -564,8 +570,8 @@ export default function LiveRunPage({
             </div>
           </div>
 
-          {/* Right pane: HITL control */}
-          <div className="col-span-3 flex flex-col gap-4 min-h-0 overflow-y-auto" id="tour-run-hitl" style={{ scrollbarWidth: "thin" }}>
+          {/* Right pane: HITL control — full-width on mobile, 3/12 on desktop */}
+          <div className="md:col-span-3 flex flex-col gap-4 min-h-0" id="tour-run-hitl" style={{ scrollbarWidth: "thin" }}>
             {/* HITL Control Panel */}
             {hasHITL && (
               <div className="bg-card border-2 border-destructive/30 rounded-xl overflow-hidden shadow-lg shrink-0">

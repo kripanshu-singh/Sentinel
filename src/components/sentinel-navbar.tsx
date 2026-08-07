@@ -88,7 +88,7 @@ export function SentinelNavbar({
           </span>
           <Badge
             variant="secondary"
-            className="text-[10px] px-1.5 py-0 h-4 font-mono"
+            className="hidden sm:inline-flex text-[10px] px-1.5 py-0 h-4 font-mono"
           >
             v0.1
           </Badge>
@@ -109,12 +109,12 @@ export function SentinelNavbar({
                       {crumb.href && !isLast ? (
                         <BreadcrumbLink
                           render={<Link href={crumb.href} />}
-                          className="truncate max-w-[150px] sm:max-w-none text-muted-foreground"
+                          className="truncate max-w-[80px] sm:max-w-[180px] md:max-w-none text-muted-foreground"
                         >
                           {crumb.label}
                         </BreadcrumbLink>
                       ) : (
-                        <BreadcrumbPage className="truncate max-w-[150px] sm:max-w-none font-medium text-foreground">
+                        <BreadcrumbPage className="truncate max-w-[80px] sm:max-w-[180px] md:max-w-none font-medium text-foreground">
                           {crumb.label}
                         </BreadcrumbPage>
                       )}
@@ -165,13 +165,13 @@ export function SentinelNavbar({
             {onNewRun ? (
               <>
                 <Plus className="size-3.5" aria-hidden="true" />
-                New run
+                <span className="hidden sm:inline">New run</span>
               </>
             ) : (
-              <span className="flex items-center gap-1.5">
+              <>
                 <Plus className="size-3.5" aria-hidden="true" />
-                New run
-              </span>
+                <span className="hidden sm:inline">New run</span>
+              </>
             )}
           </TooltipTrigger>
           <TooltipContent side="bottom">
