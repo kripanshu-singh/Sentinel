@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ComponentType } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { SidebarInset } from "@/components/ui/sidebar";
@@ -100,6 +100,10 @@ export default function GoalInputPage() {
     useState<AssistantMessage | null>(null);
   const [conversation, setConversation] = useState<ConversationTurn[]>([]);
   const router = useRouter();
+
+  useEffect(() => {
+    void fetch("/api/wake", { method: "GET" }).catch(() => undefined);
+  }, []);
 
   function handleWorkflowClick(workflow: string | SuggestedWorkflow) {
     if (typeof workflow === "string") {

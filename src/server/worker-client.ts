@@ -160,6 +160,22 @@ export async function resolveHITL(
 }
 
 // ---------------------------------------------------------------------------
+// Worker wake (Render free-tier spin-down)
+// ---------------------------------------------------------------------------
+
+/**
+ * Best-effort ping of the worker's /health endpoint. Used to wake a spun-down
+ * Render free instance on the first visitor. Never throws.
+ */
+export async function pingWorkerHealth(): Promise<void> {
+  try {
+    await workerFetch("/health", { signal: AbortSignal.timeout(5_000) });
+  } catch {
+    // Ignore: the worker may be asleep/cold-starting.
+  }
+}
+
+// ---------------------------------------------------------------------------
 // SSE stream proxy
 // ---------------------------------------------------------------------------
 
