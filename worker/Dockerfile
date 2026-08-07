@@ -1,4 +1,7 @@
 # syntax=docker/dockerfile:1
+#
+# Build context = the `worker/` directory (set as Render's Root Directory).
+# All COPY paths are therefore relative to `worker/`.
 
 # ---------------------------------------------------------------------------
 # Build stage — compile TypeScript to dist/ with the full dev dependency set
@@ -6,11 +9,11 @@
 FROM node:22-slim AS build
 WORKDIR /app
 
-COPY worker/package.json worker/package-lock.json ./
+COPY package.json package-lock.json ./
 RUN npm ci
 
-COPY worker/tsconfig.json ./
-COPY worker/src ./src
+COPY tsconfig.json ./
+COPY src ./src
 RUN npm run build
 
 # ---------------------------------------------------------------------------
@@ -22,7 +25,7 @@ FROM mcr.microsoft.com/playwright:v1.50.1-jammy AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY --chown=1000:1000 worker/package.json worker/package-lock.json ./
+COPY --chown=1000:1000 package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 COPY --chown=1000:1000 --from=build /app/dist ./dist
