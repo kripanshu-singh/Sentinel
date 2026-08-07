@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { ScreenshotTabs } from "@/components/screenshot-tabs";
 import {
   ArrowRight,
   ShieldCheck,
@@ -185,27 +186,8 @@ export default function LandingPage() {
           </Button>
         </div>
 
-        {/* Hero image */}
-        <div className="relative mt-16 w-full max-w-4xl mx-auto rounded-xl overflow-hidden border border-border shadow-lg z-10">
-          {/* Gradient overlay — fades bottom so it blends into the next section */}
-          <div
-            className="absolute inset-0 pointer-events-none z-10"
-            aria-hidden
-            style={{
-              backgroundImage:
-                "linear-gradient(to bottom, transparent 50%, var(--background) 100%)",
-            }}
-          />
-          <Image
-            src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&q=80&auto=format&fit=crop"
-            alt="Sentinel run timeline showing agent steps and a price discrepancy approval dialog"
-            width={1200}
-            height={680}
-            className="w-full object-cover object-top"
-            priority
-            unoptimized
-          />
-        </div>
+        {/* Screenshot tab switcher */}
+        <ScreenshotTabs />
       </section>
 
       {/* ── Stats strip ──────────────────────────────────────── */}
