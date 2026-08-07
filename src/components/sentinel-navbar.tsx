@@ -7,6 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuGroup,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -19,7 +28,15 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { ShieldCheck, Plus, ChevronRight, Compass } from "lucide-react";
+import {
+  ShieldCheck,
+  Plus,
+  ChevronRight,
+  Compass,
+  ExternalLink,
+  Globe,
+  FileText,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTour } from "@/components/onboarding/tour-provider";
 
@@ -63,10 +80,7 @@ export function SentinelNavbar({
           aria-label="Sentinel home"
         >
           <div className="flex items-center justify-center size-7 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-            <ShieldCheck
-              className="size-4 text-primary"
-              aria-hidden="true"
-            />
+            <ShieldCheck className="size-4 text-primary" aria-hidden="true" />
           </div>
           <span className="text-sm font-semibold tracking-tight text-foreground">
             Sentinel
@@ -120,7 +134,7 @@ export function SentinelNavbar({
                       "text-[10px] font-bold uppercase tracking-wider h-5 px-2 border-transparent",
                       statusBadge.variant === "primary"
                         ? "bg-primary/10 text-primary hover:bg-primary/15"
-                        : "bg-destructive/10 text-destructive hover:bg-destructive/15"
+                        : "bg-destructive/10 text-destructive hover:bg-destructive/15",
                     )}
                   >
                     {statusBadge.label}
@@ -186,11 +200,75 @@ export function SentinelNavbar({
           </TooltipContent>
         </Tooltip>
 
-        <Avatar size="sm" className="ml-1 cursor-pointer">
-          <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
-            EA
-          </AvatarFallback>
-        </Avatar>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Avatar
+                size="sm"
+                className="ml-1 cursor-pointer outline-hidden transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              />
+            }
+          >
+            <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
+              K
+            </AvatarFallback>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" sideOffset={8} className="w-52">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>
+                <span className="text-xs text-muted-foreground">
+                  Kripanshu Singh
+                </span>
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              render={
+                <a
+                  href="https://kripanshu.me"
+                  target="_blank"
+                  rel="noreferrer"
+                />
+              }
+            >
+              <Globe
+                className="size-4 text-muted-foreground"
+                aria-hidden="true"
+              />
+              Portfolio
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              render={
+                <a
+                  href="https://kripanshu.me/resume.pdf"
+                  target="_blank"
+                  rel="noreferrer"
+                />
+              }
+            >
+              <FileText
+                className="size-4 text-muted-foreground"
+                aria-hidden="true"
+              />
+              Resume
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              render={
+                <a
+                  href="https://github.com/kripanshu-singh"
+                  target="_blank"
+                  rel="noreferrer"
+                />
+              }
+            >
+              <ExternalLink
+                className="size-4 text-muted-foreground"
+                aria-hidden="true"
+              />
+              GitHub
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
