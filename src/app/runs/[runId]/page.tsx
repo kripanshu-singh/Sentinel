@@ -164,6 +164,36 @@ export default function LiveRunPage({
     params.then((p) => setRunId(p.runId));
   }, [params]);
 
+  // Global command palette events
+  useEffect(() => {
+    const onFocusSteer = () => {
+      const el = document.getElementById("steer-instruction-input") as HTMLTextAreaElement | null;
+      if (el) {
+        el.focus();
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    };
+
+    const onOpenResult = () => {
+      if (runId) router.push(`/runs/${encodeURIComponent(runId)}/result`);
+    };
+
+    const onExportCsv = () => {
+      // delegate to result page via event — if the user is on result that page can handle it
+      window.dispatchEvent(new CustomEvent("sentinel:export-csv"));
+    };
+
+    window.addEventListener("sentinel:focus-steer", onFocusSteer as EventListener);
+    window.addEventListener("sentinel:open-result", onOpenResult as EventListener);
+    window.addEventListener("sentinel:export-csv", onExportCsv as EventListener);
+
+    return () => {
+      window.removeEventListener("sentinel:focus-steer", onFocusSteer as EventListener);
+      window.removeEventListener("sentinel:open-result", onOpenResult as EventListener);
+      window.removeEventListener("sentinel:export-csv", onExportCsv as EventListener);
+    };
+  }, [runId, router]);
+
   const { events, isConnected, error } = useRunStream(runId ?? "");
 
   // Auto-scroll agent log to bottom when new events arrive

@@ -84,6 +84,8 @@ export default function ResultPage({
     params.then((p) => setRunId(p.runId));
   }, [params]);
 
+  
+
   const { data: summary, isLoading } = useQuery({
     queryKey: ["run", runId],
     queryFn: async (): Promise<RunSummary> => {
@@ -123,6 +125,15 @@ export default function ResultPage({
     { label: "Confirmed", value: confirmedCount },
     { label: "Grand total", value: `$${grandTotal.toFixed(2)}` },
   ];
+
+  // Allow command-palette to trigger CSV export remotely
+  useEffect(() => {
+    const handler = () => {
+      if (report) exportCsv(report.runId, lineItems);
+    };
+    window.addEventListener("sentinel:export-csv", handler as EventListener);
+    return () => window.removeEventListener("sentinel:export-csv", handler as EventListener);
+  }, [report, lineItems]);
 
   return (
     <SidebarInset>

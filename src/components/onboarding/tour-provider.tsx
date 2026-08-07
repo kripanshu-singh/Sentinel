@@ -48,7 +48,7 @@ function markSeen() {
 
 /** Match `next/navigation` pathnames to a tour config. */
 function routeFor(pathname: string): keyof typeof TOURS | null {
-  if (pathname === "/") return "home";
+  if (pathname === "/app") return "home";
   if (pathname.startsWith("/runs/") && pathname.endsWith("/result"))
     return "result";
   if (pathname.startsWith("/runs/")) return "run";

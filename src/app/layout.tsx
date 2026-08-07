@@ -5,6 +5,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { QueryProvider } from "@/components/query-provider";
 import { TourProvider } from "@/components/onboarding/tour-provider";
 import "./globals.css";
+import CommandPalette from "@/components/command-palette";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,6 +51,7 @@ export default function RootLayout({
           <TooltipProvider>
             <SidebarProvider defaultOpen={true}>
               <TourProvider>{children}</TourProvider>
+              <CommandPalette />
             </SidebarProvider>
           </TooltipProvider>
         </QueryProvider>

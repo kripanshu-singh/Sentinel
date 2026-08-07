@@ -20,6 +20,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import Kbd from "@/components/kbd";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -194,6 +195,7 @@ export function SentinelNavbar({
           >
             <Compass className="size-3.5" aria-hidden="true" />
             <span className="hidden sm:inline">Tour</span>
+            <span className="hidden sm:inline ml-2"><Kbd /></span>
           </TooltipTrigger>
           <TooltipContent side="bottom">
             Take a quick tour of this screen
