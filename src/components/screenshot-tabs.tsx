@@ -4,26 +4,30 @@ import { useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
+import scrn1 from "../../public/scrn1.webp";
+import scrn2 from "../../public/scrn2.webp";
+import scrn3 from "../../public/scrn3.webp";
+
 const TABS = [
   {
     id: "goal",
     label: "Goal Input",
     description: "Describe your task in plain English and set business guardrails.",
-    src: "/scrn1.webp",
+    src: scrn1,
     alt: "Sentinel goal input screen — write a procurement task and set price targets",
   },
   {
     id: "run",
     label: "Live Run",
     description: "Watch the agent work in real time. Approve or steer at any step.",
-    src: "/scrn2.webp",
+    src: scrn2,
     alt: "Sentinel live run screen — agent timeline, browser screenshot, and HITL approval dialog",
   },
   {
     id: "report",
     label: "Report",
     description: "Review the normalized invoice and export it as CSV.",
-    src: "/scrn3.webp",
+    src: scrn3,
     alt: "Sentinel result report — reconciliation table with discrepancy flags and CSV export",
   },
 ] as const;
