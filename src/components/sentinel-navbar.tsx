@@ -204,6 +204,7 @@ export function SentinelNavbar({
 
         <DropdownMenu>
           <DropdownMenuTrigger
+            nativeButton={false}
             render={
               <Avatar
                 size="sm"
