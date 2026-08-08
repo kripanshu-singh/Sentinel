@@ -60,49 +60,37 @@ interface SuggestedWorkflow {
 
 const SUGGESTED_WORKFLOWS: SuggestedWorkflow[] = [
   {
-    icon: ShoppingCart,
-    title: "PS5 Console & Game Audit",
-    description:
-      "Search for PlayStation 5 Digital Edition and Tekken 8 on Best Buy or eBay. Verify live pricing against a $450 console budget limit.",
-    goal: "Find the price of PlayStation 5 Digital Edition and Tekken 8 for PS5. Verify if the console is under $450 and game is under $60.",
-    storefrontUrl: "",
-    targetUnitPrice: "450.00",
-    varianceThresholdPct: "10",
-    fallbackPolicy: "default_wholesale",
-  },
-  {
     icon: Bot,
-    title: "Sony Headphones Price Guard",
+    title: "eBay — Sony WH-1000XM5 Price Audit",
     description:
-      "Check live price of Sony WH-1000XM5 Noise-Canceling Headphones on eBay with a strict $200 price ceiling.",
-    goal: "Find the price of Sony WH-1000XM5 Noise-Canceling Headphones on eBay and verify that the unit price does not exceed $200.",
+      "Audit Sony WH-1000XM5 Noise-Canceling Headphones on eBay. Enforce a strict $250 price ceiling (Triggers live HITL panel).",
+    goal: "Find the price of Sony WH-1000XM5 Noise-Canceling Headphones on eBay and verify that the unit price does not exceed $250.",
     storefrontUrl: "",
-    targetUnitPrice: "200.00",
+    targetUnitPrice: "250.00",
     varianceThresholdPct: "0",
     fallbackPolicy: "default_wholesale",
   },
   {
-    icon: Sparkles,
-    title: "Apple AirPods Target Check",
+    icon: ShoppingCart,
+    title: "Flipkart — boAt Headphone Audit",
     description:
-      "Extract live price for Apple AirPods 3rd Gen on Target and check against a $170 target ceiling.",
-    goal: "Find the price of Apple AirPods 3rd Gen on Target and verify it is under $170.",
+      "Audit boAt Rockerz 450 Bluetooth Headphones on Flipkart. Verify live price in Rupees (₹) against a ₹1,500 budget limit.",
+    goal: "Find the price of boAt Rockerz 450 Bluetooth Headphone on Flipkart and check if it is under ₹1,500.",
     storefrontUrl: "",
-    targetUnitPrice: "170.00",
-    varianceThresholdPct: "10",
-    fallbackPolicy: "abort",
-  },
-  {
-    icon: Workflow,
-    title: "Sauce Labs Full Procurement",
-    description:
-      "Procure Sauce Labs Backpack and Fleece Jacket from SauceDemo, apply coupon code 'SAVE10', and enforce a $75.00 subtotal ceiling.",
-    goal: "Procure the 'Sauce Labs Backpack' and 'Sauce Labs Fleece Jacket' from https://www.saucedemo.com/. Apply discount code 'SAVE10' and verify subtotal is under $75.00.",
-    storefrontUrl: "https://www.saucedemo.com/",
-    targetSubtotal: "75.00",
-    discountCode: "SAVE10",
+    targetUnitPrice: "1500.00",
     varianceThresholdPct: "10",
     fallbackPolicy: "default_wholesale",
+  },
+  {
+    icon: Sparkles,
+    title: "Amazon — Logitech Tech Search",
+    description:
+      "Search Amazon for Logitech M185 Wireless Mouse, extract live market price, and verify against a $20 budget ceiling.",
+    goal: "Find the price of Logitech M185 Wireless Mouse on Amazon and verify if it is under $20.",
+    storefrontUrl: "",
+    targetUnitPrice: "20.00",
+    varianceThresholdPct: "10",
+    fallbackPolicy: "abort",
   },
 ];
 
@@ -240,7 +228,7 @@ export default function GoalInputPage() {
       <SentinelNavbar onNewRun={handleNewWorkflow} /> 
 
       {/* Main Canvas */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 md:px-8 py-12 relative overflow-hidden">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 md:px-8 py-8 relative overflow-y-auto">
         {/* Teal radial glow */}
         <div
           className="absolute inset-0 pointer-events-none opacity-25"
@@ -255,21 +243,19 @@ export default function GoalInputPage() {
           <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground mb-2 text-center">
             Sentinel
           </h1>
-          <p className="text-base text-muted-foreground mb-3 text-center max-w-xl" id="tour-subtitle">
-            B2B Vendor Order &amp; Discrepancy Reconciliation Agent. Describe
-            your procurement task — Sentinel executes it with human-in-the-loop
-            guardrails.
+          <p className="text-sm text-muted-foreground mb-3 text-center max-w-xl" id="tour-subtitle">
+            B2B Vendor Order &amp; Discrepancy Reconciliation Agent. Describe your procurement task — Sentinel executes it with human-in-the-loop guardrails.
           </p>
           <button
             type="button"
             onClick={startTour}
-            className="mb-10 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
+            className="mb-6 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
           >
             <Sparkles className="size-3.5" />
             Take the 2-minute tour
           </button>
 
-          <form onSubmit={handleSubmit} className="w-full flex flex-col gap-6">
+          <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
             {/* Assistant reply for non-task prompts */}
             {assistantMessage?.kind === "conversational" && (
               <div className="w-full flex items-start gap-3 bg-card border border-border rounded-xl p-4">
@@ -325,8 +311,8 @@ export default function GoalInputPage() {
                   id="goal"
                   value={goal}
                   onChange={(e) => setGoal(e.target.value)}
-                  className="w-full min-h-[140px] resize-none border-none bg-transparent p-5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-0 focus:outline-none"
-                  placeholder="e.g. Search for Sony WH-1000XM5 headphones on https://www.amazon.com and extract the price. Or: Buy a backpack on Flipkart for under $30."
+                  className="w-full min-h-[120px] resize-none border-none bg-transparent p-4 text-sm text-foreground placeholder:text-muted-foreground focus:ring-0 focus:outline-none"
+                  placeholder="e.g. Search for Sony WH-1000XM5 headphones on Amazon and extract the price. Or: Check if boAt headphones on Flipkart are under ₹1,500."
                 />
                 <div className="flex justify-between items-center px-4 py-3 bg-muted/30 border-t border-border">
                   <div className="flex items-center gap-1">
@@ -379,28 +365,7 @@ export default function GoalInputPage() {
                 Business Rules
               </legend>
 
-              {/* Storefront URL */}
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="storefront-url" className="text-xs font-medium text-muted-foreground">
-                  Storefront URL
-                  <span className="ml-1 text-muted-foreground/60 font-normal">(optional — or name it in your goal)</span>
-                </label>
-                <div className="flex items-center h-8 rounded-lg border border-input bg-transparent focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 transition-all overflow-hidden">
-                  <span className="px-2.5 h-full bg-muted/40 text-muted-foreground flex items-center justify-center select-none shrink-0 border-r border-input">
-                    <Globe className="size-3.5" />
-                  </span>
-                  <input
-                    id="storefront-url"
-                    type="url"
-                    placeholder="https://www.amazon.com"
-                    value={storefrontUrl}
-                    onChange={(e) => setStorefrontUrl(e.target.value)}
-                    className="flex-1 h-full px-2.5 bg-transparent text-sm text-foreground placeholder:text-muted-foreground border-none outline-none focus:ring-0 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {/* Target Unit Price */}
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="target-price" className="text-xs font-medium text-muted-foreground">
@@ -476,15 +441,15 @@ export default function GoalInputPage() {
                   <Input
                     id="discount-code"
                     type="text"
-                    placeholder="e.g. SUMMER20"
+                    placeholder="e.g. SAVE10"
                     value={discountCode}
                     onChange={(e) => setDiscountCode(e.target.value)}
-                    className="h-8"
+                    className="h-8 text-sm"
                   />
                 </div>
 
                 {/* Fallback Policy */}
-                <div className="flex flex-col gap-1.5 sm:col-span-2 md:col-span-2">
+                <div className="flex flex-col gap-1.5 sm:col-span-2">
                   <label htmlFor="fallback" className="text-xs font-medium text-muted-foreground">
                     Fallback Policy
                   </label>
@@ -504,7 +469,7 @@ export default function GoalInputPage() {
               </div>
 
               {/* Optional credentials section */}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 pt-1 border-t border-border/50">
                 <button
                   type="button"
                   onClick={() => setShowCredentials((v) => !v)}
@@ -533,7 +498,7 @@ export default function GoalInputPage() {
                         value={credUsername}
                         onChange={(e) => setCredUsername(e.target.value)}
                         autoComplete="username"
-                        className="h-8"
+                        className="h-8 text-sm"
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -547,13 +512,9 @@ export default function GoalInputPage() {
                         value={credPassword}
                         onChange={(e) => setCredPassword(e.target.value)}
                         autoComplete="current-password"
-                        className="h-8"
+                        className="h-8 text-sm"
                       />
                     </div>
-                    <p className="sm:col-span-2 text-xs text-muted-foreground/60">
-                      Credentials are sent directly to the worker and never stored or logged.
-                      Only provide these for login-gated storefronts.
-                    </p>
                   </div>
                 )}
               </div>
@@ -561,8 +522,8 @@ export default function GoalInputPage() {
           </form>
 
           {/* Suggested workflows */}
-          <div className="w-full mt-10" id="tour-quickstart">
-            <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mb-4">
+          <div className="w-full mt-8" id="tour-quickstart">
+            <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mb-3">
               Suggested Workflows
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
