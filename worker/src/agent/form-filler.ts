@@ -132,16 +132,17 @@ export async function clickAddToCart(
     }
   }
 
-  // Strategy 3: Generic last resort. Only reached when NO name/sku matched — on a
-  // multi-product storefront this clicks the first button and is likely WRONG, so
-  // log it loudly for the report to surface.
-  if (candidates.length > 0 || sku) {
-    console.warn(
-      `[form-filler] No precise add-to-cart match for "${(candidates.join('", "') || sku)}"; using first visible button (may add the wrong item).`
-    );
-  }
+  // Strategy 3: Generic last resort. Only reached when NO name/sku matched.
+  // Check if a generic add-to-cart button is visible before attempting to click.
   const button = page.locator(GENERIC_SELECTOR).first();
-  await button.waitFor({ state: "visible", timeout: 10000 });
+  const isVisible = await button.isVisible({ timeout: 2500 }).catch(() => false);
+  if (!isVisible) {
+    console.warn(
+      `[form-filler] No visible add-to-cart button found on current page for "${candidates[0] || sku || 'item'}". Skipping add-to-cart step cleanly.`
+    );
+    return;
+  }
+
   await button.click();
   await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
 }

@@ -158,9 +158,9 @@ export function getFallbackPlan(input: GoalInput): PlanResult {
       ];
 
   const isReadOnlyCheck =
-    /\b(find|check|verify|get|what\s+is|show)\b/i.test(input.goal) &&
+    /\b(find|check|verify|get|what\s+is|show|search|tell\s+me|look\s+for)\b/i.test(input.goal) &&
     /\b(price|cost|rate|stock|availability|spec|specs|details)\b/i.test(input.goal) &&
-    !/\b(add|buy|purchase|order|cart|checkout|procure)\b/i.test(input.goal);
+    !/\b(add\s+to\s+cart|buy|purchase|order|checkout|procure)\b/i.test(input.goal);
 
   const cartSteps: StepPlan[] = isReadOnlyCheck
     ? []
