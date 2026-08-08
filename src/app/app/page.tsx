@@ -61,35 +61,48 @@ interface SuggestedWorkflow {
 const SUGGESTED_WORKFLOWS: SuggestedWorkflow[] = [
   {
     icon: ShoppingCart,
-    title: "Guarded Jacket & Light Purchase",
+    title: "PS5 Console & Game Audit",
     description:
-      "Procure Fleece Jacket and Bike Light from a demo store. Guard with a combined subtotal threshold of $50.00 and 10% variance limit.",
-    goal: "Procure the 'Sauce Labs Fleece Jacket' and 'Sauce Labs Bike Light' from the store. Verify that the combined item subtotal does not exceed $50.00. If the subtotal variance exceeds 10%, pause execution and request human authorization before proceeding to checkout.",
-    storefrontUrl: "https://www.saucedemo.com/",
-    targetSubtotal: "50.00",
+      "Search for PlayStation 5 Digital Edition and Tekken 8 on Best Buy or eBay. Verify live pricing against a $450 console budget limit.",
+    goal: "Find the price of PlayStation 5 Digital Edition and Tekken 8 for PS5. Verify if the console is under $450 and game is under $60.",
+    storefrontUrl: "",
+    targetUnitPrice: "450.00",
     varianceThresholdPct: "10",
     fallbackPolicy: "default_wholesale",
   },
   {
-    icon: Backpack,
-    title: "Backpack Approval Check",
+    icon: Bot,
+    title: "Sony Headphones Price Guard",
     description:
-      "Find the Sauce Labs Backpack and enforce a strict price ceiling of $25.00 before adding to cart.",
-    goal: "Login to the store, find the Sauce Labs Backpack, check its price. If the price is higher than $25, pause and ask for approval before adding it to the cart. Then proceed to checkout.",
-    storefrontUrl: "https://www.saucedemo.com/",
-    targetUnitPrice: "25.00",
+      "Check live price of Sony WH-1000XM5 Noise-Canceling Headphones on eBay with a strict $200 price ceiling.",
+    goal: "Find the price of Sony WH-1000XM5 Noise-Canceling Headphones on eBay and verify that the unit price does not exceed $200.",
+    storefrontUrl: "",
+    targetUnitPrice: "200.00",
     varianceThresholdPct: "0",
     fallbackPolicy: "default_wholesale",
   },
   {
-    icon: Workflow,
-    title: "Custom Store Procurement",
+    icon: Sparkles,
+    title: "Apple AirPods Target Check",
     description:
-      "Enter any storefront URL and describe what you want to buy. Sentinel will navigate, search, and extract pricing for you.",
-    goal: "Search for wireless headphones under $50 and add the best match to the cart.",
+      "Extract live price for Apple AirPods 3rd Gen on Target and check against a $170 target ceiling.",
+    goal: "Find the price of Apple AirPods 3rd Gen on Target and verify it is under $170.",
     storefrontUrl: "",
+    targetUnitPrice: "170.00",
     varianceThresholdPct: "10",
     fallbackPolicy: "abort",
+  },
+  {
+    icon: Workflow,
+    title: "Sauce Labs Full Procurement",
+    description:
+      "Procure Sauce Labs Backpack and Fleece Jacket from SauceDemo, apply coupon code 'SAVE10', and enforce a $75.00 subtotal ceiling.",
+    goal: "Procure the 'Sauce Labs Backpack' and 'Sauce Labs Fleece Jacket' from https://www.saucedemo.com/. Apply discount code 'SAVE10' and verify subtotal is under $75.00.",
+    storefrontUrl: "https://www.saucedemo.com/",
+    targetSubtotal: "75.00",
+    discountCode: "SAVE10",
+    varianceThresholdPct: "10",
+    fallbackPolicy: "default_wholesale",
   },
 ];
 

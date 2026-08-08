@@ -183,8 +183,45 @@ export async function loginToStore(
     return { authenticated: false, loginFormDetected: true };
   }
 
-  await page.fill('input#user-name, input[name="user-name"], input[type="text"], input[autocomplete="username"]', username).catch(() => undefined);
-  await page.fill('input#password, input[name="password"], input[autocomplete="current-password"]', password).catch(() => undefined);
+  const usernameSelectors = [
+    'input#user-name',
+    'input[name="user-name"]',
+    'input[data-test="username"]',
+    'input[autocomplete="username"]',
+    'input[name="username"]',
+    'input[name="email"]',
+    'input[type="email"]',
+    'input[type="text"]',
+  ];
+
+  for (const sel of usernameSelectors) {
+    try {
+      const el = page.locator(sel).first();
+      if (await el.isVisible({ timeout: 1000 })) {
+        await el.fill(username);
+        break;
+      }
+    } catch {}
+  }
+
+  const passwordSelectors = [
+    'input#password',
+    'input[name="password"]',
+    'input[data-test="password"]',
+    'input[type="password"]',
+    'input[autocomplete="current-password"]',
+  ];
+
+  for (const sel of passwordSelectors) {
+    try {
+      const el = page.locator(sel).first();
+      if (await el.isVisible({ timeout: 1000 })) {
+        await el.fill(password);
+        break;
+      }
+    } catch {}
+  }
+
   await loginButton.first().click();
 
   const inventorySelectors = [
