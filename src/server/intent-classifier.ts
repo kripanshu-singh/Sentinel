@@ -124,7 +124,7 @@ function looksLikeShoppingTask(text: string): boolean {
 }
 
 const COMPARISON_REPLY =
-  `I can't do open-ended product comparison or research today — my extractor is designed to pull details for one specific product at a time, and my final report is a reconciliation invoice (not a spec sheet).\n\nHere's what you **can** ask me instead:\n\n- **"Find the Oral-B Pro 1000 on Amazon India and extract its price"** — I'll navigate and extract pricing for that one product.\n- **"Buy a toothbrush under ₹500 on Amazon India"** — I'll navigate, search, and add the first match to cart.\n- **"Check if the Oral-B Pro 2000 is in stock and costs less than ₹800 on Amazon India"** — I'll navigate, extract the price, and flag a discrepancy if the threshold is exceeded.\n\nComparison across multiple products and spec sheets are on the roadmap. For now, please name the exact product you want me to act on.`;
+  `I analyze one specific product at a time to generate reconciliation invoices (not multi-product spec sheets or rankings).`;
 
 export class RuleBasedIntentClassifier implements IntentClassifier {
   async route(
