@@ -11,8 +11,10 @@ import type { LineItem, ChannelSnapshot } from "../types/index.js";
 
 function parsePrice(value: string | null | undefined): number {
   if (!value) return 0;
-  const match = value.match(/\$?([0-9]+(?:\.[0-9]{1,2})?)/);
-  return match ? Number(match[1]) : 0;
+  // Remove currency symbols, commas, and whitespace before parsing
+  const cleaned = value.replace(/[^0-9.]/g, "");
+  const num = parseFloat(cleaned);
+  return Number.isFinite(num) ? num : 0;
 }
 
 function fallbackProductExtraction(
@@ -26,7 +28,10 @@ function fallbackProductExtraction(
   const productNameMatch = html.match(/<title>([^<]+)<\/title>/i);
   const extractedName = productNameMatch?.[1]?.trim() ?? targetProductName;
 
-  const price = parsePrice(html.match(/\$([0-9]+(?:\.[0-9]{1,2})?)/i)?.[1] ?? null);
+  // Extract price matching currency symbols ($, ₹, £, €, Rs.) with optional commas
+  const priceMatch = html.match(/(?:\$|₹|£|€|Rs\.?)\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/i);
+  const price = priceMatch ? parsePrice(priceMatch[1]) : 0;
+
   const inventoryMatch = html.match(/(\d+)\s*(items|units|stock|left)/i);
   const inventoryAvailable = inventoryMatch ? Number(inventoryMatch[1]) : 999;
 

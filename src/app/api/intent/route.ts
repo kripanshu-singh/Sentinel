@@ -37,6 +37,8 @@ export async function POST(request: NextRequest) {
     try {
       const result = await startRun({
         goal: parsed.data.goal,
+        storefrontUrl: parsed.data.storefrontUrl,
+        credentials: parsed.data.credentials,
         targetUnitPrice: parsed.data.targetUnitPrice,
         targetSubtotal: parsed.data.targetSubtotal,
         varianceThresholdPct: parsed.data.varianceThresholdPct,

@@ -11,10 +11,13 @@ import {
   Paperclip,
   Globe,
   Backpack,
-  Bike,
+  ShoppingCart,
   Workflow,
   Bot,
   Sparkles,
+  Lock,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { useTour } from "@/components/onboarding/tour-provider";
 
@@ -46,6 +49,7 @@ interface SuggestedWorkflow {
   title: string;
   description: string;
   goal: string;
+  storefrontUrl?: string;
   targetUnitPrice?: string;
   targetSubtotal?: string;
   varianceThresholdPct?: string;
@@ -53,13 +57,15 @@ interface SuggestedWorkflow {
   fallbackPolicy?: string;
 }
 
+
 const SUGGESTED_WORKFLOWS: SuggestedWorkflow[] = [
   {
-    icon: Bike,
+    icon: ShoppingCart,
     title: "Guarded Jacket & Light Purchase",
     description:
-      "Procure Fleece Jacket and Bike Light. Guard with a combined subtotal threshold of $50.00 and 10% variance limit.",
+      "Procure Fleece Jacket and Bike Light from a demo store. Guard with a combined subtotal threshold of $50.00 and 10% variance limit.",
     goal: "Procure the 'Sauce Labs Fleece Jacket' and 'Sauce Labs Bike Light' from the store. Verify that the combined item subtotal does not exceed $50.00. If the subtotal variance exceeds 10%, pause execution and request human authorization before proceeding to checkout.",
+    storefrontUrl: "https://www.saucedemo.com/",
     targetSubtotal: "50.00",
     varianceThresholdPct: "10",
     fallbackPolicy: "default_wholesale",
@@ -70,18 +76,19 @@ const SUGGESTED_WORKFLOWS: SuggestedWorkflow[] = [
     description:
       "Find the Sauce Labs Backpack and enforce a strict price ceiling of $25.00 before adding to cart.",
     goal: "Login to the store, find the Sauce Labs Backpack, check its price. If the price is higher than $25, pause and ask for approval before adding it to the cart. Then proceed to checkout.",
+    storefrontUrl: "https://www.saucedemo.com/",
     targetUnitPrice: "25.00",
     varianceThresholdPct: "0",
     fallbackPolicy: "default_wholesale",
   },
   {
     icon: Workflow,
-    title: "Infant Dress Procurement",
+    title: "Custom Store Procurement",
     description:
-      "Find and buy a dress for the infant on a strict budget of $10.00.",
-    goal: "So I need to buy the dress for the infant. And my budget is $10. So I want you to find the dress and add to cart and checkout.",
-    targetUnitPrice:"10.00",
-    varianceThresholdPct: "0",
+      "Enter any storefront URL and describe what you want to buy. Sentinel will navigate, search, and extract pricing for you.",
+    goal: "Search for wireless headphones under $50 and add the best match to the cart.",
+    storefrontUrl: "",
+    varianceThresholdPct: "10",
     fallbackPolicy: "abort",
   },
 ];
@@ -89,6 +96,10 @@ const SUGGESTED_WORKFLOWS: SuggestedWorkflow[] = [
 export default function GoalInputPage() {
   const { start: startTour } = useTour();
   const [goal, setGoal] = useState("");
+  const [storefrontUrl, setStorefrontUrl] = useState("");
+  const [credUsername, setCredUsername] = useState("");
+  const [credPassword, setCredPassword] = useState("");
+  const [showCredentials, setShowCredentials] = useState(false);
   const [targetPrice, setTargetPrice] = useState("");
   const [targetSubtotal, setTargetSubtotal] = useState("");
   const [variancePct, setVariancePct] = useState("10");
@@ -118,6 +129,7 @@ export default function GoalInputPage() {
       return;
     }
     setGoal(workflow.goal);
+    setStorefrontUrl(workflow.storefrontUrl ?? "");
     setTargetPrice(workflow.targetUnitPrice ?? "");
     setTargetSubtotal(workflow.targetSubtotal ?? "");
     setVariancePct(workflow.varianceThresholdPct ?? "10");
@@ -128,6 +140,10 @@ export default function GoalInputPage() {
 
   function handleNewWorkflow() {
     setGoal("");
+    setStorefrontUrl("");
+    setCredUsername("");
+    setCredPassword("");
+    setShowCredentials(false);
     setTargetPrice("");
     setTargetSubtotal("");
     setVariancePct("10");
@@ -153,6 +169,11 @@ export default function GoalInputPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           goal: goal.trim(),
+          storefrontUrl: storefrontUrl.trim() || undefined,
+          credentials:
+            credUsername.trim() && credPassword.trim()
+              ? { username: credUsername.trim(), password: credPassword.trim() }
+              : undefined,
           targetUnitPrice: targetPrice ? parseFloat(targetPrice) : undefined,
           targetSubtotal: targetSubtotal ? parseFloat(targetSubtotal) : undefined,
           varianceThresholdPct: parseFloat(variancePct) ?? 10,
@@ -292,7 +313,7 @@ export default function GoalInputPage() {
                   value={goal}
                   onChange={(e) => setGoal(e.target.value)}
                   className="w-full min-h-[140px] resize-none border-none bg-transparent p-5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-0 focus:outline-none"
-                  placeholder="Add Sauce Labs Backpack and Sauce Labs Fleece Jacket to cart, and fill the shipping form."
+                  placeholder="e.g. Search for Sony WH-1000XM5 headphones on https://www.amazon.com and extract the price. Or: Buy a backpack on Flipkart for under $30."
                 />
                 <div className="flex justify-between items-center px-4 py-3 bg-muted/30 border-t border-border">
                   <div className="flex items-center gap-1">
@@ -344,6 +365,27 @@ export default function GoalInputPage() {
               <legend className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2">
                 Business Rules
               </legend>
+
+              {/* Storefront URL */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="storefront-url" className="text-xs font-medium text-muted-foreground">
+                  Storefront URL
+                  <span className="ml-1 text-muted-foreground/60 font-normal">(optional — or name it in your goal)</span>
+                </label>
+                <div className="flex items-center h-8 rounded-lg border border-input bg-transparent focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 transition-all overflow-hidden">
+                  <span className="px-2.5 h-full bg-muted/40 text-muted-foreground flex items-center justify-center select-none shrink-0 border-r border-input">
+                    <Globe className="size-3.5" />
+                  </span>
+                  <input
+                    id="storefront-url"
+                    type="url"
+                    placeholder="https://www.amazon.com"
+                    value={storefrontUrl}
+                    onChange={(e) => setStorefrontUrl(e.target.value)}
+                    className="flex-1 h-full px-2.5 bg-transparent text-sm text-foreground placeholder:text-muted-foreground border-none outline-none focus:ring-0 focus:outline-none"
+                  />
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {/* Target Unit Price */}
@@ -446,6 +488,61 @@ export default function GoalInputPage() {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              {/* Optional credentials section */}
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCredentials((v) => !v)}
+                  className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors w-fit"
+                >
+                  <Lock className="size-3.5" />
+                  Portal login credentials
+                  <span className="text-muted-foreground/50 font-normal">(optional)</span>
+                  {showCredentials ? (
+                    <ChevronUp className="size-3.5 ml-0.5" />
+                  ) : (
+                    <ChevronDown className="size-3.5 ml-0.5" />
+                  )}
+                </button>
+
+                {showCredentials && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="cred-username" className="text-xs font-medium text-muted-foreground">
+                        Username
+                      </label>
+                      <Input
+                        id="cred-username"
+                        type="text"
+                        placeholder="e.g. your_username"
+                        value={credUsername}
+                        onChange={(e) => setCredUsername(e.target.value)}
+                        autoComplete="username"
+                        className="h-8"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="cred-password" className="text-xs font-medium text-muted-foreground">
+                        Password
+                      </label>
+                      <Input
+                        id="cred-password"
+                        type="password"
+                        placeholder="••••••••"
+                        value={credPassword}
+                        onChange={(e) => setCredPassword(e.target.value)}
+                        autoComplete="current-password"
+                        className="h-8"
+                      />
+                    </div>
+                    <p className="sm:col-span-2 text-xs text-muted-foreground/60">
+                      Credentials are sent directly to the worker and never stored or logged.
+                      Only provide these for login-gated storefronts.
+                    </p>
+                  </div>
+                )}
               </div>
             </fieldset>
           </form>

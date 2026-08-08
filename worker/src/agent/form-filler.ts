@@ -55,44 +55,15 @@ export async function clickAddToCart(
   aliases: string[] = [],
 ): Promise<void> {
   const GENERIC_SELECTOR =
-    'button[id*="add-to-cart" i], button:has-text("Add to Cart"), button:has-text("Add to cart"), .add-to-cart';
+    'button[id*="add-to-cart" i], button:has-text("Add to Cart"), button:has-text("Add to cart"), button:has-text("Add to Bag"), .add-to-cart';
 
   // "primary" is the ACTUAL extracted product name (real DOM title). "aliases"
   // are secondary names (user's phrasing / plan query) tried when no exact hit.
   const candidates = [productName, ...aliases].filter((n): n is string => Boolean(n));
 
-  // Strategy 1: SauceDemo data-test attribute (most reliable — no search needed)
-  for (const name of candidates) {
-    const dataTestSel = sauceDemoAddToCartSelector(name);
-    try {
-      const btn = page.locator(dataTestSel).first();
-      if (await btn.isVisible({ timeout: 1500 })) {
-        await btn.click();
-        await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
-        return;
-      }
-    } catch {
-      // Not a SauceDemo page or selector not found — try next name
-    }
-  }
-
-  // Strategy 1b: some storefronts key their add-to-cart button by SKU/data-test
-  if (sku) {
-    const skuSel = sauceDemoAddToCartSelector(sku);
-    try {
-      const btn = page.locator(skuSel).first();
-      if (await btn.isVisible({ timeout: 1500 })) {
-        await btn.click();
-        await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
-        return;
-      }
-    } catch {
-      // fall through
-    }
-  }
-
-  // Strategy 2: Find the product card by name, click the Add-to-Cart inside it
-  const cardSelectors = [".inventory_item", ".product-card", ".product-item", ".card"];
+  // Strategy 1: Find the product card by name, click the Add-to-Cart inside it.
+  // This is the generic strategy that works for most storefronts.
+  const cardSelectors = [".inventory_item", ".product-card", ".product-item", ".card", "[data-testid*='product']", "li"];
   for (const sel of cardSelectors) {
     for (const name of candidates) {
       try {
@@ -110,7 +81,7 @@ export async function clickAddToCart(
       }
     }
 
-    // Strategy 2b: match the card by sku (SauceDemo titles carry data-test="<sku>-title-link")
+    // Strategy 1b: match the card by sku
     if (sku) {
       try {
         const card = page
@@ -130,6 +101,37 @@ export async function clickAddToCart(
     }
   }
 
+  // Strategy 2: SauceDemo data-test attribute — kept as a reliable fallback
+  // for the demo store only (harmless on other sites when selector not found).
+  for (const name of candidates) {
+    const dataTestSel = sauceDemoAddToCartSelector(name);
+    try {
+      const btn = page.locator(dataTestSel).first();
+      if (await btn.isVisible({ timeout: 1500 })) {
+        await btn.click();
+        await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
+        return;
+      }
+    } catch {
+      // Not a SauceDemo page or selector not found — try next name
+    }
+  }
+
+  // Strategy 2b: some storefronts key their add-to-cart button by SKU/data-test
+  if (sku) {
+    const skuSel = sauceDemoAddToCartSelector(sku);
+    try {
+      const btn = page.locator(skuSel).first();
+      if (await btn.isVisible({ timeout: 1500 })) {
+        await btn.click();
+        await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
+        return;
+      }
+    } catch {
+      // fall through
+    }
+  }
+
   // Strategy 3: Generic last resort. Only reached when NO name/sku matched — on a
   // multi-product storefront this clicks the first button and is likely WRONG, so
   // log it loudly for the report to surface.
@@ -145,20 +147,43 @@ export async function clickAddToCart(
 }
 
 /**
- * Sign in to a login-gated storefront (Sauce Demo). No-op when the page shows
- * no login form — returns false so callers can skip the auth event.
+ * Sign in to a login-gated storefront.
+ *
+ * Returns:
+ *   - `loginFormDetected`: whether a login form was present on the page
+ *   - `authenticated`: whether login succeeded
+ *
+ * This is a no-op when the page shows no login form (loginFormDetected: false).
+ * Credentials may be empty strings when the caller has none — in that case the
+ * function detects the form but does NOT attempt to submit it, leaving
+ * loginFormDetected: true and authenticated: false so the caller can pause for
+ * human input instead of crashing.
  */
 export async function loginToStore(
   page: Page,
   username: string,
   password: string
-): Promise<boolean> {
+): Promise<{ authenticated: boolean; loginFormDetected: boolean }> {
+  // A true login form must contain a password input field. Search submit buttons
+  // or newsletter forms without password fields must never be flagged as login forms.
+  const hasPasswordField = await page.locator('input[type="password"]').first().isVisible().catch(() => false);
+  if (!hasPasswordField) {
+    return { authenticated: false, loginFormDetected: false };
+  }
+
   const loginButton = page.locator('#login-button, button[type="submit"], input[type="submit"]');
   if (!(await loginButton.first().isVisible().catch(() => false))) {
-    return false;
+    return { authenticated: false, loginFormDetected: false };
   }
-  await page.fill('input#user-name, input[name="user-name"], input[type="text"]', username).catch(() => undefined);
-  await page.fill('input#password, input[name="password"]', password).catch(() => undefined);
+
+  // Login form detected. If credentials are empty, don't attempt to submit —
+  // let the caller handle the missing-credentials case via HITL.
+  if (!username || !password) {
+    return { authenticated: false, loginFormDetected: true };
+  }
+
+  await page.fill('input#user-name, input[name="user-name"], input[type="text"], input[autocomplete="username"]', username).catch(() => undefined);
+  await page.fill('input#password, input[name="password"], input[autocomplete="current-password"]', password).catch(() => undefined);
   await loginButton.first().click();
 
   const inventorySelectors = [
@@ -166,19 +191,23 @@ export async function loginToStore(
     "[data-test='inventory-container']",
     "[data-test='product-list']",
     "#inventory_container",
+    "main",
+    "[role='main']",
   ];
 
   for (const selector of inventorySelectors) {
     try {
       await page.locator(selector).first().waitFor({ state: "visible", timeout: 5000 });
-      return true;
+      return { authenticated: true, loginFormDetected: true };
     } catch {
       // Try the next selector.
     }
   }
 
   await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => undefined);
-  return true;
+  // If we're no longer on the login page, assume success.
+  const stillOnLoginForm = await loginButton.first().isVisible().catch(() => false);
+  return { authenticated: !stillOnLoginForm, loginFormDetected: true };
 }
 
 export async function openCartAndCheckout(page: Page): Promise<void> {

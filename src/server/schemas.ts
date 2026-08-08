@@ -56,6 +56,15 @@ export const FallbackPolicySchema = z.enum([
 
 export const GoalInputSchema = z.object({
   goal: z.string().min(1, "Goal is required").max(2000),
+  /** Optional target storefront URL (e.g. https://www.amazon.com) */
+  storefrontUrl: z.string().url("storefrontUrl must be a valid URL").optional(),
+  /** Optional login credentials for login-gated storefronts */
+  credentials: z
+    .object({
+      username: z.string().min(1).max(256),
+      password: z.string().min(1).max(256),
+    })
+    .optional(),
   targetUnitPrice: z.number().positive().optional(),
   targetSubtotal: z.number().positive().optional(),
   varianceThresholdPct: z.number().min(0).max(100).default(10),

@@ -66,7 +66,7 @@ async function workerErrorMessage(response: Response): Promise<string> {
 
 async function workerFetch(
   path: string,
-  init?: RequestInit
+  init?: RequestInit & { disableTimeout?: boolean }
 ): Promise<Response> {
   const headers = new Headers(init?.headers);
   if (!headers.has("Accept")) {
@@ -76,12 +76,16 @@ async function workerFetch(
     headers.set("Content-Type", "application/json");
   }
 
+  const { disableTimeout, ...fetchInit } = init ?? {};
+
   let response: Response;
   try {
     response = await fetch(getWorkerUrl(path), {
-      ...init,
+      ...fetchInit,
       headers,
-      signal: init?.signal ?? AbortSignal.timeout(WORKER_REQUEST_TIMEOUT_MS),
+      signal:
+        fetchInit.signal ??
+        (disableTimeout ? undefined : AbortSignal.timeout(WORKER_REQUEST_TIMEOUT_MS)),
     });
   } catch (error: unknown) {
     if (error instanceof WorkerError) {
@@ -212,5 +216,8 @@ export async function openEventStream(
   const headers = new Headers({ Accept: "text/event-stream" });
   if (lastEventId) headers.set("Last-Event-ID", lastEventId);
 
-  return workerFetch(`/runs/${encodeURIComponent(runId)}/stream`, { headers });
+  return workerFetch(`/runs/${encodeURIComponent(runId)}/stream`, {
+    headers,
+    disableTimeout: true,
+  });
 }

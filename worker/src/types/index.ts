@@ -67,6 +67,12 @@ export type FallbackPolicy = "default_wholesale" | "best_available" | "abort";
 
 export interface GoalInput {
   goal: string;
+  /** Optional target storefront URL (e.g. https://www.amazon.com). When provided,
+   * the agent navigates here instead of requiring the goal to name a URL. */
+  storefrontUrl?: string;
+  /** Optional login credentials for login-gated storefronts. When absent and a
+   * login form is detected, the agent will pause and ask for human input. */
+  credentials?: { username: string; password: string };
   targetUnitPrice?: number;
   targetSubtotal?: number;
   varianceThresholdPct: number;

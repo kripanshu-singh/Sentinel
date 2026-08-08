@@ -20,8 +20,6 @@ export interface PlanResult {
   estimatedSteps: number;
 }
 
-const DEFAULT_STOREFRONT_URL = "https://www.saucedemo.com/";
-
 /**
  * Goals that need reasoning beyond "add <product> to cart" (login, checkout,
  * human approval, conditional price gates, order-summary extraction) are NOT
@@ -63,6 +61,61 @@ function looksLikeSimpleShoppingGoal(goal: string): boolean {
   );
 }
 
+export function extractCleanProductName(goal: string): string {
+  let cleaned = goal.trim();
+
+  // Strip conversational budget/target prefixes (e.g. "So my target price is $20 and please search...")
+  cleaned = cleaned.replace(/^(?:so\s+)?(?:my\s+)?(?:target\s+)?(?:price|budget)\s+is\s*\$?\d+(?:\.\d+)?\s*(?:and\s+)?(?:so\s+)?(?:please\s+)?/i, "");
+  cleaned = cleaned.replace(/^(?:so\s+|please\s+|can\s+you\s+|could\s+you\s+)+/i, "");
+
+  // Strip shopping action verbs
+  cleaned = cleaned.replace(/^(?:add|buy|purchase|order|search|find|look for|pick|select|grab|get|tell me|verify)\s+/i, "");
+
+  // Strip price noun prefixes (e.g. "the price of", "cost for")
+  cleaned = cleaned.replace(/^(?:the|a|an)\s+(?:price|cost|rate|stock|availability)\s+(?:of|for)?\s*/i, "");
+  cleaned = cleaned.replace(/^(?:price|cost|rate)\s+(?:of|for)?\s*/i, "");
+
+  // Strip storefront suffixes (e.g. "on PS5 store", "from Amazon", "on eBay")
+  cleaned = cleaned.replace(/\s+(?:on|at|from)\s+(?:ebay|amazon|flipkart|walmart|myntra|ajio|bestbuy|ps5\s*store|playstation\s*store|saucedemo|sauce\s*demo|[a-z0-9-]+\.[a-z]{2,})\b.*$/i, "");
+
+  // Strip price/budget suffixes (e.g. "game price for PS5", "under $50")
+  cleaned = cleaned.replace(/\s+(?:price|cost)\s+for\b/i, " for");
+  cleaned = cleaned.replace(/\s+(?:under|up to|below|at most|max|less than|for|with|in|from)\b.*$/i, "");
+  cleaned = cleaned.replace(/^(?:the|a|an)\s+/i, "");
+
+  return cleaned.trim() || goal.trim();
+}
+
+export function resolveStorefrontUrl(goal: string, inputUrl?: string): string | undefined {
+  if (inputUrl && inputUrl.trim()) {
+    return inputUrl.trim();
+  }
+
+  // Check for explicit HTTP/HTTPS URLs in goal text
+  const urlMatch = goal.match(/https?:\/\/[^\s]+/i);
+  if (urlMatch) {
+    return urlMatch[0];
+  }
+
+  // Extract clean query/product name for direct search URLs
+  const query = extractCleanProductName(goal);
+  const encodedQuery = encodeURIComponent(query || "product");
+
+  // Map common storefront names mentioned in goal to direct search URLs
+  if (/\bebay\b/i.test(goal)) return `https://www.ebay.com/sch/i.html?_nkw=${encodedQuery}`;
+  if (/\bamazon\b/i.test(goal)) return `https://www.amazon.com/s?k=${encodedQuery}`;
+  if (/\bflipkart\b/i.test(goal)) return `https://www.flipkart.com/search?q=${encodedQuery}`;
+  if (/\bwalmart\b/i.test(goal)) return `https://www.walmart.com/search?q=${encodedQuery}`;
+  if (/\bmyntra\b/i.test(goal)) return `https://www.myntra.com/${encodedQuery}`;
+  if (/\bajio\b/i.test(goal)) return `https://www.ajio.com/search/?text=${encodedQuery}`;
+  if (/\bbestbuy\b/i.test(goal)) return `https://www.bestbuy.com/site/searchpage.jsp?st=${encodedQuery}`;
+  if (/\bsauce\s*demo\b|\bsaucedemo\b/i.test(goal)) return "https://www.saucedemo.com/";
+
+  // Default fallback for generic product goals without a specified storefront:
+  // use eBay direct search URL (fast, public, low bot risk) instead of SauceDemo.
+  return `https://www.ebay.com/sch/i.html?_nkw=${encodedQuery}`;
+}
+
 export function getFallbackPlan(input: GoalInput): PlanResult {
   // Complex multi-step goals must go through the LLM planner — the deterministic
   // fallback is only a fast path for trivial single-product orders.
@@ -77,48 +130,73 @@ export function getFallbackPlan(input: GoalInput): PlanResult {
     };
   }
 
-  const normalizedGoal = input.goal.trim();
-  const productName = normalizedGoal
-    .replace(/^(?:add|buy|purchase|order|search|find|look for|pick|select|grab|get)\s+/i, "")
-    .replace(/\s+(?:under|up to|below|at most|max|less than|for|with|in|from)\b.*$/i, "")
-    .replace(/^(?:the|a|an)\s+/i, "")
-    .trim();
+  const productName = extractCleanProductName(input.goal);
+
+  const storefrontUrl = resolveStorefrontUrl(input.goal, input.storefrontUrl);
+  const isDirectSearchUrl = Boolean(storefrontUrl && /[?&](?:_nkw|k|q|st)=/i.test(storefrontUrl));
+
+  const navigateSteps: StepPlan[] = storefrontUrl
+    ? [
+        {
+          kind: "navigate",
+          description: isDirectSearchUrl
+            ? `Navigate to search results for ${productName}`
+            : `Open the storefront`,
+          params: { url: storefrontUrl },
+        },
+      ]
+    : [];
+
+  const searchSteps: StepPlan[] = isDirectSearchUrl
+    ? []
+    : [
+        {
+          kind: "search",
+          description: `Search for ${productName}`,
+          params: { query: productName },
+        },
+      ];
+
+  const isReadOnlyCheck =
+    /\b(find|check|verify|get|what\s+is|show)\b/i.test(input.goal) &&
+    /\b(price|cost|rate|stock|availability|spec|specs|details)\b/i.test(input.goal) &&
+    !/\b(add|buy|purchase|order|cart|checkout|procure)\b/i.test(input.goal);
+
+  const cartSteps: StepPlan[] = isReadOnlyCheck
+    ? []
+    : [
+        {
+          kind: "add_to_cart",
+          description: `Add ${productName} to the cart`,
+          params: { quantity: 1 },
+        },
+      ];
+
+  const planSteps: StepPlan[] = [
+    ...navigateSteps,
+    ...searchSteps,
+    {
+      kind: "extract_product",
+      description: `Review the matching product details for ${productName}`,
+      params: { targetName: productName },
+    },
+    {
+      kind: "check_price",
+      description: `Check the price and availability for ${productName}`,
+      params: { targetName: productName },
+    },
+    ...cartSteps,
+  ];
 
   return {
     goal: `Find and add ${productName} to the cart`
       .replace(/\s+/g, " ")
       .trim(),
-    plan: [
-      {
-        kind: "navigate",
-        description: "Open the storefront",
-        params: { url: DEFAULT_STOREFRONT_URL },
-      },
-      {
-        kind: "search",
-        description: `Search for ${productName}`,
-        params: { query: productName },
-      },
-      {
-        kind: "extract_product",
-        description: `Review the matching product details for ${productName}`,
-        params: { targetName: productName },
-      },
-      {
-        kind: "check_price",
-        description: `Check the price and availability for ${productName}`,
-        params: { targetName: productName },
-      },
-      {
-        kind: "add_to_cart",
-        description: `Add ${productName} to the cart`,
-        params: { quantity: 1 },
-      },
-    ],
+    plan: planSteps,
     needsClarification: false,
     risk: "low",
     confidence: 0.85,
-    estimatedSteps: 5,
+    estimatedSteps: planSteps.length,
   };
 }
 
@@ -214,8 +292,49 @@ Each step must have:
   - check_price:     params.targetName = exact product name from the goal
   - add_to_cart:     params.targetName = exact product name from the goal
                      params.quantity  = quantity (default 1)
-  - navigate:        params.url when the goal names a specific storefront URL
+  - navigate:        params.url MUST always be a DIRECT SEARCH RESULTS URL — never
+                     the homepage. This skips the search step entirely and is faster
+                     and more reliable. Use these URL templates:
+
+                     eBay:     https://www.ebay.com/sch/i.html?_nkw={query}
+                     Amazon:   https://www.amazon.com/s?k={query}
+                     Flipkart: https://www.flipkart.com/search?q={query}
+                     Walmart:  https://www.walmart.com/search?q={query}
+                     BestBuy:  https://www.bestbuy.com/site/searchpage.jsp?st={query}
+
+                     Replace {query} with the URL-encoded product name.
+                     Examples (product = "Sony WH-1000XM5"):
+                       - eBay     → "https://www.ebay.com/sch/i.html?_nkw=Sony+WH-1000XM5"
+                       - Amazon   → "https://www.amazon.com/s?k=Sony+WH-1000XM5"
+                       - Flipkart → "https://www.flipkart.com/search?q=Sony+WH-1000XM5"
+
+                     If the storefrontUrl is already a search-results URL (contains
+                     "search", "sch", "/s?", etc.) use it verbatim.
+                     If you don't know the search URL pattern, use the storefront
+                     homepage as fallback (not preferred).
+
+                     CRITICAL: When you use a direct search URL navigate step, DO NOT
+                     also emit a separate "search" step — the navigation already lands
+                     on search results. Only emit a search step if the navigate goes to
+                     a homepage and a search box interaction is needed.
   - fill_form:       params.fields when given
+
+IMPORTANT — navigate step:
+- ALWAYS emit a navigate step as the first step.
+- ALWAYS use a direct search results URL when you know the storefront's search URL
+  pattern. This is faster, more reliable, and avoids the homepage entirely.
+- The navigate step's params.url must be derived from:
+  1. The "storefrontUrl" field in the business rules (use as-is if it's already a
+     search URL; append the search query if it's a homepage)
+  2. Any URL explicitly mentioned in the goal (same logic)
+  3. The storefront name in the goal → map to search URL using templates above
+  4. If none of the above — use "https://www.saucedemo.com/" ONLY as a last
+     resort for demo/test scenarios.
+
+IMPORTANT — search step:
+- ONLY emit a search step when the navigate step goes to a homepage and you
+  need to interact with a search box.
+- If the navigate step already goes to a search-results URL, SKIP the search step.
 
 IMPORTANT — multi-product goals:
 - If the goal mentions TWO OR MORE products, emit a COMPLETE set of steps for
@@ -224,12 +343,9 @@ IMPORTANT — multi-product goals:
 - The targetName / query param on every step MUST match the exact product name
   from the goal — this is how the agent knows WHICH item to interact with.
 
-IMPORTANT — human approval:
-- If the goal asks the agent to pause, confirm, get approval, or asks the user for
-  confirmation before a high-stakes action (checkout, submitting, or completing an
-  order), include a pause_for_approval step right before that action.
-- The step order is re-ranked automatically, so just include the step — placement
-  is handled for you.
+IMPORTANT — read-only check vs purchasing:
+- If the goal is ONLY to check, find, verify, or extract a price or stock (e.g. "Find the price of X", "Check if Y is under $50", "Verify price of Z"), DO NOT emit add_to_cart, fill_form, or pause_for_approval steps. End the plan at check_price → draft_report.
+- ONLY emit add_to_cart, fill_form, or checkout steps when the goal explicitly asks to buy, order, add to cart, or procure a product.
 
 Steps will be re-ordered into a canonical execution order automatically, so do
 not worry about ordering — focus on WHICH steps are needed and their params.
@@ -393,13 +509,13 @@ export async function planGoal(
 Procurement goal: ${input.goal}
 
 Business rules:
+- Storefront URL: ${input.storefrontUrl ?? "not set — derive from goal or storefront name"}
 - Target unit price: ${input.targetUnitPrice != null ? `$${input.targetUnitPrice}` : "not set"}
 - Target cart subtotal (combined): ${input.targetSubtotal != null ? `$${input.targetSubtotal}` : "not set"}
 - Variance threshold: ${input.varianceThresholdPct}%
 - Discount code: ${input.discountCode ?? "none"}
 - Fallback policy: ${input.fallbackPolicy}
-${
-  failureContext
+${failureContext
     ? `
 
 Previous attempts failed. Structured failure history:

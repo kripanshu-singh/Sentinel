@@ -24,6 +24,8 @@ export interface ActionResult {
 
 export interface LoginActionResult extends ActionResult {
   authenticated: boolean;
+  /** True when a login form was found on the page (whether or not login succeeded). */
+  loginFormDetected: boolean;
 }
 
 export interface CouponActionResult extends ActionResult {
@@ -51,8 +53,8 @@ export async function login(
   username: string,
   password: string
 ): Promise<LoginActionResult> {
-  const authenticated = await loginToStore(ctx.page, username, password);
-  return { authenticated, screenshot: await screenshotOf(ctx.page) };
+  const { authenticated, loginFormDetected } = await loginToStore(ctx.page, username, password);
+  return { authenticated, loginFormDetected, screenshot: await screenshotOf(ctx.page) };
 }
 
 export async function search(ctx: ActionContext, query: string): Promise<ActionResult> {

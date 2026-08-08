@@ -159,7 +159,7 @@ export function SentinelNavbar({
                 size="sm"
                 onClick={onNewRun}
                 className="gap-1.5 text-muted-foreground"
-                render={!onNewRun ? <Link href="/" /> : undefined}
+                render={!onNewRun ? <Link href="/app" /> : undefined}
               />
             }
           >

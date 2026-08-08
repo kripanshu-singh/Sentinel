@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SidebarInset } from "@/components/ui/sidebar";
@@ -146,6 +146,7 @@ export default function LiveRunPage({
   params: Promise<{ runId: string }>;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [runId, setRunId] = useState<string | null>(null);
   const [hitlResolved, setHitlResolved] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
@@ -158,6 +159,7 @@ export default function LiveRunPage({
   const [instruction, setInstruction] = useState("");
   const previewOverlayRef = useRef<HTMLDivElement | null>(null);
   const logBottomRef = useRef<HTMLDivElement | null>(null);
+  const prevHitlEventIdRef = useRef<string | null>(null);
 
   // Unwrap async params once on mount
   useEffect(() => {
@@ -179,7 +181,6 @@ export default function LiveRunPage({
     };
 
     const onExportCsv = () => {
-      // delegate to result page via event — if the user is on result that page can handle it
       window.dispatchEvent(new CustomEvent("sentinel:export-csv"));
     };
 
@@ -201,6 +202,17 @@ export default function LiveRunPage({
     logBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [events.length]);
 
+  // Immediately refetch run summary when SSE stream receives a HITL or status event
+  useEffect(() => {
+    if (!runId) return;
+    const hasHitlOrStatus = events.some(
+      (e) => e.type === "HITL" || e.type === "CHECK" || e.status === "pending" || e.status === "error"
+    );
+    if (hasHitlOrStatus) {
+      queryClient.invalidateQueries({ queryKey: ["run", runId] });
+    }
+  }, [events, runId, queryClient]);
+
   const TERMINAL_STATUSES = new Set<RunStatus>(["DONE", "FAILED", "ABORTED"]);
 
   const { data: summary, isLoading } = useQuery({
@@ -215,8 +227,6 @@ export default function LiveRunPage({
       const status = query.state.data?.status;
       if (!status) return 3000;
       if (TERMINAL_STATUSES.has(status)) return false;
-      // Poll aggressively while waiting for human input so the approval
-      // panel appears without needing a page refresh.
       if (status === "HITL_PENDING") return 1000;
       return 3000;
     },
@@ -228,13 +238,10 @@ export default function LiveRunPage({
     .reverse()
     .find((e) => e.status === "error");
 
-  // Only the most recent pending event is "in flight" — earlier pending rows are
-  // resolved, so they render as normal rows instead of spinning forever.
   const latestPendingId = [...events]
     .reverse()
     .find((e) => e.status === "pending")?.id;
 
-  // Latest browser capture + URL surfaced by the worker via event evidence.
   const screenshot = [...events]
     .reverse()
     .find((e) => typeof e.evidence?.screenshot === "string")?.evidence
@@ -248,6 +255,15 @@ export default function LiveRunPage({
   const latestHITLEvent = [...events].reverse().find((e) => e.type === "HITL");
   const steerEvents = events.filter((e) => e.type === "STEER");
 
+  // Reset hitlResolved state whenever a new HITL event ID arrives
+  const latestHITLEventId = latestHITLEvent?.id;
+  useEffect(() => {
+    if (latestHITLEventId && latestHITLEventId !== prevHitlEventIdRef.current) {
+      prevHitlEventIdRef.current = latestHITLEventId;
+      setHitlResolved(false);
+    }
+  }, [latestHITLEventId]);
+
   useEffect(() => {
     if (!previewScreenshot) return;
 
@@ -260,6 +276,7 @@ export default function LiveRunPage({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [previewScreenshot]);
+
   const approvalRequest = summary?.currentApprovalRequest;
   const hitlEvent = latestHITLEvent;
   const hitlEvidence =
@@ -274,8 +291,10 @@ export default function LiveRunPage({
     hitlEvent?.detail ??
     approvalRequest?.detail ??
     "Manual intervention required.";
+
+  // Notice: no longer dependent on status being defined beforehand!
+  // As soon as a HITL SSE event with status "pending" arrives, hasHITL becomes true instantly!
   const hasHITL =
-    !!status &&
     !hitlResolved &&
     !isTerminal &&
     Boolean(
@@ -306,6 +325,7 @@ export default function LiveRunPage({
         const data = (await res.json()) as { error?: string };
         throw new Error(data.error ?? `Error ${res.status}`);
       }
+      queryClient.invalidateQueries({ queryKey: ["run", runId] });
     } catch (err: unknown) {
       setResolveError(err instanceof Error ? err.message : "Resolution failed");
       setIsResolving(false);

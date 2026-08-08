@@ -21,16 +21,14 @@ import { emitEvent, transition } from "../emit.js";
 import { failRun, MAX_RETRIES_PER_NODE, retryUpdate } from "../retry.js";
 import { extractQuantityForProduct } from "../../../lib/goal-rules.js";
 import { drainSteers } from "../../../storage/redis.js";
+import { RunLogger } from "../../../lib/logger.js";
 import type { StepPlan } from "../../../types/index.js";
 import type { ReplanEntry, SentinelStateUpdate, SentinelStateValue } from "../state.js";
 
-const DEFAULT_STOREFRONT_URL = "https://www.saucedemo.com/";
 
-// Public demo credentials for Sauce Demo (standard_user / secret_sauce) — not secrets.
-const SAUCEDEMO_USERNAME = "standard_user";
-const SAUCEDEMO_PASSWORD = "secret_sauce";
-
-const SHIPPING_FIELDS = {
+// Placeholder fields used for checkout form when no fields are provided in the plan.
+// These are generic demo values — real storefronts should supply fields via the plan.
+const PLACEHOLDER_SHIPPING_FIELDS = {
   firstName: "Sentinel",
   lastName: "Reconciler",
   postalCode: "94103",
@@ -58,29 +56,62 @@ function quantityForStep(step: StepPlan, goal: string): number {
 }
 
 /**
- * Open a URL, sign in to the demo portal if present, and return the resulting
- * screenshot for transparency. Shared by the navigate step and the first-entry
- * default navigation below.
+ * Open a URL and sign in if the storefront has a login form.
+ *
+ * Credential resolution priority:
+ *   1. `state.input.credentials` provided by the operator via the UI
+ *   2. If a login form is detected and no credentials are available, pause and
+ *      emit a HITL_PENDING event asking the operator to supply them — never
+ *      guess or hardcode credentials for arbitrary storefronts.
  */
 async function navigateAndLogin(
   runId: string,
   ctx: ActionContext,
-  url: string
-): Promise<{ url?: string; screenshot: string | null }> {
+  url: string,
+  credentials?: { username: string; password: string }
+): Promise<{ url?: string; screenshot: string | null; hitlRequired?: boolean }> {
   await emitEvent(runId, "NAVIGATE", "Navigating", `Opening url: ${url}`, "pending", { url });
   const result = await actions.navigate(ctx, url);
   await emitEvent(runId, "NAVIGATE", "Navigation complete", `Loaded ${url}`, "success", { url: result.url, screenshot: result.screenshot });
 
-  // Portals gate the catalog behind a login form (Sauce Demo does). Sign in
-  // with the demo account so the product listing is reachable; no-op if the
-  // storefront exposes no login form.
-  const loginResult = await actions.login(ctx, SAUCEDEMO_USERNAME, SAUCEDEMO_PASSWORD);
+  // Check if the page has a login form before attempting any login.
+  const loginResult = await actions.login(
+    ctx,
+    credentials?.username ?? "",
+    credentials?.password ?? ""
+  );
+
+  if (loginResult.loginFormDetected && !loginResult.authenticated) {
+    // Login form found but we have no credentials — pause for human input.
+    if (!credentials) {
+      await emitEvent(
+        runId,
+        "NAVIGATE",
+        "Login required",
+        "This storefront requires authentication. Please provide credentials via the HITL panel and approve to continue, or abort the run.",
+        "error",
+        { screenshot: loginResult.screenshot, requiresCredentials: true }
+      );
+      return { url: result.url, screenshot: loginResult.screenshot ?? result.screenshot ?? null, hitlRequired: true };
+    }
+    // Credentials were provided but login still failed.
+    await emitEvent(
+      runId,
+      "NAVIGATE",
+      "Login failed",
+      "Authentication failed with the provided credentials. Check username/password and retry.",
+      "error",
+      { screenshot: loginResult.screenshot }
+    );
+    return { url: result.url, screenshot: loginResult.screenshot ?? result.screenshot ?? null };
+  }
+
   if (loginResult.authenticated) {
     await emitEvent(
       runId,
       "NAVIGATE",
       "Signed in",
-      "Authenticated to vendor portal with demo credentials",
+      `Authenticated to vendor portal${credentials ? " with provided credentials" : ""}`,
       "success",
       { screenshot: loginResult.screenshot }
     );
@@ -93,6 +124,7 @@ export async function executeNode(
   state: SentinelStateValue
 ): Promise<SentinelStateUpdate> {
   const { runId, input, planResult, stepIndex, sessionId } = state;
+  const runLog = new RunLogger(runId);
 
   if (state.status === "FAILED" || state.status === "ABORTED") {
     return { next: "end" };
@@ -143,14 +175,39 @@ export async function executeNode(
     await emitEvent(runId, "NAVIGATE", "Browser initialized", "Connected to Chromium context successfully", "success");
 
     // Plans don't always carry a navigate step (deterministic fallback, LLM
-    // omissions). Open the default storefront so the first action never runs
-    // against a blank page.
+    // omissions). We need a URL to open the browser against — use storefrontUrl
+    // from the input if set, otherwise require the LLM to have emitted a navigate
+    // step (the updated system prompt enforces this). Surface a clear error rather
+    // than silently opening a hardcoded demo URL.
     if (plan[stepIndex]?.kind !== "navigate") {
-      const { screenshot } = await navigateAndLogin(runId, ctx, DEFAULT_STOREFRONT_URL);
+      const fallbackUrl = input.storefrontUrl;
+      if (!fallbackUrl) {
+        // The plan has no navigate step and no storefrontUrl was supplied.
+        // Fail the run cleanly and transition database status to FAILED.
+        return failRun(
+          runId,
+          "NAVIGATE",
+          "No storefront URL",
+          "No navigate step in plan and no storefrontUrl provided. Please include a URL in your goal (e.g. 'on https://www.amazon.com') or set the Storefront URL field."
+        );
+      }
+      const { screenshot, hitlRequired } = await navigateAndLogin(runId, ctx, fallbackUrl, input.credentials);
+      if (hitlRequired) {
+        return {
+          sessionId: runId,
+          stepIndex,
+          currentURL: fallbackUrl,
+          currentScreenshot: screenshot,
+          status: "HITL_PENDING",
+          pendingHITL: true,
+          requiresApproval: true,
+          next: "validate",
+        };
+      }
       return {
         sessionId: runId,
         stepIndex,
-        currentURL: DEFAULT_STOREFRONT_URL,
+        currentURL: fallbackUrl,
         currentScreenshot: screenshot,
         status: "NAVIGATING",
         next: "execute",
@@ -170,19 +227,39 @@ export async function executeNode(
     sessionId: runId,
     stepIndex: stepIndex + 1,
     lastAction: step.description,
+    status: state.status || "NAVIGATING",
     next: "execute",
   };
 
   try {
     switch (step.kind) {
     case "navigate": {
-      const url = (step.params?.url as string | undefined) ?? DEFAULT_STOREFRONT_URL;
-      const { url: resolvedUrl, screenshot } = await navigateAndLogin(runId, ctx, url);
-
+      const url = (step.params?.url as string | undefined) ?? input.storefrontUrl;
+      if (!url) {
+        return failRun(
+          runId,
+          "NAVIGATE",
+          "No storefront URL",
+          "Navigate step has no URL and no storefrontUrl was provided. Please specify a URL in the goal or set the Storefront URL field."
+        );
+      }
+      const { url: resolvedUrl, screenshot, hitlRequired } = await navigateAndLogin(runId, ctx, url, input.credentials);
+      if (hitlRequired) {
+        return {
+          ...base,
+          currentURL: resolvedUrl ?? url,
+          currentScreenshot: screenshot,
+          status: "HITL_PENDING",
+          pendingHITL: true,
+          requiresApproval: true,
+          next: "validate",
+        };
+      }
       return {
         ...base,
         currentURL: resolvedUrl ?? url,
         currentScreenshot: screenshot,
+        status: "NAVIGATING",
       };
     }
 
@@ -279,7 +356,8 @@ export async function executeNode(
     case "fill_form": {
       await transition(runId, "FORM_FILLING");
       await emitEvent(runId, "FORM_FILL", "Opening checkout", "Moving cart to checkout and filling the shipping form...", "pending");
-      const result = await actions.fillForm(ctx, SHIPPING_FIELDS);
+      const formFields = (step.params?.fields as Record<string, string> | undefined) ?? PLACEHOLDER_SHIPPING_FIELDS;
+      const result = await actions.fillForm(ctx, formFields);
       await emitEvent(runId, "FORM_FILL", "Checkout prepared", "Shipping details filled; order staged at the final review screen", "success", { screenshot: result.screenshot });
 
       // Capture the order review screen explicitly so the live panel shows
@@ -314,7 +392,7 @@ export async function executeNode(
 
     default:
       // Unknown step kind — skip it rather than crash.
-      console.warn(`[execute:${runId}] Skipping unknown step kind: ${(step as { kind: string }).kind}`);
+      runLog.warn("execute", `Skipping unknown step kind: ${(step as { kind: string }).kind}`);
       return base;
     }
   } catch (error: unknown) {
@@ -322,10 +400,14 @@ export async function executeNode(
     // budget; otherwise the run FAILS.
     // Strip ANSI escape codes (Playwright error logs) so control characters
     // never leak into the replan prompt or the failure event.
-    const detail = (error instanceof Error ? error.message : String(error)).replace(
+    const rawDetail = (error instanceof Error ? error.message : String(error)).replace(
       /\u001b\[[0-9;]*m/g,
       ""
     );
+    // Log the full error to both terminal and SSE timeline
+    runLog.error("execute", `Step ${step.kind} threw an error`, { error: rawDetail, step: step.kind });
+
+    const detail = rawDetail;
     const retries = state.nodeRetries["execute"] ?? 0;
 
     if (retries >= MAX_RETRIES_PER_NODE) {
@@ -341,7 +423,7 @@ export async function executeNode(
         runId,
         "RECOVER",
         "Run failed",
-        `Step ${step.kind} could not recover after ${MAX_RETRIES_PER_NODE} replans: ${detail.slice(0, 160)}`
+        `Step ${step.kind} could not recover after ${MAX_RETRIES_PER_NODE} replans: ${detail.slice(0, 300)}`
       );
     }
 
@@ -349,10 +431,10 @@ export async function executeNode(
       runId,
       "RECOVER",
       "Step failed — replanning",
-      `Step ${step.kind} failed (attempt ${retries + 1}/${MAX_RETRIES_PER_NODE}): ${detail.slice(0, 160)}`,
+      `Step ${step.kind} failed (attempt ${retries + 1}/${MAX_RETRIES_PER_NODE}): ${detail.slice(0, 300)}`,
       "error",
-      { step: step.kind, retry: retries + 1 }
+      { step: step.kind, retry: retries + 1, fullError: detail }
     );
-    return retryUpdate(state, "execute", "step_error", `${step.kind}: ${detail.slice(0, 160)}`);
+    return retryUpdate(state, "execute", "step_error", `${step.kind}: ${detail.slice(0, 300)}`);
   }
 }
