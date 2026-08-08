@@ -144,12 +144,11 @@ export class Navigator {
 
     this.page = await this.context.newPage();
 
-    // Block images, fonts, and media to cut page weight by ~60%.
-    // This dramatically reduces memory usage and crash rate on heavy sites
-    // (Amazon, eBay) while still loading all HTML, CSS, and JS the extractor needs.
+    // Block heavy media (video) and web fonts to speed up load times without
+    // hiding product images from the live browser capture view.
     await this.page.route("**/*", (route) => {
       const type = route.request().resourceType();
-      if (["image", "media", "font"].includes(type)) {
+      if (["media", "font"].includes(type)) {
         route.abort().catch(() => undefined);
       } else {
         route.continue().catch(() => undefined);
