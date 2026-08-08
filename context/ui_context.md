@@ -120,16 +120,17 @@ Purpose: show the agent working in real time, and pause for human approval when 
 Purpose: show the final draft invoice/report and export it.
 
 - **Summary card:** run outcome (DONE / ABORTED), generated-at time, one-paragraph summary.
+- **Best Pick Hero Banner** (for multi-product comparison goals): highlighted card featuring top-ranked product, star rating, review count, price, verdict, and direct clickable product page link.
+- **Product Comparison Spec Sheet Matrix** (for multi-product comparison goals): `Table` with columns `Product Name`, `Price`, `Rating & Reviews`, `Key Specifications`, `Recommendation Verdict`. Product titles include direct external links (`ExternalLink`).
 - **Reconciliation table** (`Table`): columns `SKU`, `Description`, `Qty`, `Unit price`,
-  `Discount`, `Line total`, `Status`. Rows flagged by a discrepancy get a `Badge` and a
+  `Discount`, `Line total`, `Status`. Product descriptions render as direct clickable product page links when `url` is present. Rows flagged by a discrepancy get a `Badge` and a
   `destructive`-tinted status; **human-confirmed flags** are visibly marked (e.g. a "Confirmed"
   `Badge`) per `.ai/architecture.md` ("flagged items clearly marked as human-confirmed").
 - **Multi-channel comparison** (when present): `Table` of `ChannelSnapshot` —
   channel / price / discount / shipping / computed margin / variance. Rows above threshold get
   a `destructive` `Badge`; auto-passed rows need no marking.
 - **CSV export** — `Button` "Export CSV" (`DownloadIcon`, `data-icon="inline-start"`). Client
-  component; generates the CSV from the report data and triggers a browser download. No CSV
-  library needed — hand-roll with proper escaping.
+  component; generates the CSV from the report data including product URLs and comparison spec sheets, triggering a browser download. No CSV library needed — hand-roll with proper escaping.
 - **Empty/loading:** `Skeleton` rows while fetching; `Empty` if no report.
 
 ## Data & State Patterns

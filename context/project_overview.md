@@ -50,6 +50,9 @@ anything high-stakes before it happens).
 7. **Multi-channel pricing audit** — compare price, discount, shipping, and margin across two
    or more stores; flag any variance above a threshold. Large gaps pause for human confirmation
    before inclusion in the report; small gaps proceed automatically.
+8. **Multi-product comparison & spec sheet extraction** — compare top candidate products on
+   any storefront (Amazon, eBay, Flipkart, etc.), extract side-by-side spec sheets, star ratings,
+   review counts, and best-pick recommendations with direct clickable product page URLs.
 
 ## Non-Goals (for now)
 

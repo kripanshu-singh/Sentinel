@@ -312,7 +312,7 @@ export default function GoalInputPage() {
                   value={goal}
                   onChange={(e) => setGoal(e.target.value)}
                   className="w-full min-h-[120px] resize-none border-none bg-transparent p-4 text-sm text-foreground placeholder:text-muted-foreground focus:ring-0 focus:outline-none"
-                  placeholder="e.g. Search for Sony WH-1000XM5 headphones on Amazon and extract the price. Or: Check if boAt headphones on Flipkart are under ₹1,500."
+                  placeholder="e.g. Compare top ps5 games on flipkart by rating and give me comparison sheet"
                 />
                 <div className="flex justify-between items-center px-4 py-3 bg-muted/30 border-t border-border">
                   <div className="flex items-center gap-1">

@@ -6,6 +6,17 @@ respect these decisions; if a decision is wrong, change the record first, then t
 
 ## Product & Architecture
 
+### ADR-015 — Multi-Product Comparison Spec Sheet Matrix & Direct Product URL Link Extraction
+- **Status:** Accepted (2026-08-08)
+- **Context:** Users prompted research goals (e.g. *"compare top toothbrushes on amazon india by rating and give me the best one with a comparison spec sheet"*). Previously, the intent classifier blocked comparison queries, `validateNode` triggered single-item price/inventory HITL pauses on search listing pages, `reportNode` populated only a single line item, Amazon DOM top navigation bars filled context with noise (*"Show/Hide shortcuts"*, *"Arts & Crafts"*), and reports lacked direct product page links.
+- **Decision:** 
+  1. Route comparison and ranking prompts to `AUTOMATION_TASK` in `intent-classifier.ts`.
+  2. Bypass single-item inventory/price HITL variance pauses in `validateNode` for comparison goals (`isComparisonGoal`).
+  3. Extract multi-candidate comparison items (`ComparisonItem[]`) in `extractor.ts` using DOM grid container anchoring (`s-main-slot`, `data-component-type="s-search-result"`), direct product card parsing (`<h2...><a href="/.../dp/..."><span...>Title</span></a></h2>`), and noise filtering.
+  4. Pass Playwright `session.page.url()` into report generators and resolve relative links (`/dp/...`, `/itm/...`) into absolute direct product URLs (`resolveAbsoluteUrl`) across all `LineItem`s and `ComparisonItem`s.
+  5. Render the **Product Comparison Spec Sheet Matrix**, **Best Pick Hero Banner**, and clickable **ExternalLink Product URLs** in the Result UI and CSV exports.
+- **Consequences:** End-to-end multi-product comparisons run 100% autonomously, displaying side-by-side spec sheets, star ratings, best pick recommendations, and direct clickable product page links for Amazon, eBay, Flipkart, and all e-commerce storefronts.
+
 ### ADR-014 — HTTP/1.1 Stealth Navigation & Visual Image Capture
 - **Status:** Accepted (2026-08-08)
 - **Context:** Cloudflare/Akamai bot walls (Myntra, Ajio) send HTTP/2 `RST_STREAM` frame resets to headless Playwright browsers, causing `net::ERR_HTTP2_PROTOCOL_ERROR` crashes. Additionally, aggressive image blocking hid product photos in live UI screenshots.

@@ -139,6 +139,14 @@ AC-N. Non-functional: <constraint>.
       discount / margin / variance) plus a one-paragraph summary are shown, with flagged items
       marked as human-confirmed.
 
+## Feature: Multi-product comparison & direct product URL links
+
+- [ ] AC-1. Given a multi-product research prompt (e.g. *"compare top toothbrushes on amazon india by rating and give me the best one with a comparison spec sheet"*), when classified by `intent-classifier.ts`, then it is routed as an `AUTOMATION_TASK`.
+- [ ] AC-2. Given a comparison goal, when navigating search result pages, then `validateNode` bypasses single-item inventory/price HITL pauses (`isComparisonGoal`) to run end-to-end autonomously.
+- [ ] AC-3. Given search result pages on Amazon/eBay/storefronts, when extracting DOM snapshots, then `extractComparisonFromDOM` anchors to search grid containers (`s-main-slot`, `data-component-type="s-search-result"`), extracts true product titles, prices, ratings, and filters out navigation header noise.
+- [ ] AC-4. Given extracted products and comparison items, when generating the report, then relative link hrefs (`/dp/...`, `/itm/...`) are resolved against `session.page.url()` into direct absolute product URLs (`resolveAbsoluteUrl`) on all `LineItem`s and `ComparisonItem`s.
+- [ ] AC-5. Given the result screen (`/runs/[runId]/result`), when rendering a comparison report, then the **Best Pick Hero Banner**, **Product Comparison Spec Sheet Matrix**, and **Reconciliation Table** display clickable product names with `ExternalLink` icons that open direct storefront product pages in a new tab.
+
 ## Feature: Shared contract (types + events)
 
 - [ ] AC-1. Given a `RunStatus` or `AgentEvent`, when serialized over SSE/HTTP, then both
