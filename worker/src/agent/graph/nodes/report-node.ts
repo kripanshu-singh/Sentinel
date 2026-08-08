@@ -6,12 +6,12 @@
  * Runs when the execute machine reaches `draft_report` (or the plan ends).
  */
 
-import { extractInvoiceFromDOM } from "../../extractor.js";
+import { extractInvoiceFromDOM, extractComparisonFromDOM } from "../../extractor.js";
 import { sessionManager } from "../../session/session-manager.js";
 import { checkSubtotal } from "../../rule-engine.js";
 import { db, reconciliationReports } from "../../../storage/db.js";
 import { emitEvent, transition } from "../emit.js";
-import type { LineItem, ReconciliationReport } from "../../../types/index.js";
+import type { LineItem, ReconciliationReport, ComparisonItem } from "../../../types/index.js";
 import type { ProductExtraction, SentinelStateUpdate, SentinelStateValue } from "../state.js";
 
 /**
@@ -59,6 +59,7 @@ function itemsFromExtractedProducts(
       existing.quantity += qty;
       existing.lineTotal = Math.round((existing.lineTotal + lineTotal) * 100) / 100;
       existing.discounts += discounts;
+      if (!existing.url && product.productUrl) existing.url = product.productUrl;
     } else {
       seen.set(key, {
         sku,
@@ -68,6 +69,7 @@ function itemsFromExtractedProducts(
         lineTotal,
         discounts,
         status: "confirmed" as const,
+        url: product.productUrl,
       });
     }
   }
@@ -93,12 +95,13 @@ export async function reportNode(
 
   const session = await sessionManager.get(runId);
   const html = await session.navigator.getDOMSnapshot();
+  const currentUrl = state.currentURL ?? undefined;
 
   let invoiceData: { items: ReconciliationReport["items"]; channels?: ReconciliationReport["channels"]; summary: string };
 
   if (hasDraftReport) {
     try {
-      invoiceData = await extractInvoiceFromDOM(html);
+      invoiceData = await extractInvoiceFromDOM(html, currentUrl);
       // If the LLM invoice is empty or has no usable line items, fall back to the
       // normalized product aggregate so the report is never blank.
       if (!invoiceData?.items || invoiceData.items.length === 0) {
@@ -119,12 +122,42 @@ export async function reportNode(
     };
   }
 
+  // Check if the goal requested product comparison or spec sheet analysis
+  let comparisonItems: ComparisonItem[] | undefined = undefined;
+  const isComparisonGoal = /\b(?:compare|comparison|spec(?:s|ification)?\s+sheet|rank(?:ing)?|best\s+(?:one|option|product|choice|pick)|top\s+\d*|versus|vs\.?|side[\s-]by[\s-]side)\b/i.test(input.goal);
+
+  if (isComparisonGoal) {
+    try {
+      const compData = await extractComparisonFromDOM(html, input.goal, currentUrl);
+      if (compData?.items && compData.items.length > 0) {
+        comparisonItems = compData.items;
+        const bestItem = compData.items.find((i) => i.isBestPick) ?? compData.items[0];
+        invoiceData.summary = `Extracted ${compData.items.length} candidate products for comparison. Best Pick: "${bestItem.name}" ($${bestItem.price.toFixed(2)}${bestItem.rating ? `, ${bestItem.rating.toFixed(1)}★` : ""}). ${compData.summary ?? ""}`.trim();
+
+        // Map ALL candidate comparison items to line items so all compared products appear in the report
+        invoiceData.items = compData.items.map((item, idx) => ({
+          sku: `COMP-${idx + 1}`,
+          description: item.name,
+          quantity: 1,
+          unitPrice: item.price,
+          lineTotal: item.price,
+          discounts: 0,
+          status: item.isBestPick ? ("confirmed" as const) : ("ok" as const),
+          url: item.url ?? currentUrl,
+        }));
+      }
+    } catch (err: unknown) {
+      console.warn("[report] Comparison spec sheet extraction failed:", err);
+    }
+  }
+
   const report: ReconciliationReport = {
     runId,
     generatedAt: new Date().toISOString(),
     items: invoiceData.items,
     discrepancies,
     channels: invoiceData.channels ?? [],
+    comparison: comparisonItems,
     summary: invoiceData.summary,
   };
 
@@ -159,6 +192,7 @@ export async function reportNode(
     items: report.items,
     discrepancies: report.discrepancies,
     channels: report.channels ?? [],
+    comparison: report.comparison ?? null,
     summary: report.summary,
   });
 

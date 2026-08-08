@@ -21,6 +21,7 @@ export interface ExtractedProduct {
   couponApplied: boolean;
   inventoryAvailable: number;
   quantityRequested: number;
+  productUrl?: string;
 }
 
 export interface RuleCheckResult {

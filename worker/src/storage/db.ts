@@ -102,6 +102,7 @@ export const reconciliationReports = pgTable("reconciliation_reports", {
   items: jsonb("items").notNull().$type<object[]>(),
   discrepancies: jsonb("discrepancies").notNull().$type<object[]>(),
   channels: jsonb("channels").$type<object[]>(),
+  comparison: jsonb("comparison").$type<object[]>(),
   summary: text("summary").notNull(),
 });
 
@@ -202,8 +203,13 @@ export async function createTablesIfNotExist(): Promise<void> {
       items         JSONB NOT NULL,
       discrepancies JSONB NOT NULL,
       channels      JSONB,
+      comparison    JSONB,
       summary       TEXT NOT NULL
     )
+  `;
+
+  await client`
+    ALTER TABLE reconciliation_reports ADD COLUMN IF NOT EXISTS comparison JSONB;
   `;
 }
 

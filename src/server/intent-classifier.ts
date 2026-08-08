@@ -83,9 +83,6 @@ const CART_PATTERN = /\b(cart|basket|checkout)\b/i;
  * Detect these early and return a helpful CONVERSATIONAL reply instead of
  * launching a browser run that will silently fail mid-execution.
  */
-const COMPARISON_RESEARCH_PATTERN =
-  /\b(?:compare|comparison|spec(?:s|ification)?\s+sheet|rank(?:ing)?|best\s+(?:one|option|product|choice|pick)|top\s+\d*\s*(?:product|item|review|rated|listing)|versus|vs\.?|side[\s-]by[\s-]side|review|recommend(?:ation)?s?|which\s+(?:is\s+)?(?:better|best|the best)|give\s+me\s+the\s+best)\b/i;
-
 const GREETING_PATTERN = /^\s*(hi+|hello+|hey+|yo+|hola|namaste|greetings)\b/i;
 
 const NAME_QUESTION_PATTERN = /what('| i)?s my name\??$/i;
@@ -123,9 +120,6 @@ function looksLikeShoppingTask(text: string): boolean {
   return Boolean(hasCartContext && hasPriceContext);
 }
 
-const COMPARISON_REPLY =
-  `I analyze one specific product at a time to generate reconciliation invoices (not multi-product spec sheets or rankings).`;
-
 export class RuleBasedIntentClassifier implements IntentClassifier {
   async route(
     message: string,
@@ -134,13 +128,6 @@ export class RuleBasedIntentClassifier implements IntentClassifier {
     const text = message.trim();
     if (!text) {
       return { intent: "CONVERSATIONAL", reply: CONVERSATIONAL_REPLIES[0] };
-    }
-
-    // Research/comparison prompts must be caught BEFORE the TASK_HINTS check
-    // because words like "compare" and "best" are in TASK_HINTS but the agent
-    // cannot fulfill them. Return a clear explanation instead of a broken run.
-    if (COMPARISON_RESEARCH_PATTERN.test(text) && !CART_PATTERN.test(text)) {
-      return { intent: "CONVERSATIONAL", reply: COMPARISON_REPLY };
     }
 
     let intent: UserIntent;
@@ -179,36 +166,24 @@ function ruleBasedReply(message: string, history: ConversationTurn[]): string {
 // Gemini classifier
 // ---------------------------------------------------------------------------
 
-const CLASSIFY_SYSTEM_PROMPT = `You are Sentinel, a B2B procurement automation agent.
-A short conversation for THIS session is provided; use it to answer personal follow-ups (for example, if the user says "I'm Kripanshu" and later asks "what's my name?", you must answer Kripanshu — never claim to not know).
+const CLASSIFY_SYSTEM_PROMPT = `You are Sentinel, a B2B procurement and product research automation agent.
+A short conversation for THIS session is provided; use it to answer personal follow-ups.
 
 Classify the user's latest message into exactly one intent:
-- AUTOMATION_TASK: a concrete browser task that Sentinel CAN fulfill: search for a SPECIFIC product, add a NAMED product to cart, verify a SINGLE product's price against a budget, apply a coupon, pause for approval, fill a checkout form.
+- AUTOMATION_TASK: a concrete browser task that Sentinel CAN fulfill: search for specific products, compare products by rating/specs, build carts, verify prices, extract product spec sheets, apply coupons, pause for approval, fill checkout forms.
 - CAPABILITY_QUERY: a question about what the agent can do or how it works.
-- CONVERSATIONAL: greetings, chitchat, math, personal questions, OR any task that Sentinel CANNOT fulfill right now.
-
-CRITICAL — these are NOT AUTOMATION_TASKs, classify them as CONVERSATIONAL:
-- Comparing multiple products ("compare top X by rating", "which is better", "vs", "spec sheet", "side-by-side")
-- Open-ended recommendations ("give me the best X", "what's the best Y", "top 5 X")
-- Review aggregation or research reports across many products
-- Any request that needs extracting MORE THAN ONE product from a listing page simultaneously
-
-Reason: Sentinel's extractor handles ONE product per step. Its output is a reconciliation invoice, NOT a spec comparison table. These tasks would silently fail mid-run.
+- CONVERSATIONAL: greetings, chitchat, math, personal questions.
 
 Examples:
 - "add the red t-shirt under $20" → AUTOMATION_TASK
 - "buy a laptop under $1000" → AUTOMATION_TASK
 - "find the Sony WH-1000XM5 on Amazon and extract price" → AUTOMATION_TASK
-- "compare top toothbrushes on Amazon by rating and give me the best one" → CONVERSATIONAL (cannot compare multiple products)
-- "which headphones are best on Flipkart" → CONVERSATIONAL (open-ended recommendation)
+- "compare top toothbrushes on Amazon by rating and give me the best one" → AUTOMATION_TASK
+- "which headphones are best on Flipkart" → AUTOMATION_TASK
 - "what can you do?" → CAPABILITY_QUERY
 
-For CONVERSATIONAL, reply briefly (max 4 sentences). For comparison/research tasks that the agent cannot do:
-  - Acknowledge what was asked
-  - Explain that multi-product comparison is not supported yet
-  - Suggest a reformulated goal that IS supported (e.g. a single specific product)
-For other CONVERSATIONAL, reply grounded in the conversation history.
-For the other two intents, set "reply" to null.
+For CONVERSATIONAL, reply briefly (max 4 sentences) grounded in conversation history.
+For AUTOMATION_TASK and CAPABILITY_QUERY, set "reply" to null.
 
 Respond with JSON only: {"intent": "<AUTOMATION_TASK|CAPABILITY_QUERY|CONVERSATIONAL>", "reply": "<text or null>"}`;
 

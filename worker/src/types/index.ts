@@ -123,6 +123,7 @@ export interface LineItem {
   lineTotal: number;
   discounts: number;
   status: "ok" | "flagged" | "confirmed";
+  url?: string;
 }
 
 export interface ChannelSnapshot {
@@ -133,12 +134,24 @@ export interface ChannelSnapshot {
   computedMargin: number;
 }
 
+export interface ComparisonItem {
+  name: string;
+  price: number;
+  rating?: number;
+  reviewsCount?: number;
+  specs?: Record<string, string>;
+  isBestPick?: boolean;
+  verdict?: string;
+  url?: string;
+}
+
 export interface ReconciliationReport {
   runId: string;
   generatedAt: string;
   items: LineItem[];
   discrepancies: Discrepancy[];
   channels?: ChannelSnapshot[];
+  comparison?: ComparisonItem[];
   summary: string;
 }
 

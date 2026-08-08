@@ -64,7 +64,8 @@ function looksLikeSimpleShoppingGoal(goal: string): boolean {
 export function extractCleanProductName(goal: string): string {
   let cleaned = goal.trim();
 
-  // Strip conversational budget/target prefixes (e.g. "So my target price is $20 and please search...")
+  // Strip comparison preambles (e.g. "compare top", "give me the best")
+  cleaned = cleaned.replace(/^(?:compare|comparison\s+of|rank|find\s+top|give\s+me\s+the\s+best|give\s+me\s+top|get\s+top|show\s+top)\s+(?:the\s+)?(?:top\s+)?/i, "");
   cleaned = cleaned.replace(/^(?:so\s+)?(?:my\s+)?(?:target\s+)?(?:price|budget)\s+is\s*\$?\d+(?:\.\d+)?\s*(?:and\s+)?(?:so\s+)?(?:please\s+)?/i, "");
   cleaned = cleaned.replace(/^(?:so\s+|please\s+|can\s+you\s+|could\s+you\s+)+/i, "");
 
@@ -75,8 +76,13 @@ export function extractCleanProductName(goal: string): string {
   cleaned = cleaned.replace(/^(?:the|a|an)\s+(?:price|cost|rate|stock|availability)\s+(?:of|for)?\s*/i, "");
   cleaned = cleaned.replace(/^(?:price|cost|rate)\s+(?:of|for)?\s*/i, "");
 
-  // Strip storefront suffixes (e.g. "on PS5 store", "from Amazon", "on eBay")
-  cleaned = cleaned.replace(/\s+(?:on|at|from)\s+(?:ebay|amazon|flipkart|walmart|myntra|ajio|bestbuy|ps5\s*store|playstation\s*store|saucedemo|sauce\s*demo|[a-z0-9-]+\.[a-z]{2,})\b.*$/i, "");
+  // Strip comparison suffixes (e.g. "by rating and give me the best one...", "with comparison spec sheet")
+  cleaned = cleaned.replace(/\s+by\s+(?:rating|reviews?|price|specs?).*$/i, "");
+  cleaned = cleaned.replace(/\s+and\s+give\s+me\s+the\s+best.*$/i, "");
+  cleaned = cleaned.replace(/\s+with\s+(?:a\s+)?(?:comparison\s+)?spec\s+sheet.*$/i, "");
+
+  // Strip storefront suffixes (e.g. "on PS5 store", "from Amazon", "on Amazon India", "on eBay")
+  cleaned = cleaned.replace(/\s+(?:on|at|from)\s+(?:ebay|amazon(?:\s+india|\.in)?|flipkart|walmart|myntra|ajio|bestbuy|ps5\s*store|playstation\s*store|saucedemo|sauce\s*demo|[a-z0-9-]+\.[a-z]{2,})\b.*$/i, "");
 
   // Strip price/budget suffixes (e.g. "game price for PS5", "under $50")
   cleaned = cleaned.replace(/\s+(?:price|cost)\s+for\b/i, " for");
@@ -103,6 +109,7 @@ export function resolveStorefrontUrl(goal: string, inputUrl?: string): string | 
 
   // Map common storefront names mentioned in goal to direct search URLs
   if (/\bebay\b/i.test(goal)) return `https://www.ebay.com/sch/i.html?_nkw=${encodedQuery}`;
+  if (/\bamazon\s*(?:india|\.in)\b/i.test(goal)) return `https://www.amazon.in/s?k=${encodedQuery}`;
   if (/\bamazon\b/i.test(goal)) return `https://www.amazon.com/s?k=${encodedQuery}`;
   if (/\bflipkart\b/i.test(goal)) return `https://www.flipkart.com/search?q=${encodedQuery}`;
   if (/\bwalmart\b/i.test(goal)) return `https://www.walmart.com/search?q=${encodedQuery}`;

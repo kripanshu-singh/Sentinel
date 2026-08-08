@@ -18,8 +18,8 @@ import {
   TableFooter,
 } from "@/components/ui/table";
 import { SentinelNavbar } from "@/components/sentinel-navbar";
-import type { LineItem, RunSummary } from "@/types";
-import { Download, CheckCircle2, AlertTriangle, CheckCheck } from "lucide-react";
+import { Download, CheckCircle2, AlertTriangle, CheckCheck, Star, Sparkles, Trophy, ExternalLink } from "lucide-react";
+import type { LineItem, RunSummary, ComparisonItem } from "@/types";
 
 const STATUS_CONFIG = {
   ok: {
@@ -44,12 +44,13 @@ const TH_CLASS =
 const NUM_H_CLASS = "text-right";
 const NUM_B_CLASS = "text-right font-mono tabular-nums";
 
-function exportCsv(runId: string, items: LineItem[]) {
+function exportCsv(runId: string, items: LineItem[], comparison?: ComparisonItem[]) {
   const escape = (v: string | number) => {
     const s = String(v);
     return s.includes(",") || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const header = "SKU,Description,Qty,Unit Price,Discount,Line Total,Status";
+  
+  const header = "SKU,Description,Qty,Unit Price,Discount,Line Total,Status,URL";
   const rows = items.map((item) =>
     [
       item.sku,
@@ -59,12 +60,33 @@ function exportCsv(runId: string, items: LineItem[]) {
       item.discounts.toFixed(2),
       item.lineTotal.toFixed(2),
       item.status,
+      item.url ?? "",
     ]
       .map(escape)
       .join(","),
   );
-  const csv = [header, ...rows].join("\n");
-  const blob = new Blob([csv], { type: "text/csv" });
+
+  let csvContent = [header, ...rows].join("\n");
+
+  if (comparison && comparison.length > 0) {
+    const compHeader = "\n\nPRODUCT COMPARISON SPEC SHEET\nName,Price,Rating,Reviews,Best Pick,Verdict,URL";
+    const compRows = comparison.map((c) =>
+      [
+        c.name,
+        c.price.toFixed(2),
+        c.rating ?? "N/A",
+        c.reviewsCount ?? "N/A",
+        c.isBestPick ? "YES" : "NO",
+        c.verdict ?? "",
+        c.url ?? "",
+      ]
+        .map(escape)
+        .join(",")
+    );
+    csvContent += [compHeader, ...compRows].join("\n");
+  }
+
+  const blob = new Blob([csvContent], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -106,6 +128,8 @@ export default function ResultPage({
   const lineItems = report?.items ?? [];
   const discrepancies = report?.discrepancies ?? [];
   const channels = report?.channels ?? [];
+  const comparisonItems = report?.comparison ?? [];
+  const bestPick = comparisonItems.find((i) => i.isBestPick) ?? comparisonItems[0];
   const grandTotal = lineItems.reduce((sum, i) => sum + i.lineTotal, 0);
   const flaggedCount = lineItems.filter((i) => i.status === "flagged").length;
   const confirmedCount = lineItems.filter((i) => i.status === "confirmed").length;
@@ -120,7 +144,7 @@ export default function ResultPage({
   const overBudget = budget !== undefined && grandTotal > budget;
 
   const stats = [
-    { label: "Line items", value: lineItems.length },
+    { label: comparisonItems.length > 0 ? "Compared items" : "Line items", value: comparisonItems.length > 0 ? comparisonItems.length : lineItems.length },
     { label: "Flagged", value: flaggedCount },
     { label: "Confirmed", value: confirmedCount },
     { label: "Grand total", value: `$${grandTotal.toFixed(2)}` },
@@ -129,11 +153,13 @@ export default function ResultPage({
   // Allow command-palette to trigger CSV export remotely
   useEffect(() => {
     const handler = () => {
-      if (report) exportCsv(report.runId, lineItems);
+      if (summary?.report) {
+        exportCsv(summary.report.runId, summary.report.items ?? [], summary.report.comparison ?? []);
+      }
     };
     window.addEventListener("sentinel:export-csv", handler as EventListener);
     return () => window.removeEventListener("sentinel:export-csv", handler as EventListener);
-  }, [report, lineItems]);
+  }, [summary?.report]);
 
   return (
     <SidebarInset>
@@ -222,7 +248,7 @@ export default function ResultPage({
                     size="sm"
                     id="tour-result-export"
                     className="gap-2"
-                    onClick={() => exportCsv(report.runId, lineItems)}
+                    onClick={() => exportCsv(report.runId, lineItems, comparisonItems)}
                   >
                     <Download className="size-4" />
                     Export CSV
@@ -250,6 +276,150 @@ export default function ResultPage({
                 </div>
               </div>
             </div>
+
+            {/* Product Comparison Spec Sheet */}
+            {comparisonItems.length > 0 && (
+              <section className="bg-card border border-border rounded-xl overflow-hidden" id="tour-result-comparison">
+                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                  <div>
+                    <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <Sparkles className="size-4 text-primary" />
+                      Product Comparison Spec Sheet
+                    </h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Side-by-side spec comparison and recommendation matrix extracted from market listings.
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="gap-1 font-normal">
+                    <Trophy className="size-3 text-amber-500" />
+                    {comparisonItems.length} Products Analyzed
+                  </Badge>
+                </div>
+
+                {/* Best Pick Banner */}
+                {bestPick && (
+                  <div className="mx-5 my-4 p-4 rounded-xl border border-primary/30 bg-primary/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex flex-col gap-1 max-w-2xl">
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 gap-1 text-[11px]">
+                          <Trophy className="size-3" /> Best Pick
+                        </Badge>
+                        {bestPick.url ? (
+                          <a
+                            href={bestPick.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-heading text-sm font-semibold text-foreground hover:text-primary hover:underline inline-flex items-center gap-1.5 group"
+                          >
+                            <span>{bestPick.name}</span>
+                            <ExternalLink className="size-3.5 text-muted-foreground group-hover:text-primary shrink-0 opacity-70" />
+                          </a>
+                        ) : (
+                          <h3 className="font-heading text-sm font-semibold text-foreground">
+                            {bestPick.name}
+                          </h3>
+                        )}
+                      </div>
+                      {bestPick.verdict && (
+                        <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
+                          {bestPick.verdict}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      {bestPick.rating !== undefined && (
+                        <div className="flex items-center gap-1 text-xs font-semibold text-foreground">
+                          <Star className="size-3.5 fill-amber-400 text-amber-400" />
+                          <span>{bestPick.rating.toFixed(1)}</span>
+                          {bestPick.reviewsCount !== undefined && (
+                            <span className="text-muted-foreground font-normal">({bestPick.reviewsCount.toLocaleString()})</span>
+                          )}
+                        </div>
+                      )}
+                      <span className="font-heading text-lg font-bold text-primary tabular-nums">
+                        ${bestPick.price.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className={TH_CLASS}>Product Name</TableHead>
+                      <TableHead className={cn(TH_CLASS, NUM_H_CLASS)}>Price</TableHead>
+                      <TableHead className={TH_CLASS}>Rating & Reviews</TableHead>
+                      <TableHead className={TH_CLASS}>Key Specifications</TableHead>
+                      <TableHead className={TH_CLASS}>Recommendation Verdict</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {comparisonItems.map((item, idx) => (
+                      <TableRow
+                        key={idx}
+                        className={cn(item.isBestPick && "bg-primary/[0.03]")}
+                      >
+                        <TableCell className="font-medium text-foreground max-w-[220px]">
+                          <div className="flex flex-col gap-1">
+                            {item.url ? (
+                              <a
+                                href={item.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="line-clamp-2 text-foreground hover:text-primary hover:underline inline-flex items-center gap-1 group"
+                              >
+                                <span>{item.name}</span>
+                                <ExternalLink className="size-3 text-muted-foreground group-hover:text-primary shrink-0 opacity-70" />
+                              </a>
+                            ) : (
+                              <span className="line-clamp-2">{item.name}</span>
+                            )}
+                            {item.isBestPick && (
+                              <Badge variant="outline" className="w-fit border-amber-500/30 text-amber-500 text-[10px] py-0">
+                                ★ Best Recommendation
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className={cn(NUM_B_CLASS, "font-semibold text-foreground")}>
+                          ${item.price.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-xs">
+                          {item.rating !== undefined ? (
+                            <div className="flex items-center gap-1">
+                              <Star className="size-3.5 fill-amber-400 text-amber-400" />
+                              <span className="font-semibold text-foreground">{item.rating.toFixed(1)}</span>
+                              {item.reviewsCount !== undefined && (
+                                <span className="text-muted-foreground text-[11px]">({item.reviewsCount.toLocaleString()})</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs max-w-[220px]">
+                          {item.specs && Object.keys(item.specs).length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {Object.entries(item.specs).map(([k, v]) => (
+                                <Badge key={k} variant="secondary" className="text-[10px] font-normal px-1.5 py-0">
+                                  <span className="text-muted-foreground mr-1">{k}:</span>
+                                  <span>{String(v)}</span>
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[240px]">
+                          {item.verdict ?? "Standard option."}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </section>
+            )}
 
             {/* Discrepancies */}
             {discrepancies.length > 0 && (
@@ -392,7 +562,20 @@ export default function ResultPage({
                           {item.sku}
                         </TableCell>
                         <TableCell className="max-w-[240px] truncate text-foreground">
-                          {item.description}
+                          {item.url ? (
+                            <a
+                              href={item.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="hover:text-primary hover:underline inline-flex items-center gap-1 group max-w-full truncate"
+                              title={item.description}
+                            >
+                              <span className="truncate">{item.description}</span>
+                              <ExternalLink className="size-3 text-muted-foreground group-hover:text-primary shrink-0 opacity-70" />
+                            </a>
+                          ) : (
+                            <span>{item.description}</span>
+                          )}
                         </TableCell>
                         <TableCell className={NUM_B_CLASS}>{item.quantity}</TableCell>
                         <TableCell className={NUM_B_CLASS}>

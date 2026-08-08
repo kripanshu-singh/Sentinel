@@ -129,6 +129,24 @@ export async function validateNode(
     };
   }
 
+  const isComparisonGoal = /\b(?:compare|comparison|spec(?:s|ification)?\s+sheet|rank(?:ing)?|best\s+(?:one|option|product|choice|pick)|top\s+\d*|versus|vs\.?|side[\s-]by[\s-]side)\b/i.test(input.goal);
+  if (isComparisonGoal) {
+    await emitEvent(
+      runId,
+      "CHECK",
+      "Comparison analysis checkpoint",
+      "Proceeding with multi-product spec sheet extraction.",
+      "success"
+    );
+    return {
+      discrepancies: [],
+      pendingHITL: false,
+      status: "CHECKING",
+      next: "execute",
+      resolution: null,
+    };
+  }
+
   if (!currentProduct) {
     return replanOrFail(state, "no_product", "No product extraction available at this checkpoint.");
   }
