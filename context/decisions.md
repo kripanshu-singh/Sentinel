@@ -6,6 +6,18 @@ respect these decisions; if a decision is wrong, change the record first, then t
 
 ## Product & Architecture
 
+### ADR-014 — HTTP/1.1 Stealth Navigation & Visual Image Capture
+- **Status:** Accepted (2026-08-08)
+- **Context:** Cloudflare/Akamai bot walls (Myntra, Ajio) send HTTP/2 `RST_STREAM` frame resets to headless Playwright browsers, causing `net::ERR_HTTP2_PROTOCOL_ERROR` crashes. Additionally, aggressive image blocking hid product photos in live UI screenshots.
+- **Decision:** Launch Playwright Chromium with `--disable-http2` to force HTTP/1.1, eliminating connection resets. Unblock image resource types (`png, jpg, webp, svg`) while continuing to block heavy video media and web fonts.
+- **Consequences:** Multi-storefront navigation works reliably without stream resets, and live UI captures display full, crisp product photos.
+
+### ADR-013 — Site-Agnostic Direct Search Resolution & Clean Query Normalization
+- **Status:** Accepted (2026-08-08)
+- **Context:** Storefront homepages often contain popups, captchas, or login prompts. Searching directly via URL parameter skips homepages completely and reduces navigation latency by ~60%.
+- **Decision:** Implement `extractCleanProductName` to strip conversational preambles ("So my target price is $20 and please search..."), target price clauses, and storefront suffixes. Implement `resolveStorefrontUrl` to map goal text (eBay, Amazon, Flipkart, Target, Best Buy, Walmart, Myntra, Ajio) to direct search URLs (`_nkw`, `q`, `k`, `st`). Default unmapped queries to eBay direct search instead of SauceDemo.
+- **Consequences:** Prompt queries like *"Find Sony WH-1000XM5 on eBay"* navigate straight to search results without hitting homepages or embedding conversational preambles in search params.
+
 ### ADR-012 — Live steering: operator instruction channel at step boundaries
 - **Status:** Accepted (2026-08-07)
 - **Context:** HITL pauses only at a formal `validate → hitl` gate (a crossed

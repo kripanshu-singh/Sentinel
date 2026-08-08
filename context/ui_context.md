@@ -55,23 +55,29 @@ Config facts: `components.json` → style `base-nova`, aliases `@/components`, `
 
 ## Screens (product spec)
 
-### 1. Goal Input (`/`)
+### 1. Goal Input (`/app` and `/`)
 
 Purpose: the user types a procurement goal and sets business rules before a run starts.
 
-Layout (single column, centered, `max-w-2xl`):
+Layout (Single-Page Application SPA centered layout, `max-w-2xl`):
+- **Teal Radial Background Glow:** `#6bd8cb` radial gradient centered at top of canvas.
 - **Heading** (`font-heading`, `text-3xl`): "Sentinel".
-- **Subheading** (`text-muted-foreground`): one line about the B2B reconciliation agent.
-- **Goal textarea** — `Field` + `FieldLabel` ("Procurement goal") + `FieldControl` textarea.
-  Placeholder: *"Build a cart with 5 units of Organic Almond Milk and 10 units of Oat Milk,
-  apply SUMMER20, and fill the shipping form."*
-- **Business rules** — a grouped `FieldSet` + `FieldLegend` ("Business rules") containing:
-  - Target unit price (`Input` with `InputGroupAddon` currency symbol)
+- **Subheading** (`text-muted-foreground`): B2B vendor order & discrepancy reconciliation tagline.
+- **Goal textarea** — `textarea` with ambient gradient blur focus ring.
+  Placeholder: *"Search for Sony WH-1000XM5 headphones on Amazon and extract the price. Or: Check if boAt headphones on Flipkart are under ₹1,500."*
+- **Business rules fieldset** — grouped `FieldSet` containing:
+  - Target unit price (`Input` with `InputGroupAddon` `$`)
+  - Target subtotal (`Input` with `InputGroupAddon` `$`)
   - Variance threshold (%) (`Input`, default `10`)
   - Discount code (`Input`)
   - Fallback policy (`Select`: "Default wholesale tier", "Best available code", "Abort")
-- **Primary CTA** — `Button` "Start run" with `PlayIcon` (`data-icon="inline-start"`).
-  Disabled while submitting. Client component; validates with the Zod schema before POSTing.
+  - Optional portal credentials toggle (Username / Password inputs)
+- **Suggested Workflows** — 3 real-world e-commerce preset cards:
+  1. 🛡️ **eBay — Sony WH-1000XM5 Price Audit** ($250 ceiling, triggers live HITL panel)
+  2. 🛒 **Flipkart — boAt Headphone Audit** (INR `₹` currency verification)
+  3. ⚡ **Amazon — Logitech Tech Search** ($20 target budget)
+- **Primary CTA** — `Button` "Start run" with `PlayIcon`.
+  Disabled while submitting. Client component; validates with Zod schema before POSTing.
 
 ### 2. Live Run (`/runs/[runId]`)
 

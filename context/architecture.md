@@ -56,9 +56,11 @@ deliberate; it is driven by the hard constraints of an *acting* agent, not by ta
   `StateGraph` that runs `plan → execute (step machine) ⇄ extract/validate → report`,
   with a HITL gate (`validate → hitl`) and a bounded replan loop
   (`validate/execute → replan → execute`) — see ADR-011 and
-  `.ai/langgraph-migration.md`. Owns the Playwright browser (via `SessionManager`,
-  state stores only a `sessionId`), LLM orchestration, and the rule engine. Streams
-  events down; accepts resolutions up.
+  `.ai/langgraph-migration.md`. Owns the Playwright browser (via `SessionManager` / `navigator.ts`),
+  which executes stealth HTTP/1.1 navigation (`--disable-http2` to bypass stream resets) and
+  enables product image rendering for live browser captures. Implements clean query normalization
+  (`extractCleanProductName`), direct search URL resolution (`resolveStorefrontUrl`), LLM DOM
+  extraction, and rule validation. Streams events down; accepts resolutions up.
 - **PostgreSQL** — durable records: agent runs, approvals, discrepancies, generated reports.
 - **Redis** — job queue for runs, ephemeral run state, and pub/sub used to fan events to
   subscribers and wake the worker on HITL resolution.

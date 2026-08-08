@@ -2,17 +2,11 @@
 
 **Name:** Sentinel
 **Tagline:** B2B Vendor Order & Discrepancy Reconciliation Agent
-**Status:** Scaffolding / early development
+**Status:** Active / Production-Ready
 
 ## Mission
 
-Sentinel is an AI agent that **executes** B2B procurement workflows instead of just reading
-them. Given a natural-language goal, it navigates a vendor storefront or procurement portal,
-searches products, builds a cart, fills order and invoice forms, applies discount codes, and
-validates every price and coupon against business rules. When a rule is violated — a price
-variance above threshold, a failed coupon, an inventory surprise — Sentinel **pauses and asks
-a human** before continuing. It drafts the final invoice summary for review but never places
-the order itself.
+Sentinel is an AI agent that **executes** B2B procurement workflows across any e-commerce storefront or vendor portal (eBay, Amazon, Flipkart, Target, Best Buy, B&H Photo, SauceDemo, etc.). Given a natural-language goal, it navigates vendor portals, resolves direct search URLs, extracts live market prices, builds carts, fills forms, applies discount codes, and validates every price and coupon against business rules. When a rule is violated — a price variance above threshold, a failed coupon, an inventory surprise — Sentinel **pauses and asks a human** before continuing. It drafts the final invoice summary for review but never places the order itself.
 
 ## Problem
 

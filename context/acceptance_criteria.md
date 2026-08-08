@@ -26,18 +26,18 @@ AC-2. ...
 AC-N. Non-functional: <constraint>.
 ```
 
-## Feature: Goal input (`/`)
+## Feature: Goal input (`/app` and `/`)
 
-- [ ] AC-1. Given a user on `/`, when the page renders, then the heading shows "Sentinel" and
+- [x] AC-1. Given a user on `/app`, when the page renders, then the heading shows "Sentinel" and
       a one-line subheading about the B2B reconciliation agent.
-- [ ] AC-2. Given the goal form, when the user types a natural-language goal, then the goal is
+- [x] AC-2. Given the goal form, when the user types a natural-language goal, then the goal is
       captured and sent to the API with the configured business rules (target price, variance
       threshold, coupon code, fallback policy).
-- [ ] AC-3. Given an invalid goal (empty / over max length), when submitted, then validation
+- [x] AC-3. Given an invalid goal (empty / over max length), when submitted, then validation
       errors show inline (`aria-invalid` on the control) and no run is created.
-- [ ] AC-4. Given valid input, when the user clicks "Start run", then a run is created and the
+- [x] AC-4. Given valid input, when the user clicks "Start run", then a run is created and the
       user is routed to `/runs/[runId]`.
-- [ ] AC-5. Non-functional: the form submits via Zod-validated API; button shows a `Spinner`
+- [x] AC-5. Non-functional: the form submits via Zod-validated API; button shows a `Spinner`
       and is `disabled` while submitting.
 
 ## Feature: Navigation & search
