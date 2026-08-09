@@ -5,14 +5,12 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 /**
- * GlowCta — Primary CTA button with an animated SVG border trace on mount.
+ * GlowCta — Primary hero CTA.
  *
- * The trace is a `<rect>` with `stroke-dasharray` / `stroke-dashoffset`
- * animated from full offset (invisible) to zero (fully drawn) via Motion.
- * After the trace completes, a soft pulsing glow aura continues indefinitely.
- *
- * The button itself is a standard `<Link>` so it works as a server-rendered
- * anchor; the SVG animation is purely decorative and layered on top.
+ * On mount the SVG border traces itself; a soft aura pulse follows. The
+ * button itself is a gradient primary with a periodic shine sweep that glides
+ * across, plus a hover lift. Remains a server-rendered <Link>; all animation
+ * lives in decorative layers.
  */
 export function GlowCta({
   href,
@@ -21,11 +19,8 @@ export function GlowCta({
   href: string;
   label?: string;
 }) {
-  // border-radius 8px matches rounded-lg
   const r = 8;
-  // button is approx h-12 (48px) and intrinsic width ~190px — we use SVG viewBox
-  // to make it responsive; the rect fills the viewBox minus stroke width
-  const sw = 1.5; // stroke width
+  const sw = 1.5;
 
   return (
     <div className="relative inline-block">
@@ -51,8 +46,8 @@ export function GlowCta({
           initial={{ pathLength: 0, opacity: 0 }}
           animate={{ pathLength: 1, opacity: 1 }}
           transition={{
-            pathLength: { duration: 1.2, delay: 0.5, ease: [0.4, 0, 0.2, 1] },
-            opacity:    { duration: 0.01, delay: 0.5 },
+            pathLength: { duration: 1.1, delay: 1.1, ease: [0.4, 0, 0.2, 1] },
+            opacity: { duration: 0.01, delay: 1.1 },
           }}
         />
       </motion.svg>
@@ -66,31 +61,62 @@ export function GlowCta({
           opacity: [0, 1, 1],
           boxShadow: [
             "0 0 0 0 rgba(107,216,203,0)",
-            "0 0 16px 4px rgba(107,216,203,0.35)",
-            "0 0 10px 2px rgba(107,216,203,0.18)",
+            "0 0 18px 4px rgba(107,216,203,0.28)",
+            "0 0 10px 2px rgba(107,216,203,0.14)",
           ],
         }}
         transition={{
-          duration: 2,
-          delay: 1.5,
+          duration: 2.2,
+          delay: 2,
           repeat: Infinity,
           repeatType: "reverse",
           ease: "easeInOut",
         }}
       />
 
+      <motion.span
+        aria-hidden
+        className="pointer-events-none absolute -inset-2 rounded-2xl"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 1, 1, 0] }}
+        transition={{
+          duration: 4.4,
+          delay: 1.2,
+          repeat: Infinity,
+          repeatType: "loop",
+          ease: "easeInOut",
+        }}
+      >
+        <span className="absolute inset-0 rounded-2xl border border-primary/10" />
+      </motion.span>
+
       <Link
         href={href}
         id="hero-cta-launch"
-        className="relative inline-flex h-12 items-center gap-2 rounded-lg bg-primary px-7 text-sm font-semibold text-primary-foreground transition-all duration-200 hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="group relative inline-flex h-12 items-center gap-2 overflow-hidden rounded-lg bg-linear-to-b from-primary to-primary/85 px-7 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         {label}
+        <ArrowRight
+          className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
+          aria-hidden
+        />
+
+        {/* Periodic shine sweep */}
         <motion.span
-          initial={{ x: 0 }}
-          whileHover={{ x: 3 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
+          aria-hidden
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
         >
-          <ArrowRight className="size-4" aria-hidden />
+          <motion.span
+            className="absolute inset-y-0 left-0 w-2/5 skew-x-[-20deg] bg-linear-to-r from-transparent via-white/25 to-transparent"
+            initial={{ x: "-140%" }}
+            animate={{ x: ["-140%", "360%"] }}
+            transition={{
+              duration: 2.6,
+              repeat: Infinity,
+              repeatDelay: 2.6,
+              ease: "easeInOut",
+            }}
+          />
         </motion.span>
       </Link>
     </div>

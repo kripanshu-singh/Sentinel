@@ -4,16 +4,12 @@ import { motion, useInView } from "motion/react";
 import { useRef } from "react";
 
 /**
- * SplitHeadline — Splits a headline into words and animates each word
- * with a staggered spring entrance (y + blur fade).
+ * SplitHeadline — Splits a headline into words and reveals each word with a
+ * soft mask wipe (slides up from behind an overflow mask + blur settle).
  *
- * Uses `motion/react` (already installed as `motion@13`). The accent
- * words are passed as `accentWords` and rendered in `text-primary`.
- * All other words render in `text-foreground`.
- *
- * The animation is scroll-triggered via `useInView`, fires once, and
- * degrades to full opacity/position without JS (the initial state is
- * only applied after hydration).
+ * Masked reveals clip with overflow-hidden so each word reads as physically
+ * appearing from below, keeping the stagger legible. Accent words render in
+ * `text-primary`. Animates once when the headline scrolls into view.
  */
 export function SplitHeadline({
   text,
@@ -25,37 +21,42 @@ export function SplitHeadline({
   className?: string;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
+  const inView = useInView(ref, { once: true, margin: "-40px" });
 
   const words = text.split(" ");
 
   return (
     <span ref={ref} className={className} aria-label={text}>
       {words.map((word, i) => {
-        const isAccent = accentWords.some((a) =>
-          a.toLowerCase() === word.toLowerCase().replace(/[—–]/g, "")
+        const isAccent = accentWords.some(
+          (a) => a.toLowerCase() === word.toLowerCase().replace(/[—–]/g, "")
         );
         return (
-          <motion.span
+          <span
             key={`${word}-${i}`}
             aria-hidden
-            initial={{ opacity: 0, y: 28, filter: "blur(8px)" }}
-            animate={
-              inView
-                ? { opacity: 1, y: 0, filter: "blur(0px)" }
-                : { opacity: 0, y: 28, filter: "blur(8px)" }
-            }
-            transition={{
-              duration: 0.65,
-              delay: i * 0.07,
-              ease: [0.16, 1, 0.3, 1],
-            }}
-            className={`inline-block whitespace-pre ${
-              isAccent ? "text-primary" : ""
-            }`}
+            className="inline-block overflow-hidden pb-[0.13em] -mb-[0.13em] align-bottom"
           >
-            {word}{" "}
-          </motion.span>
+            <motion.span
+              initial={{ y: "112%", opacity: 0 }}
+              animate={
+                inView
+                  ? { y: "0%", opacity: 1 }
+                  : { y: "112%", opacity: 0 }
+              }
+              transition={{
+                duration: 0.7,
+                delay: 0.15 + i * 0.06,
+                ease: [0.16, 1, 0.3, 1],
+              }}
+              className={`inline-block will-change-transform ${
+                isAccent ? "text-primary" : ""
+              }`}
+            >
+              {word}
+              {"\u00A0"}
+            </motion.span>
+          </span>
         );
       })}
     </span>
