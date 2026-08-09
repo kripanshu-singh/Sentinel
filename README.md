@@ -49,10 +49,10 @@ User describes goal
           │    └─ no  ──► auto-continue     │
           │                                 │
           │    coupon/field failure?        │
-          │    └──► RECOVERING (fallback)  │
+          │    └──► RECOVERING (fallback)   │
           │                                 │
           │    step error (≤2 replans)?     │
-          │    └──► replan → retry         │
+          │    └──► replan → retry          │
           │                                 │
           └────────────────┬────────────────┘
                            │
