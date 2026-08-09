@@ -2,13 +2,13 @@
 
 This file is the **source of truth for generated code**. Every line you write in this repo must
 satisfy these rules. Lint + build are the gatekeepers; these rules are the reason they exist.
-If a requirement is ambiguous, re-read this file, then `.ai/ui_context.md`, then ask.
+If a requirement is ambiguous, re-read this file, then `context/ui_context.md`, then ask.
 
 ## Non-Negotiables
 
 - **No inline CSS. Ever.** No `style={{…}}`, no `<style>`, no bespoke CSS files. Tailwind
   utility classes with **semantic tokens only** (`bg-background`, `text-muted-foreground`, …).
-  See `.ai/ui_context.md` for the full list.
+  See `context/ui_context.md` for the full list.
 - **Zod validation at every boundary.** Never trust raw input. Every API route, server action,
   and worker-response boundary validates with a Zod schema in `src/server/`. Infer types from
   schemas with `z.infer`.
@@ -52,13 +52,13 @@ If a requirement is ambiguous, re-read this file, then `.ai/ui_context.md`, then
 
 ```
 src/
-  app/            # pages: / (goal input), /runs/[runId] (live), /runs/[runId]/result
-  components/     # shadcn/ui + feature components (goal-input/, run/, hitl/, report/)
+  app/            # pages: / (landing), /app (goal input), /runs/[runId] (live), /runs/[runId]/result
+  components/     # shadcn/ui + feature components (landing/, goal-input/, run/, hitl/, report/)
     ui/           # shadcn generated — do not hand-edit
   hooks/          # useRunStream, useResolveHITL, react-query hooks
   lib/            # utils, api clients, format helpers
   server/         # server-only: API routes, Zod schemas, worker proxy
-  types/          # shared domain contract (see .ai/architecture.md)
+  types/          # shared domain contract (see context/architecture.md)
 ```
 
 - Shared domain types (`GoalInput`, `AgentEvent`, `ApprovalRequest`, `ReconciliationReport`,

@@ -89,7 +89,7 @@ The system is split into two deployable services that communicate over HTTP and 
 │  Next.js frontend (this repo)        │         │  Worker service (worker/)            │
 │                                      │  HTTP / │                                      │
 │  /          Landing page             │   SSE   │  LangGraph.js StateGraph             │
-│  /app       Goal input + rules       │ ◄──────►│  Playwright Stealth (HTTP/1.1)      │
+│  /app       Goal input + rules       │ ◄──────►│  Playwright Stealth (HTTP/1.1)       │
 │  /runs/:id  Live run + HITL modal    │         │  Gemini 2.5 Flash (+ fallbacks)      │
 │  /runs/:id  /result  Report + CSV    │         │  Rule engine (variance / margin)     │
 │                                      │         │  BullMQ job queue                    │

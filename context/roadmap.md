@@ -9,7 +9,8 @@ Status legend: `[x] done · [~] in progress · [ ] planned`
 - [x] Establish shared domain types in `src/types/` (`GoalInput`, `AgentEvent`, `ApprovalRequest`, `ReconciliationReport`, …).
 
 ## Phase 1 — Frontend MVP & SPA Experience
-- [x] Single-Page Application (SPA) Goal input screen (`/app` and `/`) with ambient teal background glow, goal textarea, and Business Rules (target price, subtotal, threshold, coupon, fallback, credentials).
+- [x] Single-Page Application (SPA) Goal input screen (`/app`) with ambient teal background glow, goal textarea, and Business Rules (target price, subtotal, threshold, coupon, fallback, credentials).
+- [x] Landing/marketing page at `/` (hero, run-board demo, capabilities, at-work gallery, FAQ) with light theme, brand logo, and CTAs into the console.
 - [x] Create-run flow: Zod-validated API route → worker start → route to `/runs/[runId]`.
 - [x] Live run screen: SSE timeline of `AgentEvent`s via `useRunStream` with live browser capture preview and instant reactive HITL alerts.
 - [x] HITL modal: `ApprovalRequest` → **Approve & Continue / Override Target / Abort** → resolution sent back.

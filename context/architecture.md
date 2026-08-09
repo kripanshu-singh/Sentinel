@@ -27,14 +27,14 @@ deliberate; it is driven by the hard constraints of an *acting* agent, not by ta
 ```
 ┌───────────────────────────────────┐          ┌──────────────────────────────────────┐
 │   Next.js (this repo)  Frontend   │          │   Worker / Backend (in-tree `worker/`)│
-│   - Goal input screen             │          │   - Agent orchestration (LangGraph.js │
-│   - Live run screen (event stream)│          │     StateGraph, see ADR-011)          │
-│   - HITL approval modal           │          │   - LLM calls (Gemini 2.5 Flash,     │
-│   - Result screen (table + CSV)   │  HTTP/SSE │     OpenRouter/Groq/Ollama fallback) │
-│   - Thin API routes (Zod-validated)│◄────────►│   - Playwright browser session      │
-│                                   │ WebSocket │   - Rule engine (variance, margin)  │
-└───────────────────────────────────┘          │   - HITL pause/resume coordinator    │
-                                               └───────────────┬──────────────────────┘
+│   - Landing page (`/`)            │          │   - Agent orchestration (LangGraph.js │
+│   - Goal input screen             │          │     StateGraph, see ADR-011)          │
+│   - Live run screen (event stream)│          │   - LLM calls (Gemini 2.5 Flash,     │
+│   - HITL approval modal           │          │     OpenRouter/Groq/Ollama fallback) │
+│   - Result screen (table + CSV)   │  HTTP/SSE │   - Playwright browser session      │
+│   - Thin API routes (Zod-validated)│◄────────►│   - Rule engine (variance, margin)  │
+│                                   │ WebSocket │   - HITL pause/resume coordinator    │
+└───────────────────────────────────┘          └───────────────┬──────────────────────┘
                                                                │
                                                ┌───────────────▼──────────────────────┐
                                                │  PostgreSQL (runs, approvals,        │
@@ -46,7 +46,7 @@ deliberate; it is driven by the hard constraints of an *acting* agent, not by ta
 
 ### Layer responsibilities
 
-- **Next.js frontend** — goal input, live run timeline, HITL modal, result/report table with
+- **Next.js frontend** — landing page (`/`), goal input, live run timeline, HITL modal, result/report table with
   CSV export. The "API" here is a thin proxy layer (`src/server/`) that validates input
   with Zod and talks to the worker. No Playwright, no agent-orchestration LLM logic in this
   repo — the sole exception is the intent gatekeeper (`src/server/intent-classifier.ts`,
@@ -56,7 +56,7 @@ deliberate; it is driven by the hard constraints of an *acting* agent, not by ta
   `StateGraph` that runs `plan → execute (step machine) ⇄ extract/validate → report`,
   with a HITL gate (`validate → hitl`) and a bounded replan loop
   (`validate/execute → replan → execute`) — see ADR-011 and
-  `.ai/langgraph-migration.md`. Owns the Playwright browser (via `SessionManager` / `navigator.ts`),
+  `context/langgraph-migration.md`. Owns the Playwright browser (via `SessionManager` / `navigator.ts`),
   which executes stealth HTTP/1.1 navigation (`--disable-http2` to bypass stream resets) and
   enables product image rendering for live browser captures. Implements clean query normalization
   (`extractCleanProductName`), direct search URL resolution (`resolveStorefrontUrl`), LLM DOM
@@ -135,11 +135,13 @@ worker/src/
 ```
 src/
   app/            # App Router pages
-    page.tsx            # Goal input
+    page.tsx            # Landing / marketing page
+    app/                # Goal input (console) screen
     runs/[runId]/       # Live run screen
     runs/[runId]/result # Result/report screen
   components/     # UI components (shadcn/ui + feature components)
     ui/           # shadcn base components (generated — do not hand-edit)
+    landing/      # landing page sections (nav, run-board, pipeline-explorer, faq, …)
     goal-input/   # goal form + business rule editor
     run/          # timeline, event row, status badges
     hitl/         # approval modal + resolution buttons

@@ -75,6 +75,7 @@ anything high-stakes before it happens).
 
 ## Repo Scope
 
-This repository is the **Next.js frontend** (goal input, live run screen, result screen) plus a
-**thin API** that talks to a separate worker service. See `.ai/architecture.md` for the split
-and the shared contract, and `.ai/decisions.md` for the decisions behind it.
+This repository is the **Next.js frontend** (landing page, goal input, live run screen, result
+screen) plus a
+**thin API** that talks to a separate worker service. See `context/architecture.md` for the split
+and the shared contract, and `context/decisions.md` for the decisions behind it.

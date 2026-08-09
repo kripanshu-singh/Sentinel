@@ -343,7 +343,7 @@ revised plan (→ `execute`, `stepIndex: 0`) or FAILED on empty plan. Final-invo
 sanity mode (§6) is deferred — report node already gates the invoice before commit.
 
 **Phase D — Cleanup** ✅ done (2026-08-06)
-Delete `runner.ts`; update `.ai/architecture.md` (worker in-tree + graph),
+Delete `runner.ts`; update `context/architecture.md` (worker in-tree + graph),
 `decisions.md` (new ADR, Status: Accepted), `roadmap.md` Phase 2 items. Full re-verify.
 `runner.ts` deleted; `architecture.md` (diagram, worker responsibilities, lifecycle +
 replan, worker module layout, in-tree convention), `roadmap.md` Phase 2 (in-tree + done),
@@ -407,7 +407,7 @@ compiles with 7 nodes.
 
 ## 17. ADR
 
-Recorded in `.ai/decisions.md` as **ADR-011 — Worker orchestration on LangGraph.js
+Recorded in `context/decisions.md` as **ADR-011 — Worker orchestration on LangGraph.js
 (in-tree worker/)**, **Status: Accepted (2026-08-06)**. Excerpt from the decision record:
 
 ## 18. Open questions (non-blocking)

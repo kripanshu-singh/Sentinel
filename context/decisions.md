@@ -36,7 +36,7 @@ respect these decisions; if a decision is wrong, change the record first, then t
   autonomously and the operator has no way to redirect it — a wrong product, an
   overlooked quantity, or a change of plan is unrecoverable until the next pause.
   A LangGraph `interrupt()` + checkpointer would solve this properly but is a
-  deferred production-hardening item (see ADR-011 and `.ai/langgraph-migration.md`
+  deferred production-hardening item (see ADR-011 and `context/langgraph-migration.md`
   §8). We need steering now, with the existing BLPOP/no-checkpointer stack.
 - **Decision:** Add an **asynchronous steer channel**: the frontend pushes a
   free-form instruction to the worker via a new `POST /runs/:id/steer` route,
@@ -70,9 +70,9 @@ respect these decisions; if a decision is wrong, change the record first, then t
   later without graph changes. Keep the existing `LLMProvider` abstraction and event
   streaming; keep the shared frontend contract (`src/types/`) unchanged.
 - **Consequences:** `worker/` gains `@langchain/langgraph`; `worker/src/agent/runner.ts`
-  is removed at the end of the migration; `.ai/architecture.md` and `roadmap.md` are
+  is removed at the end of the migration; `context/architecture.md` and `roadmap.md` are
   updated to reflect the in-tree worker and graph orchestration. See
-  `.ai/langgraph-migration.md` for the phased plan.
+  `context/langgraph-migration.md` for the phased plan.
 
 ### ADR-010 — Intent gatekeeper LLM call lives in the frontend (exception to ADR-002)
 - **Status:** Accepted (2026-08-06)
@@ -99,18 +99,18 @@ respect these decisions; if a decision is wrong, change the record first, then t
   + shadcn/ui **base-nova** (Base UI primitives, lucide icons, Geist fonts).
 - **Consequences:** The pinned Next.js version has breaking changes; agents must consult
   `node_modules/next/dist/docs/`. UI must use semantic tokens and shadcn conventions (see
-  `.ai/ui_context.md`).
+  `context/ui_context.md`).
 
 ### ADR-002 — Frontend / worker split (two deployables)
 - **Status:** Accepted (2026-08-06)
 - **Context:** Agent runs keep a Playwright browser alive and stream events for minutes.
   Serverless functions have execution time limits and are request/response oriented; keeping a
   browser session streaming reliably on pure serverless is impractical.
-- **Decision:** This repo is the **Next.js frontend** (goal input, live run, HITL modal, result
+- **Decision:** This repo is the **Next.js frontend** (landing page, goal input, live run, HITL modal, result
   + CSV export) with a thin Zod-validated API layer. The **worker** (agent orchestration,
   Playwright, LLM, rule engine) is a **separate long-running service** in its own repo.
 - **Consequences:** Frontend never owns browser state; the shared contract is the domain types
-  in `src/types/`. See `.ai/architecture.md`.
+  in `src/types/`. See `context/architecture.md`.
 
 ### ADR-003 — Human-in-the-loop before high-stakes actions
 - **Status:** Accepted (2026-08-06)

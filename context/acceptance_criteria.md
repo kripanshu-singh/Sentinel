@@ -1,15 +1,15 @@
 # Sentinel — Acceptance Criteria
 
 Every requirement is a checkable acceptance criterion. Use the template below for new
-features; existing criteria below map directly to `.ai/project_overview.md` capabilities and
+features; existing criteria below map directly to `context/project_overview.md` capabilities and
 the walkthrough. Mark a box `[x]` only when verified.
 
 ## Definition of Done (applies to every feature)
 
 - [ ] `npm run lint` passes.
 - [ ] `npm run build` passes (includes type-checking).
-- [ ] UI follows `.ai/ui_context.md` — semantic tokens, shadcn components, no inline CSS.
-- [ ] Code follows `.ai/code_standards.md` — Zod at boundaries, React Query, server-first.
+- [ ] UI follows `context/ui_context.md` — semantic tokens, shadcn components, no inline CSS.
+- [ ] Code follows `context/code_standards.md` — Zod at boundaries, React Query, server-first.
 - [ ] No secrets or credentials introduced.
 - [ ] Behavior verified locally (manual or automated).
 
@@ -26,7 +26,18 @@ AC-2. ...
 AC-N. Non-functional: <constraint>.
 ```
 
-## Feature: Goal input (`/app` and `/`)
+## Feature: Landing page (`/`)
+
+- [x] AC-1. Given a user on `/`, when the page renders, then it shows the brand logo (from
+      `public/favicon.svg`), a hero with a headline and CTAs into the console (`/app`).
+- [x] AC-2. Given the landing page, when the user scrolls, then it shows the capabilities,
+      at-work gallery, comparison table, and FAQ sections (no pricing section present).
+- [x] AC-3. Given the landing page, when the user clicks "Launch console", then they are routed
+      to `/app`.
+- [x] AC-4. Given the landing page, when rendered, then the page fills the viewport width
+      (`w-full`) and uses the light theme (semantic tokens, no `dark` class).
+
+## Feature: Goal input (`/app`)
 
 - [x] AC-1. Given a user on `/app`, when the page renders, then the heading shows "Sentinel" and
       a one-line subheading about the B2B reconciliation agent.

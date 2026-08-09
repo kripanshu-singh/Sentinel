@@ -13,7 +13,7 @@ If this file and the code disagree, this file wins — fix the code.
 - **Fonts:** Geist (`--font-geist-sans`, `--font-geist-mono`) via `next/font/google`.
 - **Design & MCP Skills:** Impeccable Anti-AI-Slop (`.agents/skills/impeccable/`), 21st Dev CLI (`@21st-dev/cli`), `.mcp.json` (`21st`), Stitch MCP Server.
 - **Server state:** `@tanstack/react-query` (add via `npm install @tanstack/react-query` when
-  first needed — see `.ai/code_standards.md`).
+  first needed — see `context/code_standards.md`).
 - **Validation:** `zod` (add via `npm install zod` — schemas live in `src/server/`).
 
 Config facts: `components.json` → style `base-nova`, aliases `@/components`, `@/components/ui`,
@@ -79,7 +79,37 @@ Agents can invoke lazy-loaded Stitch MCP tools for structured layout generation:
 
 ## Screens (product spec)
 
-### 1. Goal Input (`/app` and `/`)
+### 1. Landing / marketing (`/`)
+
+Purpose: sell the product to visitors and route them to the console (`/app`). Registered as the
+root page in `src/app/page.tsx`.
+
+Layout (centered, `max-w-7xl`, light theme via semantic tokens — **no forced dark mode**):
+- **Root wrapper:** `w-full min-h-dvh bg-background text-foreground` (must stay `w-full` —
+  the root `layout.tsx` wraps every route in a flex `SidebarProvider` container that
+  shrink-wraps children; without `w-full` the page clamps to content width and drifts left).
+- **Navbar** (`src/components/landing/nav.tsx`): sticky, `bg-background/70 backdrop-blur-xl`.
+  Brand = **logo image from `/public/favicon.svg`** + "Sentinel" wordmark + `OPS` badge. Links:
+  How it works, Capabilities, At work, FAQ (no Pricing link). "Watch run" opens the walkthrough
+  video; "Launch console" → `/app`.
+- **Hero:** headline + subcopy, grid-floor background (`var(--border)`, 64px, `opacity-[0.15]`),
+  CTAs (Launch console → `/app`, Watch run), then `RunBoard` (animated live-run mock) and a
+  `VendorMarquee` strip.
+- **Quick stats:** 4-point grid.
+- **How it works** (`#how-it-works`): `PipelineExplorer` stage trace.
+- **Capabilities** (`#capabilities`): guardrail principle cards.
+- **At work** (`#at-work`): `ScreenshotTabs` product studio.
+- **Guardrails vs. ungated:** comparison table.
+- **FAQ** (`#faq`): `Faq` accordion.
+- **Final CTA:** primary panel → `/app`, `WatchButton`.
+- **Footer:** brand mark, "B2B Vendor Order & Discrepancy Reconciliation Agent", attribution.
+
+Design system notes:
+- Light theme only — tokens in `:root` (no `dark` class, no theme toggle).
+- Subtle shadows use `shadow-border/60` (not black) so they read correctly on light.
+- `Reveal` (motion) for scroll-into-view; `font-mono` micro-labels for the ops-console voice.
+
+### 2. Goal Input (`/app`)
 
 Purpose: the user types a procurement goal and sets business rules before a run starts.
 
@@ -103,7 +133,7 @@ Layout (Single-Page Application SPA centered layout, `max-w-2xl`):
 - **Primary CTA** — `Button` "Start run" with `PlayIcon`.
   Disabled while submitting. Client component; validates with Zod schema before POSTing.
 
-### 2. Live Run (`/runs/[runId]`)
+### 3. Live Run (`/runs/[runId]`)
 
 Purpose: show the agent working in real time, and pause for human approval when needed.
 
@@ -139,7 +169,7 @@ Purpose: show the agent working in real time, and pause for human approval when 
   While awaiting the worker's acknowledgement of a resolution, buttons are `disabled` and the
   modal shows a `Spinner`. Do not close the Dialog until the run resumes or aborts.
 
-### 3. Result / Report (`/runs/[runId]/result`)
+### 4. Result / Report (`/runs/[runId]/result`)
 
 Purpose: show the final draft invoice/report and export it.
 
@@ -149,7 +179,7 @@ Purpose: show the final draft invoice/report and export it.
 - **Reconciliation table** (`Table`): columns `SKU`, `Description`, `Qty`, `Unit price`,
   `Discount`, `Line total`, `Status`. Product descriptions render as direct clickable product page links when `url` is present. Rows flagged by a discrepancy get a `Badge` and a
   `destructive`-tinted status; **human-confirmed flags** are visibly marked (e.g. a "Confirmed"
-  `Badge`) per `.ai/architecture.md` ("flagged items clearly marked as human-confirmed").
+  `Badge`) per `context/architecture.md` ("flagged items clearly marked as human-confirmed").
 - **Multi-channel comparison** (when present): `Table` of `ChannelSnapshot` —
   channel / price / discount / shipping / computed margin / variance. Rows above threshold get
   a `destructive` `Badge`; auto-passed rows need no marking.
