@@ -138,11 +138,11 @@ export function AgentHeroSimulator() {
         <div className="lg:col-span-5 p-5 border-b lg:border-b-0 lg:border-r border-border/60 flex flex-col justify-between bg-muted/20">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Terminal className="size-3.5 text-primary" />
                 Goal Prompt
               </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+              <span className="text-xs font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
                 {currentScenario.vendor}
               </span>
             </div>
@@ -154,7 +154,7 @@ export function AgentHeroSimulator() {
 
             {/* Execution Step Indicators */}
             <div className="space-y-3">
-              <span className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground block mb-2">
+              <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground block mb-2">
                 Execution Progress
               </span>
 
@@ -169,7 +169,7 @@ export function AgentHeroSimulator() {
               >
                 <div
                   className={cn(
-                    "size-6 rounded-full flex items-center justify-center text-[10px] font-mono font-bold shrink-0",
+                    "size-6 rounded-full flex items-center justify-center text-xs font-mono font-bold shrink-0",
                     simStep >= 1 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   )}
                 >
@@ -177,7 +177,7 @@ export function AgentHeroSimulator() {
                 </div>
                 <div className="flex-1">
                   <div className="font-medium">Navigate Portal & Search SKU</div>
-                  <div className="text-[10px] text-muted-foreground">Resolving direct storefront URL...</div>
+                  <div className="text-xs text-muted-foreground">Resolving direct storefront URL...</div>
                 </div>
                 {simStep > 1 && <CheckCircle2 className="size-4 text-primary shrink-0" />}
               </div>
@@ -193,7 +193,7 @@ export function AgentHeroSimulator() {
               >
                 <div
                   className={cn(
-                    "size-6 rounded-full flex items-center justify-center text-[10px] font-mono font-bold shrink-0",
+                    "size-6 rounded-full flex items-center justify-center text-xs font-mono font-bold shrink-0",
                     simStep >= 2 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   )}
                 >
@@ -201,7 +201,7 @@ export function AgentHeroSimulator() {
                 </div>
                 <div className="flex-1">
                   <div className="font-medium">Extract Unit Price & Test Promo</div>
-                  <div className="text-[10px] text-muted-foreground">Checking target variance ceiling...</div>
+                  <div className="text-xs text-muted-foreground">Checking target variance ceiling...</div>
                 </div>
                 {simStep > 2 && <CheckCircle2 className="size-4 text-primary shrink-0" />}
               </div>
@@ -219,7 +219,7 @@ export function AgentHeroSimulator() {
               >
                 <div
                   className={cn(
-                    "size-6 rounded-full flex items-center justify-center text-[10px] font-mono font-bold shrink-0",
+                    "size-6 rounded-full flex items-center justify-center text-xs font-mono font-bold shrink-0",
                     simStep >= 3
                       ? currentScenario.couponStatus === "invalid_fallback"
                         ? "bg-amber-500 text-white"
@@ -231,7 +231,7 @@ export function AgentHeroSimulator() {
                 </div>
                 <div className="flex-1">
                   <div className="font-medium">HITL Guardrail Verification</div>
-                  <div className="text-[10px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     {simStep >= 3
                       ? currentScenario.couponStatus === "invalid_fallback"
                         ? "PAUSED: Discrepancy detected"
@@ -262,7 +262,7 @@ export function AgentHeroSimulator() {
               <RotateCcw className="size-3.5" />
               Reset
             </Button>
-            <span className="text-[11px] font-mono text-muted-foreground">
+            <span className="text-xs font-mono text-muted-foreground">
               {isPlaying ? "Simulating live run..." : simStep >= 4 ? "Execution complete" : "Paused at HITL guardrail"}
             </span>
           </div>
@@ -331,7 +331,7 @@ export function AgentHeroSimulator() {
 
                 {/* Discrepancy Breakdown Table */}
                 <div className="rounded-xl border border-border bg-background p-3.5 space-y-2.5 text-xs">
-                  <div className="flex justify-between items-center pb-2 border-b border-border/50 text-muted-foreground font-mono text-[11px]">
+                  <div className="flex justify-between items-center pb-2 border-b border-border/50 text-muted-foreground font-mono text-xs">
                     <span>CHECKPOINT PARAMETER</span>
                     <span>EXTRACTED VALUE</span>
                   </div>
@@ -359,7 +359,7 @@ export function AgentHeroSimulator() {
                     <span className="text-muted-foreground">Coupon &apos;{currentScenario.coupon}&apos;:</span>
                     <span
                       className={cn(
-                        "px-1.5 py-0.5 rounded text-[10px] font-bold uppercase",
+                        "px-1.5 py-0.5 rounded text-xs font-bold uppercase",
                         currentScenario.couponStatus === "valid"
                           ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                           : "bg-destructive/10 text-destructive border border-destructive/20"
@@ -386,7 +386,7 @@ export function AgentHeroSimulator() {
 
                 {/* HITL Action buttons */}
                 <div className="space-y-2">
-                  <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider block">
+                  <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider block">
                     Choose Human Decision:
                   </span>
                   <div className="grid grid-cols-3 gap-2">

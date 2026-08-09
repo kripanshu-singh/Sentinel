@@ -84,7 +84,7 @@ export function ProcurementRoiCalculator() {
               onChange={(e) => setPoCount(Number(e.target.value))}
               className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
             />
-            <div className="flex justify-between text-[10px] font-mono text-muted-foreground">
+            <div className="flex justify-between text-xs font-mono text-muted-foreground">
               <span>20 orders</span>
               <span>500 orders</span>
               <span>1,000 orders</span>
@@ -111,7 +111,7 @@ export function ProcurementRoiCalculator() {
               onChange={(e) => setAvgPoValue(Number(e.target.value))}
               className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
             />
-            <div className="flex justify-between text-[10px] font-mono text-muted-foreground">
+            <div className="flex justify-between text-xs font-mono text-muted-foreground">
               <span>$200</span>
               <span>$10,000</span>
               <span>$25,000</span>
@@ -138,7 +138,7 @@ export function ProcurementRoiCalculator() {
               onChange={(e) => setLeakageRate(Number(e.target.value))}
               className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
             />
-            <div className="flex justify-between text-[10px] font-mono text-muted-foreground">
+            <div className="flex justify-between text-xs font-mono text-muted-foreground">
               <span>1.0% (Conservative)</span>
               <span>3.5% (Industry Avg)</span>
               <span>10.0% (High Leakage)</span>
@@ -166,7 +166,7 @@ export function ProcurementRoiCalculator() {
                 {formattedAnnualSavings}
               </div>
             </div>
-            <p className="text-[11px] text-muted-foreground mt-3 leading-snug">
+            <p className="text-xs text-muted-foreground mt-3 leading-snug">
               Prevented from unverified unit price drift & failed discount codes.
             </p>
           </motion.div>
@@ -189,7 +189,7 @@ export function ProcurementRoiCalculator() {
                 {monthlyHoursSaved} hrs/mo
               </div>
             </div>
-            <p className="text-[11px] text-muted-foreground mt-3 leading-snug">
+            <p className="text-xs text-muted-foreground mt-3 leading-snug">
               Automated storefront navigation & normalized line-item extraction.
             </p>
           </motion.div>

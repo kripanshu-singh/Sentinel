@@ -93,7 +93,7 @@ export default function RootLayout({
         </QueryProvider>
         <Analytics />
       {/* impeccable-live-start */}
-<script src="http://localhost:8400/live.js?token=cc645739-eb5e-48b7-a064-6461ccfec075"></script>
+<script async src="http://localhost:8400/live.js?token=cc645739-eb5e-48b7-a064-6461ccfec075"></script>
 {/* impeccable-live-end */}
 </body>
     </html>

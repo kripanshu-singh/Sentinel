@@ -101,7 +101,7 @@ export function ScreenshotTabs() {
           </div>
 
           {/* URL bar */}
-          <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-background/80 border border-border/50 text-foreground text-[11px] max-w-xs sm:max-w-md w-full justify-center shadow-inner">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-background/80 border border-border/50 text-foreground text-xs max-w-xs sm:max-w-md w-full justify-center shadow-inner font-mono">
             <Lock className="size-3 text-primary shrink-0" />
             <span className="truncate">{current.path}</span>
           </div>
@@ -109,7 +109,7 @@ export function ScreenshotTabs() {
           {/* Live Indicator */}
           <div className="flex items-center gap-1.5">
             <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider hidden sm:inline">
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider hidden sm:inline">
               Guardrails Active
             </span>
           </div>

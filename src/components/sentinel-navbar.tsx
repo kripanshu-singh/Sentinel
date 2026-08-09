@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -83,14 +84,14 @@ export function SentinelNavbar({
           aria-label="Sentinel home"
         >
           <div className="">
-            <img src="/favicon.svg" alt="Sentinel logo" className="size-6" aria-hidden="true" />
+            <Image src="/favicon.svg" alt="Sentinel logo" width={24} height={24} className="size-6" aria-hidden="true" />
           </div>
           <span className="text-lg font-semibold tracking-tight text-foreground">
             Sentinel
           </span>
           <Badge
             variant="secondary"
-            className="hidden sm:inline-flex text-[10px] px-1.5 py-0 h-4 font-mono"
+            className="hidden sm:inline-flex text-xs px-2 py-0.5 h-5 font-mono"
           >
             v0.1
           </Badge>
@@ -134,7 +135,7 @@ export function SentinelNavbar({
                 <li className="inline-flex items-center ml-0.5 shrink-0">
                   <Badge
                     className={cn(
-                      "text-[10px] font-bold uppercase tracking-wider h-5 px-2 border-transparent",
+                      "text-xs font-bold uppercase tracking-wider h-5 px-2 border-transparent",
                       statusBadge.variant === "primary"
                         ? "bg-primary/10 text-primary hover:bg-primary/15"
                         : "bg-destructive/10 text-destructive hover:bg-destructive/15",
@@ -258,7 +259,7 @@ export function SentinelNavbar({
               />
             }
           >
-            <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-semibold">
+            <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
               K
             </AvatarFallback>
           </DropdownMenuTrigger>

@@ -1,529 +1,377 @@
 import Link from "next/link";
-import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { ScreenshotTabs } from "@/components/screenshot-tabs";
-import { AgentHeroSimulator } from "@/components/agent-hero-simulator";
-import { ProcurementRoiCalculator } from "@/components/procurement-roi-calculator";
 import {
-  ArrowRight,
   ShieldCheck,
-  Zap,
-  GitMerge,
-  FileDown,
-  Radio,
-  Play,
-  CheckCircle2,
+  ArrowRight,
+  Activity,
+  Target,
   Layers,
-  Tv,
-  Check,
-  X,
-  Sliders,
-  Store,
+  FileSpreadsheet,
+  Crosshair,
+  GitMerge,
 } from "lucide-react";
-import { openWalkthroughVideo } from "@/components/video-modal";
+import { Navbar } from "@/components/landing/nav";
+import { RunBoard } from "@/components/landing/run-board";
+import { VendorMarquee } from "@/components/landing/vendor-marquee";
+import { Reveal } from "@/components/landing/reveal";
+import { PipelineExplorer } from "@/components/landing/pipeline-explorer";
+import { Faq } from "@/components/landing/faq";
+import { WatchButton } from "@/components/landing/watch-button";
+import { ScreenshotTabs } from "@/components/screenshot-tabs";
 
-/* ─────────────────────────── data ─────────────────────────── */
-
-const STATS = [
+const STAT_POINTS = [
   {
-    value: "100% HITL Guardrails",
-    label: "Human approval required for any high-stakes variance or price creep.",
+    icon: ShieldCheck,
+    value: "0 unchecked",
+    label: "A high-stakes step is never taken without a human sign-off.",
   },
   {
-    value: "Real-Time SSE Stream",
-    label: "Every Playwright DOM action & decision visible line-by-line as it happens.",
+    icon: Activity,
+    value: "1 live stream",
+    label: "Every Playwright action rendered line-by-line over SSE.",
   },
   {
-    value: "Normalized Invoice Export",
-    label: "Generates structured CSV invoice reports with line-item discrepancy flags.",
+    icon: Target,
+    value: "±1/10 tolerance",
+    label: "Unit drift measured in percent, paused at any breach.",
   },
   {
-    value: "Multi-Store Audit Engine",
-    label: "Compare pricing, shipping, & discount rules across 2+ vendor storefronts.",
+    icon: FileSpreadsheet,
+    value: "RFC 4180 CSV",
+    label: "Itemized reconciliation reports export to any ledger.",
   },
 ];
 
-const PIPELINE_STEPS = [
+const PRINCIPLES = [
   {
-    num: "01",
-    title: "Define Prompt & Target Ceiling",
-    body: "Write your procurement goal in plain English — specify SKUs, target unit prices (e.g. $4.00/unit), quantities, and discount promo codes.",
-    icon: Sliders,
+    icon: Crosshair,
+    tag: "Explainable",
+    title: "Every step, on the record",
+    body: "Each navigate, extract, and click streams as an event. Nothing recursive happens blind: the operator sees the agent's reasoning as it executes.",
   },
   {
-    num: "02",
-    title: "Autonomous Navigation",
-    body: "Sentinel opens the targeted vendor portal, resolves direct product search URLs, extracts live catalog prices, and builds your cart.",
-    icon: Zap,
-  },
-  {
-    num: "03",
-    title: "HITL Guardrail Intercept",
-    body: "If a price variance exceeds your tolerance or a promo code fails, Sentinel pauses execution and surfaces an interactive approval card.",
-    icon: ShieldCheck,
-  },
-  {
-    num: "04",
-    title: "Normalized Invoice Export",
-    body: "Sentinel fills order forms, stops at the final review screen (never completes payment), and exports a clean itemized CSV summary.",
-    icon: FileDown,
-  },
-];
-
-const FEATURES = [
-  {
-    icon: Zap,
-    title: "Goal-Driven Navigation",
-    body: "Translates plain-English procurement instructions into precise browser execution plans across any storefront.",
+    icon: GitMerge,
+    tag: "Recoverable",
+    title: "Failures route, they don't crash",
+    body: "Expired coupon, missing DOM field, slow render — every failure maps to a fallback policy. The run recovers or surfaces the choice, never dies mid-flight.",
   },
   {
     icon: ShieldCheck,
-    title: "Price Variance Guardrails",
-    body: "Configure target unit prices and variance thresholds. Any price creep triggers a human approval checkpoint.",
-  },
-  {
-    icon: CheckCircle2,
-    title: "Coupon Validation & Recovery",
-    body: "Applies promo codes, detects portal error messages ('Invalid Code'), logs failures, and falls back to wholesale tiers.",
-  },
-  {
-    icon: Radio,
-    title: "Real-Time HITL Interceptor",
-    body: "A blocking approval modal surfaces exact discrepancy metrics — allowing you to Approve, Override, or Abort.",
+    tag: "Guarded",
+    title: "Zero-unapproved spend",
+    body: "The agent stops at the final order draft. Approve, override, or abort — the release gate is always human, always before money moves.",
   },
   {
     icon: Layers,
-    title: "Multi-Channel Pricing Audit",
-    body: "Compares unit cost, shipping fees, and discount tiers across multiple vendors (Amazon, eBay, B&H, custom portals).",
+    tag: "Structured",
+    title: "Output you can reconcile",
+    body: "Discrepancies, line items, and channel snapshots normalize into one contract, ready for CSV export into your accounting stack.",
   },
-  {
-    icon: FileDown,
-    title: "Structured CSV Export",
-    body: "Generates clean, normalized itemized invoices ready for ERP entry or accounting review with one click.",
-  },
-];
-
-const VENDORS = [
-  { name: "Amazon Business", type: "B2B E-Commerce" },
-  { name: "eBay Enterprise", type: "Marketplace" },
-  { name: "Target B2B", type: "Retail Supply" },
-  { name: "B&H Photo Video", type: "Electronics" },
-  { name: "SauceDemo Portal", type: "Mock Storefront" },
-  { name: "Custom Web Store", type: "Direct EDI / Portal" },
 ];
 
 const COMPARISON = [
   {
-    feature: "Checkout Safety",
-    ungated: "Runs autonomously to checkout with zero budget caps",
-    sentinel: "Pauses execution & requires human sign-off on any variance",
+    feature: "Unit price vs. target ceiling",
+    ungated: "Accepts whatever the DOM shows",
+    sentinel: "Compares to contract, pauses on drift",
   },
   {
-    feature: "Coupon Failure Handling",
-    ungated: "Crashes or silently pays full price when code fails",
-    sentinel: "Logs error, applies fallback policy, & asks for approval",
+    feature: "Discount / coupon failure",
+    ungated: "Crash or silently pays full price",
+    sentinel: "Logs portal error, applies fallback policy",
   },
   {
-    feature: "Visibility & Audit Trail",
-    ungated: "Black box execution with no line-by-line logs",
-    sentinel: "Real-time SSE event stream with browser screenshots",
+    feature: "Execution visibility",
+    ungated: "Black box, no line-by-line log",
+    sentinel: "Real-time SSE event thread, live screenshots",
   },
   {
-    feature: "Data Output",
-    ungated: "Unstructured HTML text or raw DOM dump",
-    sentinel: "Normalized, itemized CSV ready for accounting",
+    feature: "Point of payment",
+    ungated: "Can reach checkout with no budget cap",
+    sentinel: "Hard stop before any order placement",
+  },
+  {
+    feature: "Reporting contract",
+    ungated: "Unstructured DOM dump",
+    sentinel: "Normalized, itemized, exportable CSV",
   },
 ];
 
-/* ─────────────────────────── components ─────────────────────────── */
-
-function LandingNav() {
-  return (
-    <header className="sticky top-0 z-50 flex items-center justify-between h-16 px-5 md:px-8 bg-background/80 backdrop-blur-xl border-b border-border/80 transition-all">
-      <Link
-        href="/"
-        className="flex items-center gap-2.5 shrink-0 group"
-        aria-label="Sentinel home"
-      >
-        <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center group-hover:bg-primary/20 transition-all">
-          <Image
-            src="/favicon.svg"
-            alt="Sentinel logo"
-            width={20}
-            height={20}
-            className="size-5"
-            aria-hidden
-          />
-        </div>
-        <span className="text-lg font-bold tracking-tight text-foreground font-heading">
-          Sentinel
-        </span>
-        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 leading-none font-semibold">
-          v0.1
-        </span>
-      </Link>
-
-      <nav className="flex items-center gap-1">
-        <Link
-          href="#how-it-works"
-          className="hidden md:inline-flex text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-accent"
-        >
-          How it works
-        </Link>
-        <Link
-          href="#roi-calculator"
-          className="hidden md:inline-flex text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-accent"
-        >
-          ROI Calculator
-        </Link>
-        <Link
-          href="#features"
-          className="hidden md:inline-flex text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-accent"
-        >
-          Capabilities
-        </Link>
-        <button
-          type="button"
-          onClick={openWalkthroughVideo}
-          className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-accent cursor-pointer"
-        >
-          <Tv className="size-3.5 text-primary" aria-hidden="true" />
-          <span>Watch Demo</span>
-        </button>
-        <Separator orientation="vertical" className="hidden sm:block mx-2 self-center h-4" />
-        <Button render={<Link href="/app" />} size="sm" className="gap-1.5 shadow-md font-semibold text-xs px-4">
-          Launch App
-          <ArrowRight className="size-3.5" aria-hidden="true" />
-        </Button>
-      </nav>
-    </header>
-  );
-}
-
-/* ─────────────────────────── page ─────────────────────────── */
-
 export default function LandingPage() {
   return (
-    <div className="flex flex-col min-h-dvh w-full flex-1 bg-background text-foreground selection:bg-primary/20 selection:text-primary">
-      <LandingNav />
+    <div id="top" className="w-full min-h-dvh bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground">
+      <Navbar />
 
-      {/* ── Hero Section ─────────────────────────────────────────────── */}
-      <section className="relative flex flex-col items-center justify-center text-center px-5 pt-20 pb-16 md:pt-28 md:pb-24 overflow-hidden">
-        {/* Subsurface Ambient Background Grid */}
-        <div
-          className="absolute inset-0 pointer-events-none opacity-25"
-          aria-hidden
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 50% 15%, var(--color-primary) 0%, transparent 60%)",
-          }}
-        />
+      <main>
+        {/* ── Hero ─────────────────────────────────────────────── */}
+        <section className="relative overflow-hidden">
+          {/* subtle grid floor, strictly in-world */}
+          <div
+            className="pointer-events-none absolute inset-0 [background-image:linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] [background-size:64px_64px] opacity-[0.15]"
+            aria-hidden
+          />
 
-        {/* Live Status Pill */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-mono text-primary mb-6 relative z-10 shadow-sm">
-          <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-semibold uppercase tracking-wider text-[11px]">
-            100% Human-In-The-Loop Guardrail Agent
-          </span>
-        </div>
+          <div className="relative mx-auto max-w-7xl px-5 pb-20 pt-16 md:px-8 md:pb-28 md:pt-24">
+            <Reveal className="mx-auto max-w-3xl text-center">
+              <h1 className="font-heading text-4xl font-bold leading-[1.08] tracking-tight text-foreground sm:text-5xl md:text-6xl">
+                Procurement that runs itself —{" "}
+                <span className="text-primary">with a human at every gate.</span>
+              </h1>
+              <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground">
+                Sentinel is a guardrailed agent for B2B buying. Give it a goal in plain English; it
+                navigates vendor storefronts, builds the cart, validates every unit price and coupon
+                against your contract — then pauses for your sign-off before anything high-stakes
+                moves.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  href="/app"
+                  className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-6 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20"
+                >
+                  Launch the console
+                  <ArrowRight className="size-4" aria-hidden />
+                </Link>
+                <WatchButton />
+              </div>
+            </Reveal>
 
-        {/* Headline */}
-        <h1 className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground max-w-4xl leading-[1.08] mb-6 relative z-10">
-          Procurement workflows,{" "}
-          <br className="hidden sm:block" />
-          <span className="text-primary font-bold">
-            executed with guardrails.
-          </span>
-        </h1>
-
-        {/* Sub-copy */}
-        <p className="text-base sm:text-lg text-muted-foreground max-w-2xl leading-relaxed mb-8 relative z-10">
-          Sentinel takes plain-English procurement goals, navigates vendor portals, validates unit pricing & coupons against contract rules, and pauses for human approval before high-stakes actions.
-        </p>
-
-        {/* CTAs */}
-        <div className="flex items-center gap-3 flex-wrap justify-center relative z-10 mb-8">
-          <Button render={<Link href="/app" />} size="lg" className="gap-2 px-7 py-6 text-sm font-semibold shadow-xl">
-            <Play className="size-4" aria-hidden="true" />
-            Launch Sentinel
-          </Button>
-          <Button
-            type="button"
-            size="lg"
-            variant="outline"
-            onClick={openWalkthroughVideo}
-            className="gap-2 px-6 py-6 text-sm border-primary/30 bg-card/60 hover:bg-primary/10 hover:border-primary/50 text-foreground cursor-pointer backdrop-blur-md shadow-md"
-          >
-            <Tv className="size-4 text-primary" aria-hidden="true" />
-            Watch Walkthrough (2 min)
-          </Button>
-        </div>
-
-        {/* Interactive Agent Simulator Widget */}
-        <AgentHeroSimulator />
-      </section>
-
-      {/* ── Stats Strip ──────────────────────────────────────── */}
-      <section className="border-y border-border/80 bg-muted/30 py-12">
-        <div className="max-w-6xl mx-auto px-5 md:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {STATS.map((stat) => (
-            <div
-              key={stat.value}
-              className="p-5 rounded-2xl border border-border/60 bg-card/70 backdrop-blur-md flex flex-col justify-between"
-            >
-              <span className="text-base font-bold font-mono text-foreground mb-1">
-                {stat.value}
-              </span>
-              <span className="text-xs text-muted-foreground leading-relaxed">
-                {stat.label}
-              </span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Execution Pipeline ("How it works") ─────────────────────────────────────── */}
-      <section
-        id="how-it-works"
-        className="py-24 md:py-32 px-5 md:px-8 scroll-mt-16"
-      >
-        <div className="max-w-6xl mx-auto">
-          {/* Section Header */}
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="font-mono text-xs text-primary font-semibold uppercase tracking-widest block mb-3">
-              Execution Architecture
-            </span>
-            <h2 className="font-heading text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
-              From prompt to invoice — with total transparency.
-            </h2>
-            <p className="text-sm text-muted-foreground mt-3">
-              Sentinel isn&apos;t a black box. Every step is evaluated against business guardrails before execution.
-            </p>
+            <Reveal delay={0.1} className="relative z-10 mt-16">
+              <RunBoard />
+            </Reveal>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {PIPELINE_STEPS.map((step) => {
-              const Icon = step.icon;
-              return (
+          <div className="relative border-y border-border/60 bg-foreground/[0.02]">
+            <div className="mx-auto max-w-7xl px-5 py-4 md:px-8">
+              <p className="mb-3 text-center font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                / a live thread against every storefront in your catalog /
+              </p>
+              <VendorMarquee />
+            </div>
+          </div>
+        </section>
+
+        {/* ── Quick stats ───────────────────────────────────────── */}
+        <section className="border-b border-border/60 bg-background">
+          <div className="mx-auto grid max-w-7xl grid-cols-1 gap-px px-5 py-14 md:grid-cols-4 md:px-8">
+            {STAT_POINTS.map((s, i) => (
+              <Reveal key={s.value} delay={i * 0.06} className="flex flex-col gap-2 px-2 py-4 md:px-6">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex size-8 items-center justify-center rounded-lg border border-primary/25 bg-primary/10">
+                    <s.icon className="size-4 text-primary" aria-hidden />
+                  </span>
+                  <span className="font-mono text-sm font-semibold text-foreground">{s.value}</span>
+                </div>
+                <p className="text-xs leading-relaxed text-muted-foreground">{s.label}</p>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+
+        {/* ── How it works ─────────────────────────────────────── */}
+        <section id="how-it-works" className="scroll-mt-20 border-b border-border/60 bg-background">
+          <div className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-28">
+            <div className="mb-14 max-w-2xl">
+              <Reveal>
+                <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/5 px-3 py-1 font-mono text-[11px] tracking-widest text-primary">
+                  <Target className="size-3" aria-hidden />
+                  THE THREAD
+                </span>
+                <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                  From a sentence to a reconciled invoice.
+                </h2>
+                <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+                  Five stages, one guardrail the whole way. Click a stage to watch the trace.
+                </p>
+              </Reveal>
+            </div>
+            <Reveal delay={0.1}>
+              <PipelineExplorer />
+            </Reveal>
+          </div>
+        </section>
+
+        {/* ── Capabilities ─────────────────────────────────────── */}
+        <section id="capabilities" className="scroll-mt-20 border-b border-border/60 bg-background">
+          <div className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-28">
+            <Reveal>
+              <div className="mb-14 flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
+                <div className="max-w-2xl">
+                  <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                    Built for procurement that can&apos;t afford a surprise.
+                  </h2>
+                  <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+                    Every capability exists because a missed price check once cost a quarter. No
+                    flair — just the guardrails.
+                  </p>
+                </div>
+              </div>
+            </Reveal>
+
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+              {PRINCIPLES.map((p, i) => (
                 <div
-                  key={step.num}
-                  className="p-6 rounded-2xl border border-border/80 bg-card/80 backdrop-blur-md flex flex-col justify-between relative group hover:border-primary/50 transition-all shadow-md"
+                  key={p.title}
+                  className={
+                    i % 2 === 0
+                      ? "lg:col-span-1"
+                      : "lg:col-span-1 lg:translate-y-8"
+                  }
                 >
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="font-mono text-xs text-primary font-bold px-2 py-1 rounded bg-primary/10 border border-primary/20">
-                        {step.num}
-                      </span>
-                      <div className="size-8 rounded-lg bg-muted flex items-center justify-center text-foreground">
-                        <Icon className="size-4" />
+                  <Reveal delay={i * 0.06}>
+                    <div className="group h-full rounded-2xl border border-border/70 bg-foreground/[0.02] p-7 transition-colors hover:border-primary/40">
+                      <div className="mb-5 flex items-center gap-3">
+                        <span className="flex size-10 items-center justify-center rounded-lg border border-primary/25 bg-primary/10">
+                          <p.icon className="size-5 text-primary" aria-hidden />
+                        </span>
+                        <span className="rounded-full border border-border/70 px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                          {p.tag}
+                        </span>
                       </div>
+                      <h3 className="font-heading text-xl font-semibold tracking-tight text-foreground">
+                        {p.title}
+                      </h3>
+                      <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">{p.body}</p>
                     </div>
-                    <h3 className="text-base font-semibold text-foreground mb-2">
-                      {step.title}
-                    </h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      {step.body}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Product Experience Studio (Screenshot Tabs) ────────────────────────── */}
-      <section className="py-20 px-5 md:px-8 border-t border-border/80 bg-muted/20">
-        <div className="max-w-6xl mx-auto text-center">
-          <span className="font-mono text-xs text-primary font-semibold uppercase tracking-widest block mb-3">
-            Product Experience Studio
-          </span>
-          <h2 className="font-heading text-3xl sm:text-4xl font-bold tracking-tight text-foreground max-w-2xl mx-auto">
-            Experience the Sentinel workspace.
-          </h2>
-          <ScreenshotTabs />
-        </div>
-      </section>
-
-      {/* ── ROI Calculator Section ────────────────────────────────────────── */}
-      <section id="roi-calculator" className="py-20 px-5 md:px-8 scroll-mt-16">
-        <ProcurementRoiCalculator />
-      </section>
-
-      {/* ── Capabilities Matrix ────────────────────────────────────── */}
-      <section
-        id="features"
-        className="py-24 md:py-32 px-5 md:px-8 border-t border-border/80 bg-muted/20 scroll-mt-16"
-      >
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="font-mono text-xs text-primary font-semibold uppercase tracking-widest block mb-3">
-              Capabilities
-            </span>
-            <h2 className="font-heading text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
-              Built for procurement that can&apos;t afford surprises.
-            </h2>
-            <p className="text-sm text-muted-foreground mt-3">
-              Every feature is engineered to prevent price creep, catch bad promos, and standardize B2B order auditing.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {FEATURES.map((feat) => {
-              const Icon = feat.icon;
-              return (
-                <div
-                  key={feat.title}
-                  className="bg-card/80 backdrop-blur-md p-6 rounded-2xl border border-border/80 flex flex-col gap-4 shadow-sm hover:border-primary/40 transition-all"
-                >
-                  <div className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                    <Icon className="size-5" aria-hidden="true" />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <h3 className="text-base font-semibold text-foreground">
-                      {feat.title}
-                    </h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      {feat.body}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Guardrails vs Un-Gated Agents Comparison ─────────────────────── */}
-      <section className="py-24 px-5 md:px-8 border-t border-border/80">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="font-mono text-xs text-primary font-semibold uppercase tracking-widest block mb-3">
-              Why Guardrails Matter
-            </span>
-            <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground">
-              Sentinel vs. Un-gated AI Agents
-            </h2>
-            <p className="text-sm text-muted-foreground mt-2">
-              Why enterprise B2B buyers trust Sentinel&apos;s human-in-the-loop architecture.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-border/80 overflow-hidden bg-card shadow-xl">
-            <div className="grid grid-cols-12 bg-muted/60 p-4 border-b border-border/80 font-mono text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              <div className="col-span-4 sm:col-span-3">Feature</div>
-              <div className="col-span-4 sm:col-span-4 text-destructive flex items-center gap-1">
-                <X className="size-3.5" /> Un-gated AI Scripting
-              </div>
-              <div className="col-span-4 sm:col-span-5 text-primary flex items-center gap-1">
-                <Check className="size-3.5 text-primary" /> Sentinel Guardrail Agent
-              </div>
-            </div>
-
-            <div className="divide-y divide-border/60">
-              {COMPARISON.map((row) => (
-                <div key={row.feature} className="grid grid-cols-12 p-4 text-xs items-center gap-2">
-                  <div className="col-span-4 sm:col-span-3 font-semibold text-foreground">{row.feature}</div>
-                  <div className="col-span-4 sm:col-span-4 text-muted-foreground">{row.ungated}</div>
-                  <div className="col-span-4 sm:col-span-5 font-medium text-foreground bg-primary/5 p-2 rounded-lg border border-primary/20">
-                    {row.sentinel}
-                  </div>
+                  </Reveal>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── Supported Vendor Portals ─────────────────────────────────────── */}
-      <section className="py-16 px-5 md:px-8 border-t border-border/80 bg-muted/20">
-        <div className="max-w-5xl mx-auto text-center">
-          <span className="font-mono text-xs text-muted-foreground uppercase tracking-widest block mb-6">
-            Supported Storefronts & Vendor Portals
-          </span>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {VENDORS.map((v) => (
-              <div
-                key={v.name}
-                className="p-3.5 rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm text-center flex flex-col items-center justify-center gap-1"
-              >
-                <Store className="size-4 text-primary opacity-80" />
-                <span className="text-xs font-semibold text-foreground">{v.name}</span>
-                <span className="text-[10px] text-muted-foreground font-mono">{v.type}</span>
+        {/* ── Product studio ───────────────────────────────────── */}
+        <section id="at-work" className="scroll-mt-20 border-b border-border/60 bg-background">
+          <div className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-28">
+            <Reveal>
+              <div className="mx-auto mb-12 max-w-2xl text-center">
+                <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                  Inside the operations console.
+                </h2>
+                <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+                  The real product — a goal, a live run, and the reconciled report at the end.
+                </p>
               </div>
-            ))}
+            </Reveal>
+            <Reveal delay={0.1}>
+              <ScreenshotTabs />
+            </Reveal>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── Final CTA ────────────────────────────────────────── */}
-      <section className="py-28 md:py-36 px-5 md:px-8 border-t border-border/80 relative overflow-hidden">
-        <div
-          className="absolute inset-0 pointer-events-none opacity-20"
-          aria-hidden
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 50% 50%, var(--color-primary) 0%, transparent 70%)",
-          }}
-        />
+        {/* ── Guardrails vs. ungated ───────────────────────────── */}
+        <section className="border-b border-border/60 bg-background">
+          <div className="mx-auto max-w-5xl px-5 py-20 md:px-8 md:py-28">
+            <Reveal>
+              <div className="mb-12 text-center">
+                <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                  Uraised agents buy. Sentinel signs.
+                </h2>
+              </div>
+            </Reveal>
 
-        <div className="max-w-3xl mx-auto flex flex-col items-center text-center gap-6 relative z-10">
-          <div className="size-14 rounded-2xl bg-primary/10 border border-primary/30 text-primary flex items-center justify-center shadow-lg">
-            <GitMerge className="size-7" aria-hidden="true" />
+            <Reveal delay={0.1}>
+              <div className="overflow-hidden rounded-2xl border border-border/70">
+                <div className="grid grid-cols-12 gap-0 border-b border-border/70 bg-foreground/[0.04] px-6 py-4 font-mono text-[11px] uppercase tracking-widest">
+                  <div className="col-span-12 text-foreground sm:col-span-4">Capability</div>
+                  <div className="col-span-6 text-destructive sm:col-span-4 sm:pl-4">Ungated script</div>
+                  <div className="col-span-6 text-primary sm:col-span-4 sm:pl-4">Sentinel</div>
+                </div>
+                {COMPARISON.map((row) => (
+                  <div
+                    key={row.feature}
+                    className="grid grid-cols-12 gap-0 border-b border-border/50 px-6 py-4 last:border-b-0"
+                  >
+                    <div className="col-span-12 mb-2 flex items-center gap-2 text-sm font-medium text-foreground sm:col-span-4 sm:mb-0">
+                      <span className="size-1.5 rounded-full bg-primary/50" aria-hidden />
+                      {row.feature}
+                    </div>
+                    <div className="col-span-6 pr-3 text-xs leading-relaxed text-muted-foreground sm:col-span-4 sm:pl-4">
+                      {row.ungated}
+                    </div>
+                    <div className="col-span-6 border-l border-primary/25 pl-3 text-xs font-medium leading-relaxed text-primary sm:col-span-4 sm:pl-4">
+                      {row.sentinel}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Reveal>
           </div>
-          <h2 className="font-heading text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
-            Ready to execute your first B2B procurement workflow?
-          </h2>
-          <p className="text-base text-muted-foreground max-w-lg leading-relaxed">
-            Specify your prompt, set target price ceilings, and let Sentinel handle storefront navigation with 100% human-in-the-loop guardrails.
-          </p>
-          <Button render={<Link href="/app" />} size="lg" className="gap-2 px-8 py-6 text-sm font-semibold shadow-xl mt-2">
-            <Play className="size-4" aria-hidden="true" />
-            Launch Sentinel
-          </Button>
-        </div>
-      </section>
+        </section>
 
-      {/* ── Footer ───────────────────────────────────────────── */}
-      <footer className="border-t border-border/80 py-10 px-5 md:px-8 bg-muted/30">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2.5">
-            <div className="size-6 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center">
-              <Image
-                src="/favicon.svg"
-                alt="Sentinel logo"
-                width={14}
-                height={14}
-                className="size-3.5"
-                aria-hidden
-              />
-            </div>
-            <span className="text-sm font-bold text-foreground font-heading">
-              Sentinel
+        {/* ── FAQ ──────────────────────────────────────────────── */}
+        <section id="faq" className="scroll-mt-20 border-b border-border/60 bg-background">
+          <div className="mx-auto max-w-7xl px-5 py-20 md:px-8 md:py-28">
+            <Reveal>
+              <div className="mx-auto mb-12 max-w-2xl text-center">
+                <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                  Questions, before you launch.
+                </h2>
+              </div>
+            </Reveal>
+            <Reveal delay={0.1}>
+              <Faq />
+            </Reveal>
+          </div>
+        </section>
+
+        {/* ── Final CTA ────────────────────────────────────────── */}
+        <section className="bg-background">
+          <div className="mx-auto max-w-7xl px-5 py-24 md:px-8 md:py-32">
+            <Reveal>
+              <div className="relative overflow-hidden rounded-3xl border border-primary/25 bg-primary/[0.04] px-6 py-16 text-center md:px-16 md:py-20">
+                <div className="pointer-events-none absolute inset-0 [background-image:linear-gradient(to_right,var(--primary)_1px,transparent_1px)] [background-size:64px_64px] opacity-[0.07]" aria-hidden />
+                <span className="mx-auto mb-6 flex size-14 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10">
+                  <ShieldCheck className="size-7 text-primary" aria-hidden />
+                </span>
+                <h2 className="mx-auto max-w-2xl font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                  Ready to put a guard on your next order run?
+                </h2>
+                <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted-foreground">
+                  Set a goal, pin a target price, and let Sentinel navigate while you keep the
+                  final say. First run is free.
+                </p>
+                <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                  <Link
+                    href="/app"
+                    className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-7 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/25"
+                  >
+                    Launch the console
+                    <ArrowRight className="size-4" aria-hidden />
+                  </Link>
+                  <WatchButton label="Watch it run" />
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-border/60 bg-foreground/[0.02]">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-5 py-10 md:flex-row md:px-8">
+          <div className="flex items-center gap-3">
+            <span className="flex size-7 items-center justify-center rounded-md border border-primary/30 bg-primary/10">
+              <ShieldCheck className="size-3.5 text-primary" aria-hidden />
             </span>
-            <span className="text-xs text-muted-foreground font-mono">
-              — B2B Vendor Order & Discrepancy Agent
+            <span className="font-heading text-sm font-bold tracking-tight text-foreground">Sentinel</span>
+            <span className="font-mono text-xs text-muted-foreground">
+              B2B Vendor Order & Discrepancy Reconciliation Agent
             </span>
           </div>
 
-          <div className="flex items-center gap-4 text-xs text-muted-foreground font-mono">
+          <div className="flex items-center gap-5 font-mono text-xs text-muted-foreground">
             <span>Built by Kripanshu Singh</span>
-            <Separator orientation="vertical" className="h-3" />
             <a
               href="https://kripanshu.me"
               target="_blank"
               rel="noreferrer"
-              className="hover:text-foreground transition-colors"
+              className="transition-colors hover:text-foreground"
             >
               kripanshu.me
             </a>
-            <Separator orientation="vertical" className="h-3" />
             <a
               href="https://github.com/kripanshu-singh"
               target="_blank"
               rel="noreferrer"
-              className="hover:text-foreground transition-colors"
+              className="transition-colors hover:text-foreground"
             >
               GitHub
             </a>
