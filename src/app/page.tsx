@@ -17,7 +17,6 @@ import { Faq } from "@/components/landing/faq";
 import { ScreenshotTabs } from "@/components/screenshot-tabs";
 import { HeroCanvas } from "@/components/landing/hero-canvas";
 import { HeroContent } from "@/components/landing/hero-content";
-import { FinalCta } from "@/components/landing/final-cta";
 
 const STAT_POINTS = [
   {
