@@ -69,13 +69,14 @@ User describes goal
 
 | Capability | Description |
 |---|---|
-| **Goal-driven navigation** | Parse any natural-language goal into a step plan; navigate storefronts, search products, land on pages. |
+| **Goal-driven navigation** | Parse any natural-language goal into a step plan; resolve direct storefront search URLs (eBay, Amazon, Flipkart, Target, Best Buy, Walmart, Myntra, Ajio) and navigate storefronts. |
 | **Price validation** | Check every unit price against a target + variance threshold; auto-continue on small gaps. |
 | **Human-in-the-loop** | Cross-threshold events surface a blocking approval modal — Approve & Continue, Override Target, or Abort. |
 | **Live steering** | Operator sends a free-form instruction at any point; the agent applies it at its next step boundary without interrupting the current step. |
 | **Coupon validation & recovery** | Apply discount codes, detect portal error messages, fall back to the configured policy without crashing. |
+| **Multi-product comparison & spec sheets** | Extract side-by-side comparison spec sheets, star ratings, review counts, best pick recommendations, and direct product page links for multi-item research queries. |
 | **Multi-channel pricing audit** | Compare price, discount, shipping, and margin across two or more stores; large gaps require human confirmation. |
-| **Structured invoice export** | Final itemized invoice rendered as a table; one-click CSV export with proper escaping. |
+| **Structured invoice & CSV export** | Itemized invoice rendered as a table with direct clickable product page links; one-click CSV export with proper escaping. |
 
 ---
 
@@ -88,7 +89,7 @@ The system is split into two deployable services that communicate over HTTP and 
 │  Next.js frontend (this repo)        │         │  Worker service (worker/)            │
 │                                      │  HTTP / │                                      │
 │  /          Landing page             │   SSE   │  LangGraph.js StateGraph             │
-│  /app       Goal input + rules       │ ◄──────►│  Playwright browser sessions         │
+│  /app       Goal input + rules       │ ◄──────►│  Playwright Stealth (HTTP/1.1)      │
 │  /runs/:id  Live run + HITL modal    │         │  Gemini 2.5 Flash (+ fallbacks)      │
 │  /runs/:id  /result  Report + CSV    │         │  Rule engine (variance / margin)     │
 │                                      │         │  BullMQ job queue                    │
@@ -128,7 +129,7 @@ Playwright keeps a browser alive for minutes and streams events continuously —
 |---|---|
 | Runtime | Node.js + TypeScript |
 | Agent orchestration | LangGraph.js `StateGraph` |
-| Browser automation | Playwright 1.62 |
+| Browser automation | Playwright 1.62 (Stealth mode, HTTP/1.1 protocol) |
 | LLM | Gemini 2.5 Flash (primary) · OpenAI-compatible fallback via OpenRouter / Groq / Ollama |
 | Job queue | BullMQ + Redis (ioredis) |
 | Database ORM | Drizzle ORM + PostgreSQL |
@@ -297,7 +298,7 @@ sentinel/
 │   ├── scrn2.webp               # Live run screenshot
 │   └── scrn3.webp               # Report screenshot
 │
-├── .ai/                         # Project documentation
+├── context/                      # Project documentation
 │   ├── project_overview.md
 │   ├── architecture.md
 │   ├── ui_context.md
@@ -326,8 +327,9 @@ The types in `src/types/` are the shared wire contract between the frontend and 
 | `ApprovalRequest` | Blocking HITL gate: `{ id, runId, title, detail, discrepancies[] }` |
 | `ApprovalResolution` | `"approve" \| "override" \| "abort"` + optional `overrideTarget` |
 | `ChannelSnapshot` | Per-store comparison row: `{ channel, price, discount, shipping, computedMargin }` |
-| `LineItem` | Invoice row: `{ sku, description, quantity, unitPrice, lineTotal, discounts, status }` |
-| `ReconciliationReport` | Final report: `{ runId, generatedAt, items[], discrepancies[], channels[], summary }` |
+| `ComparisonItem` | Multi-product comparison row: `{ name, price, rating, reviewsCount, specs, isBestPick, verdict, url }` |
+| `LineItem` | Invoice row: `{ sku, description, quantity, unitPrice, lineTotal, discounts, status, url }` |
+| `ReconciliationReport` | Final report: `{ runId, generatedAt, items[], discrepancies[], channels[], comparison[], summary }` |
 
 ---
 
