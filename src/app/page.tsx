@@ -17,6 +17,10 @@ import { PipelineExplorer } from "@/components/landing/pipeline-explorer";
 import { Faq } from "@/components/landing/faq";
 import { WatchButton } from "@/components/landing/watch-button";
 import { ScreenshotTabs } from "@/components/screenshot-tabs";
+import { HeroCanvas } from "@/components/landing/hero-canvas";
+import { SplitHeadline } from "@/components/landing/split-headline";
+import { GlowCta } from "@/components/landing/glow-cta";
+import { CtaBloom } from "@/components/landing/cta-bloom";
 
 const STAT_POINTS = [
   {
@@ -104,37 +108,40 @@ export default function LandingPage() {
       <main>
         {/* ── Hero ─────────────────────────────────────────────── */}
         <section className="relative overflow-hidden">
-          {/* subtle grid floor, strictly in-world */}
+          {/* WebGL teal noise field — full bleed, absolutely positioned */}
+          <HeroCanvas />
+
+          {/* Subtle grid floor on top of canvas — retained for brand texture */}
           <div
-            className="pointer-events-none absolute inset-0 [background-image:linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] [background-size:64px_64px] opacity-[0.15]"
+            className="pointer-events-none absolute inset-0 [background-image:linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] [background-size:64px_64px] opacity-[0.08]"
             aria-hidden
           />
 
           <div className="relative mx-auto max-w-7xl px-5 pb-20 pt-16 md:px-8 md:pb-28 md:pt-24">
-            <Reveal className="mx-auto max-w-3xl text-center">
-              <h1 className="font-heading text-4xl font-bold leading-[1.08] tracking-tight text-foreground sm:text-5xl md:text-6xl">
-                Procurement that runs itself —{" "}
-                <span className="text-primary">with a human at every gate.</span>
+            <div className="mx-auto max-w-3xl text-center">
+              <h1 className="font-heading text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl md:text-6xl">
+                <SplitHeadline
+                  text="Procurement that runs itself — with a human at every gate."
+                  accentWords={["human", "every", "gate."]}
+                />
               </h1>
-              <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground">
-                Sentinel is a guardrailed agent for B2B buying. Give it a goal in plain English; it
-                navigates vendor storefronts, builds the cart, validates every unit price and coupon
-                against your contract — then pauses for your sign-off before anything high-stakes
-                moves.
-              </p>
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                <Link
-                  href="/app"
-                  className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-6 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20"
-                >
-                  Launch the console
-                  <ArrowRight className="size-4" aria-hidden />
-                </Link>
-                <WatchButton />
-              </div>
-            </Reveal>
+              <Reveal delay={0.6}>
+                <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground">
+                  Sentinel is a guardrailed agent for B2B buying. Give it a goal in plain English; it
+                  navigates vendor storefronts, builds the cart, validates every unit price and coupon
+                  against your contract — then pauses for your sign-off before anything high-stakes
+                  moves.
+                </p>
+              </Reveal>
+              <Reveal delay={0.8}>
+                <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                  <GlowCta href="/app" label="Launch the console" />
+                  <WatchButton />
+                </div>
+              </Reveal>
+            </div>
 
-            <Reveal delay={0.1} className="relative z-10 mt-16">
+            <Reveal delay={0.2} className="relative z-10 mt-16">
               <RunBoard />
             </Reveal>
           </div>
@@ -314,30 +321,58 @@ export default function LandingPage() {
         </section>
 
         {/* ── Final CTA ────────────────────────────────────────── */}
+        {/*
+          Dark obsidian panel — intentionally inverts the page's light world
+          at the very end to create a cinematic, high-contrast moment.
+          The teal bloom canvas fills the panel; text and buttons are on top.
+          We do NOT use dark: utilities — instead we explicitly set the
+          obsidian/teal values inline via semantic class names that match the
+          .dark token values. The section itself uses bg-[#15191b] which is the
+          brand inverse-surface value, not an arbitrary dark default.
+        */}
         <section className="bg-background">
           <div className="mx-auto max-w-7xl px-5 py-24 md:px-8 md:py-32">
             <Reveal>
-              <div className="relative overflow-hidden rounded-3xl border border-primary/25 bg-primary/[0.04] px-6 py-16 text-center md:px-16 md:py-20">
-                <div className="pointer-events-none absolute inset-0 [background-image:linear-gradient(to_right,var(--primary)_1px,transparent_1px)] [background-size:64px_64px] opacity-[0.07]" aria-hidden />
-                <span className="mx-auto mb-6 flex size-14 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10">
-                  <ShieldCheck className="size-7 text-primary" aria-hidden />
-                </span>
-                <h2 className="mx-auto max-w-2xl font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                  Ready to put a guard on your next order run?
-                </h2>
-                <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted-foreground">
-                  Set a goal, pin a target price, and let Sentinel navigate while you keep the
-                  final say. First run is free.
-                </p>
-                <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                  <Link
-                    href="/app"
-                    className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-7 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/25"
-                  >
-                    Launch the console
-                    <ArrowRight className="size-4" aria-hidden />
-                  </Link>
-                  <WatchButton label="Watch it run" />
+              <div className="relative overflow-hidden rounded-3xl border border-[#6bd8cb]/20 bg-[#15191b] px-6 py-16 text-center md:px-16 md:py-24">
+                {/* Obsidian bloom canvas */}
+                <CtaBloom />
+
+                {/* Content — z-10 so it sits above the canvas */}
+                <div className="relative z-10">
+                  {/* Icon badge */}
+                  <span className="mx-auto mb-8 flex size-16 items-center justify-center rounded-2xl border border-[#6bd8cb]/25 bg-[#6bd8cb]/10">
+                    <ShieldCheck className="size-8 text-[#6bd8cb]" aria-hidden />
+                  </span>
+
+                  <h2 className="mx-auto max-w-2xl font-heading text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
+                    Ready to put a guard on{" "}
+                    <span className="text-[#6bd8cb]">your next order run?</span>
+                  </h2>
+
+                  <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-white/60">
+                    Set a goal, pin a target price, and let Sentinel navigate while you keep the
+                    final say. First run is free.
+                  </p>
+
+                  <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+                    {/* Primary — bright teal fill */}
+                    <Link
+                      href="/app"
+                      id="final-cta-launch"
+                      className="inline-flex h-12 items-center gap-2 rounded-lg bg-[#6bd8cb] px-8 text-sm font-semibold text-[#00201d] transition-all duration-200 hover:bg-[#6bd8cb]/85 hover:shadow-xl hover:shadow-[#6bd8cb]/25"
+                    >
+                      Launch the console
+                      <ArrowRight className="size-4" aria-hidden />
+                    </Link>
+
+                    {/* Secondary — ghost, teal border */}
+                    <WatchButton label="Watch it run" />
+                  </div>
+
+                  {/* Subtle trust signal */}
+                  <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.2em] text-white/30">
+                    / zero-unapproved spend · 100% human-in-the-loop /
+                  </p>
                 </div>
               </div>
             </Reveal>
