@@ -17,7 +17,7 @@ const TABS = [
     description: "Write your procurement prompt in natural language and configure strict price ceiling thresholds.",
     path: "sentinel.ai/app/new-run",
     src: scrn1,
-    alt: "Sentinel goal input screen — write a procurement task and set price targets",
+    alt: "Sentinel goal input screen: write a procurement task and set price targets",
     highlights: [
       { text: "Natural language goal parser", x: "25%", y: "30%" },
       { text: "Variance ceiling threshold", x: "75%", y: "45%" },
@@ -29,7 +29,7 @@ const TABS = [
     description: "Watch Sentinel navigate vendor portals live with real-time event logs and blocking HITL approval modals.",
     path: "sentinel.ai/app/runs/run_984102",
     src: scrn2,
-    alt: "Sentinel live run screen — agent timeline, browser screenshot, and HITL approval dialog",
+    alt: "Sentinel live run screen with agent timeline, browser screenshot, and HITL approval dialog",
     highlights: [
       { text: "Live SSE event stream", x: "20%", y: "40%" },
       { text: "Human-in-the-loop modal", x: "60%", y: "50%" },
@@ -41,7 +41,7 @@ const TABS = [
     description: "Inspect the final itemized invoice summary with discrepancy flags and export directly to CSV.",
     path: "sentinel.ai/app/runs/run_984102/report",
     src: scrn3,
-    alt: "Sentinel result report — reconciliation table with discrepancy flags and CSV export",
+    alt: "Sentinel result report: reconciliation table with discrepancy flags and CSV export",
     highlights: [
       { text: "Itemized price variance matrix", x: "40%", y: "35%" },
       { text: "One-click CSV Export", x: "85%", y: "25%" },

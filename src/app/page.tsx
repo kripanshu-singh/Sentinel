@@ -53,13 +53,13 @@ const PRINCIPLES = [
     icon: GitMerge,
     tag: "Recoverable",
     title: "Failures route, they don't crash",
-    body: "Expired coupon, missing DOM field, slow render — every failure maps to a fallback policy. The run recovers or surfaces the choice, never dies mid-flight.",
+    body: "Expired coupon, missing DOM field, slow render. Every failure maps to a fallback policy. The run recovers or surfaces the choice, never dies mid-flight.",
   },
   {
     icon: ShieldCheck,
     tag: "Guarded",
     title: "Zero-unapproved spend",
-    body: "The agent stops at the final order draft. Approve, override, or abort — the release gate is always human, always before money moves.",
+    body: "The agent stops at the final order draft. Approve, override, or abort: the release gate is always human, always before money moves.",
   },
   {
     icon: Layers,
@@ -196,7 +196,7 @@ export default function LandingPage() {
                     </h2>
                     <p className="mt-4 text-base leading-relaxed text-muted-foreground">
                       Every capability exists because a missed price check once
-                      cost a quarter. No flair — just the guardrails.
+                      cost a quarter. No flair. Just the guardrails.
                     </p>
                   </div>
                 </div>
@@ -251,7 +251,7 @@ export default function LandingPage() {
                     Inside the operations console.
                   </h2>
                   <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-                    The real product — a goal, a live run, and the reconciled
+                    The real product: a goal, a live run, and the reconciled
                     report at the end.
                   </p>
                 </div>

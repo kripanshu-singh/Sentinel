@@ -28,7 +28,7 @@ const PHASES: Phase[] = [
     num: "01",
     title: "Resolve",
     short: "Parses the goal into a guarded plan",
-    desc: "A plain-English procurement goal becomes a typed execution plan: target price, quantity, coupon gates, and tolerance band — validated before any browser opens.",
+    desc: "A plain-English procurement goal becomes a typed execution plan: target price, quantity, coupon gates, and tolerance band, validated before any browser opens.",
     icon: Compass,
     logs: [
       "PARSE: goal -> plan {steps: 4, gates: 2}",
@@ -80,7 +80,7 @@ const PHASES: Phase[] = [
     num: "05",
     title: "Dispatch",
     short: "Fills the invoice draft, stops before paying",
-    desc: "The invoice and receiving fields are filled, a normalized line-item report is generated, and the run parks at the review screen — never at checkout.",
+    desc: "The invoice and receiving fields are filled, a normalized line-item report is generated, and the run parks at the review screen rather than checkout.",
     icon: FileSpreadsheet,
     logs: [
       "FORM_FILL: qty=50, ship->rev",

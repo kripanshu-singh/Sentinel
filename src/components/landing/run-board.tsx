@@ -284,7 +284,7 @@ export function RunBoard() {
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-semibold text-foreground">
                           {resolved === "approved"
-                            ? "Run dispatched — draft invoice ready"
+                            ? "Run dispatched. Draft invoice ready."
                             : "Run aborted before draft"}
                         </div>
                         <div className="font-mono text-[11px] text-muted-foreground truncate">

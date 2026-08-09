@@ -12,15 +12,15 @@ interface Item {
 const ITEMS: Item[] = [
   {
     q: "Does Sentinel actually spend money or place live orders?",
-    a: "No. Sentinel is engineered with a hard stop: it navigates storefronts, builds carts, applies promo codes, and fills shipping forms — but it always parks at the review screen before payment. A human performs the final purchase decision.",
+    a: "No. Sentinel is engineered with a hard stop: it navigates storefronts, builds carts, applies promo codes, and fills shipping forms, but it always parks at the review screen before payment. A human performs the final purchase decision.",
   },
   {
     q: "How is the price-variance guardrail triggered?",
-    a: "You set a target unit price and a tolerance band (e.g. 10%). When a live storefront price exceeds that band, the run pauses and surfaces an approval dialog with the contract value, found value, and drift — and waits.",
+    a: "You set a target unit price and a tolerance band (e.g. 10%). When a live storefront price exceeds that band, the run pauses and surfaces an approval dialog with the contract value, found value, and drift, then waits.",
   },
   {
     q: "What happens when a discount code fails?",
-    a: "Sentinel reads the storefront's error message, logs the failure to the event stream, and applies your configured fallback policy — like the contractual wholesale tier or a hold for operator decision — instead of crashing or silently overpaying.",
+    a: "Sentinel reads the storefront's error message, logs the failure to the event stream, and applies your configured fallback policy, such as the contractual wholesale tier or a hold for operator decision, instead of crashing or silently overpaying.",
   },
   {
     q: "Can it audit the same product across different vendors?",
@@ -28,7 +28,7 @@ const ITEMS: Item[] = [
   },
   {
     q: "What happens to custom enterprise supplier portals?",
-    a: "The worker runs on Playwright and LLM reasoning, so it can navigate authenticated vendor portals, custom B2B dashboards, and standard e-commerce stores — with reusable DOM extractors for repeat accounts.",
+    a: "The worker runs on Playwright and LLM reasoning, so it can navigate authenticated vendor portals, custom B2B dashboards, and standard e-commerce stores, with reusable DOM extractors for repeat accounts.",
   },
 ];
 

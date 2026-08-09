@@ -6,7 +6,7 @@ import { WatchButton } from "@/components/landing/watch-button";
 import { SplitHeadline } from "@/components/landing/split-headline";
 
 const SUB_COPY =
-  "Sentinel is a guardrailed agent for B2B buying. Give it a goal in plain English; it navigates vendor storefronts, builds the cart, validates every unit price and coupon against your contract — then pauses for your sign-off before anything high-stakes moves.";
+  "Sentinel is a guardrailed agent for B2B buying. Give it a goal in plain English; it navigates vendor storefronts, builds the cart, validates every unit price and coupon against your contract, then pauses for your sign-off before anything high-stakes moves.";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -15,7 +15,7 @@ export function HeroContent() {
     <div className="mx-auto max-w-3xl text-center">
       <h1 className="font-heading text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl md:text-6xl">
         <SplitHeadline
-          text="Procurement that runs itself — with a human at every gate."
+          text="Procurement that runs itself, with a human at every gate."
           accentWords={["human", "every", "gate."]}
         />
       </h1>

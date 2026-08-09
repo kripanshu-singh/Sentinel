@@ -22,7 +22,7 @@ const PLANS: Plan[] = [
     id: "starter",
     name: "Starter",
     cadence: { monthly: "$0", annual: "$0" },
-    descriptor: "free — no card",
+    descriptor: "free, no card",
     blurb: "For individual buyers exploring agentic procurement.",
     features: [
       "25 automated runs / month",
