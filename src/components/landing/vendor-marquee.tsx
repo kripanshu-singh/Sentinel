@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 
 const VENDORS = [
   "Amazon Business",
@@ -14,6 +14,7 @@ const VENDORS = [
 ];
 
 export function VendorMarquee() {
+  const reduced = useReducedMotion();
   const doubled = [...VENDORS, ...VENDORS];
   return (
     <div
@@ -21,7 +22,7 @@ export function VendorMarquee() {
     >
       <motion.div
         className="flex w-max gap-12 pr-12"
-        animate={{ x: ["0%", "-50%"] }}
+        animate={reduced ? undefined : { x: ["0%", "-50%"] }}
         transition={{ duration: 30, ease: "linear", repeat: Infinity }}
       >
         {doubled.map((v, i) => (

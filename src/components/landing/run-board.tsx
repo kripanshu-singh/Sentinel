@@ -98,7 +98,7 @@ export function RunBoard() {
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className="size-2 rounded-full bg-positive animate-pulse" />
+            <span className="size-2 rounded-full bg-positive animate-pulse motion-reduce:animate-none" />
             <span className="font-mono text-[10px] sm:text-xs text-foreground uppercase tracking-wider">
               Guardrails armed
             </span>
@@ -163,7 +163,7 @@ export function RunBoard() {
               </span>
             </div>
 
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <AnimatePresence initial={false}>
                 {shown.map((ev) => (
                   <motion.div
@@ -304,12 +304,12 @@ export function RunBoard() {
               {/* Pending indicator */}
               {!asked && !resolved && (
                 <div className="flex items-center gap-2 pt-1 font-mono text-[11px] text-muted-foreground">
-                  <span className="h-3.5 w-px bg-foreground/25 animate-pulse" />
+                  <span className="h-3.5 w-px bg-foreground/25 animate-pulse motion-reduce:animate-none" />
                   <span className="flex items-center gap-1.5">
                     <span className="flex items-center gap-0.5">
-                      <span className="size-1 rounded-full bg-muted-foreground animate-pulse" />
-                      <span className="size-1 rounded-full bg-muted-foreground animate-pulse [animation-delay:120ms]" />
-                      <span className="size-1 rounded-full bg-muted-foreground animate-pulse [animation-delay:240ms]" />
+                      <span className="size-1 rounded-full bg-muted-foreground animate-pulse motion-reduce:animate-none" />
+                      <span className="size-1 rounded-full bg-muted-foreground animate-pulse motion-reduce:animate-none [animation-delay:120ms]" />
+                      <span className="size-1 rounded-full bg-muted-foreground animate-pulse motion-reduce:animate-none [animation-delay:240ms]" />
                     </span>
                     agent executing...
                   </span>

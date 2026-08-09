@@ -105,12 +105,12 @@ export function PipelineExplorer() {
             <button
               key={p.id}
               onClick={() => setActive(idx)}
-              className={cn(
-                "group flex items-start gap-4 rounded-xl border px-4 py-3.5 text-left transition-all duration-300",
-                isActive
-                  ? "border-primary/60 bg-primary/[0.06] shadow-[0_1px_0_rgba(255,255,255,0.04)]"
-                  : "border-border/70 hover:border-border hover:bg-foreground/[0.02]"
-              )}
+className={cn(
+                  "group flex items-start gap-4 rounded-xl border px-4 py-3.5 text-left transition-[border-color,background-color,box-shadow] duration-300",
+                  isActive
+                    ? "border-primary/60 bg-primary/[0.06]"
+                    : "border-border/70 hover:border-border hover:bg-foreground/[0.02]"
+                )}
             >
               <span
                 className={cn(
@@ -167,7 +167,7 @@ export function PipelineExplorer() {
               </h3>
               <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">{phase.desc}</p>
 
-              <div className="mt-6 space-y-2">
+              <div className="mt-6 flex flex-col gap-2">
                 {phase.logs.map((l, i) => (
                   <div
                     key={l}

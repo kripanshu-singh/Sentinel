@@ -71,7 +71,7 @@ export function ScreenshotTabs() {
             id={`tab-${tab.id}`}
             onClick={() => setActive(tab.id)}
             className={cn(
-              "relative px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring font-mono",
+              "relative px-4 py-2 text-xs sm:text-sm font-medium rounded-lg transition-[color,background-color,box-shadow,border-color] duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring font-mono",
               active === tab.id
                 ? "bg-card text-foreground shadow-md border border-border/60"
                 : "text-muted-foreground hover:text-foreground"
@@ -95,8 +95,8 @@ export function ScreenshotTabs() {
           <div className="flex items-center gap-2">
             <div className="flex gap-1.5">
               <span className="size-3 rounded-full bg-destructive/80 inline-block" />
-              <span className="size-3 rounded-full bg-amber-500/80 inline-block" />
-              <span className="size-3 rounded-full bg-emerald-500/80 inline-block" />
+              <span className="size-3 rounded-full bg-warning/80 inline-block" />
+              <span className="size-3 rounded-full bg-positive/80 inline-block" />
             </div>
           </div>
 
@@ -108,8 +108,8 @@ export function ScreenshotTabs() {
 
           {/* Live Indicator */}
           <div className="flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider hidden sm:inline">
+            <span className="size-2 rounded-full bg-positive animate-pulse motion-reduce:animate-none" />
+            <span className="text-xs text-positive font-semibold uppercase tracking-wider hidden sm:inline">
               Guardrails Active
             </span>
           </div>
