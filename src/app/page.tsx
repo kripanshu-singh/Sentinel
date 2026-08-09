@@ -13,7 +13,9 @@ import {
   Play,
   CheckCircle2,
   Layers,
+  Tv,
 } from "lucide-react";
+import { openWalkthroughVideo } from "@/components/video-modal";
 
 /* ─────────────────────────── data ─────────────────────────── */
 
@@ -122,6 +124,14 @@ function LandingNav() {
         >
           Features
         </Link>
+        <button
+          type="button"
+          onClick={openWalkthroughVideo}
+          className="hidden sm:inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-md hover:bg-accent cursor-pointer"
+        >
+          <Tv className="size-3.5 text-primary" aria-hidden="true" />
+          <span>Watch Demo</span>
+        </button>
         <Separator orientation="vertical" className="hidden sm:block mx-1 self-center h-4" />
         <Button render={<Link href="/app" />} size="sm" variant="outline" className="hidden sm:flex gap-1.5">
             Launch app
@@ -180,7 +190,17 @@ export default function LandingPage() {
             <Play className="size-4" aria-hidden="true" />
             Start a run
           </Button>
-          <Button render={<Link href="#how-it-works" />} size="lg" variant="outline" className="gap-2 px-6">
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            onClick={openWalkthroughVideo}
+            className="gap-2 px-6 border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 text-foreground cursor-pointer"
+          >
+            <Tv className="size-4 text-primary" aria-hidden="true" />
+            Watch Walkthrough (2 min)
+          </Button>
+          <Button render={<Link href="#how-it-works" />} size="lg" variant="ghost" className="gap-2 px-6 text-muted-foreground hover:text-foreground">
             See how it works
             <ArrowRight className="size-4" aria-hidden="true" />
           </Button>

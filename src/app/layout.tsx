@@ -6,6 +6,7 @@ import { QueryProvider } from "@/components/query-provider";
 import { TourProvider } from "@/components/onboarding/tour-provider";
 import "./globals.css";
 import CommandPalette from "@/components/command-palette";
+import { VideoModal } from "@/components/video-modal";
 import { Analytics } from "@vercel/analytics/next"
 
 const geistSans = Geist({
@@ -86,6 +87,7 @@ export default function RootLayout({
             <SidebarProvider defaultOpen={true}>
               <TourProvider>{children}</TourProvider>
               <CommandPalette />
+              <VideoModal />
             </SidebarProvider>
           </TooltipProvider>
         </QueryProvider>

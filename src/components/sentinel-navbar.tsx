@@ -30,7 +30,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import {
-
   Plus,
   ChevronRight,
   Compass,
@@ -38,9 +37,11 @@ import {
   Globe,
   FileText,
   Search,
+  Tv,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTour } from "@/components/onboarding/tour-provider";
+import { openWalkthroughVideo } from "@/components/video-modal";
 
 /**
  * Breadcrumb segment shown in the center-left of the navbar.
@@ -222,6 +223,28 @@ export function SentinelNavbar({
           </TooltipTrigger>
           <TooltipContent side="bottom">
             Take a quick tour of this screen
+          </TooltipContent>
+        </Tooltip>
+
+        <Separator orientation="vertical" className="mx-1 self-center" />
+
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-muted-foreground hover:text-foreground"
+                onClick={openWalkthroughVideo}
+              />
+            }
+          >
+            <Tv className="size-3.5 text-primary" aria-hidden="true" />
+            <span className="hidden sm:inline">Watch Demo</span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            Watch 2-min application walkthrough video
           </TooltipContent>
         </Tooltip>
 

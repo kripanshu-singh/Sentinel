@@ -256,6 +256,14 @@ export default function CommandPalette() {
       run: () => dispatch("sentinel:start-tour"),
     });
 
+    // Always include video walkthrough
+    list.push({
+      id: "watch-walkthrough",
+      title: "Watch Video Walkthrough",
+      subtitle: "Play the 2-minute overview video of Sentinel in action",
+      run: () => dispatch("sentinel:open-walkthrough-video"),
+    });
+
     return list;
   }, [pathname, router, open, runIdFromPath]);
 
