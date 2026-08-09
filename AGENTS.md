@@ -36,6 +36,7 @@ The above Next.js block applies to every change in `src/`.
 - **React Query** for server state; composition over props-drilling.
 - **Server-first.** Server Components by default; `"use client"` only for interactivity.
 - Verify before reporting done: `npm run lint` and `npm run build`.
+- **Anti-AI-Slop & Design Skills:** Run `node .agents/skills/impeccable/scripts/detect.mjs --json <path>` to audit visual craft. Use `21st` CLI (`21st search`, `21st review`, `21st generate`) and Stitch MCP tools (`generate_screen_from_text`, `create_design_system`) for component & UI generation (see `context/ui_context.md`).
 - Never commit secrets, and never commit at all unless asked.
 
 ## Standard workflow

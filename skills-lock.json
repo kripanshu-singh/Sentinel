@@ -13,6 +13,12 @@
       "skillPath": "skills/frontend-design/SKILL.md",
       "computedHash": "4eabc66183767153e404b39d1b839b1c37f2d82d86f0a0d7e880a579d8d62336"
     },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/impeccable/SKILL.md",
+      "computedHash": "b7b08ad093fa20e80813a300c9cda0863a8540c6dd6b43788d0814a165b09baa"
+    },
     "shadcn": {
       "source": "shadcn/ui",
       "sourceType": "github",

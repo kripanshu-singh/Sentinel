@@ -11,12 +11,36 @@ If this file and the code disagree, this file wins — fix the code.
 - **Primitives:** shadcn/ui **base-nova** style, Base UI primitives.
 - **Icons:** `lucide-react`.
 - **Fonts:** Geist (`--font-geist-sans`, `--font-geist-mono`) via `next/font/google`.
+- **Design & MCP Skills:** Impeccable Anti-AI-Slop (`.agents/skills/impeccable/`), 21st Dev CLI (`@21st-dev/cli`), `.mcp.json` (`21st`), Stitch MCP Server.
 - **Server state:** `@tanstack/react-query` (add via `npm install @tanstack/react-query` when
   first needed — see `.ai/code_standards.md`).
 - **Validation:** `zod` (add via `npm install zod` — schemas live in `src/server/`).
 
 Config facts: `components.json` → style `base-nova`, aliases `@/components`, `@/components/ui`,
 `@/lib`, `@/hooks`; `@/*` → `src/*`; `rsc: true` — interactive components need `"use client"`.
+
+## Installed Design Skills & MCP Tooling (How Agents Must Use Them)
+
+### 1. Impeccable Anti-AI-Slop Skill (`.agents/skills/impeccable/`)
+Before declaring UI work complete, agents must verify visual quality against anti-AI-slop rules:
+- **Mechanical Detector:** `node .agents/skills/impeccable/scripts/detect.mjs --json <path>` — Detects decorative text gradients (`bg-clip-text`), un-ramped font sizes, and over-stimulating blur.
+- **Context Generator:** `node .agents/skills/impeccable/scripts/context.mjs --target <path>` — Reads `DESIGN.md` design tokens & material system.
+- **Craft Directives:** Avoid AI design tropes (no decorative gradient text, no broadsheet grids without purpose, no warm cream/terracotta defaults unless explicitly requested). Solid brand tokens only.
+
+### 2. 21st Dev CLI & MCP (`@21st-dev/cli` + `.mcp.json`)
+Use 21st tools for catalog component discovery, UI variant generation, and deterministic quality checks:
+- **Component Search:** `21st search "<query>"`
+- **Component Install:** `21st add <author>/<slug>`
+- **UI Variant Generation:** `21st generate "<prompt>"`
+- **UI Local Review:** `21st review <path>`
+- **Brand & UI SVG Logos:** `21st logo "<brand>"`
+- **MCP Server Config:** Defined in `.mcp.json` connecting to `https://21st.dev/api/mcp` using `${API_KEY_21ST}`.
+
+### 3. Stitch MCP Tools (Lazy-Loaded)
+Agents can invoke lazy-loaded Stitch MCP tools for structured layout generation:
+- `generate_screen_from_text` — Create complete UI screens from natural language prompts.
+- `generate_variants` — Produce visual variations of existing components.
+- `create_design_system` & `apply_design_system` — Generate and enforce theme design tokens.
 
 ## Design System Rules (hard rules, no exceptions)
 
