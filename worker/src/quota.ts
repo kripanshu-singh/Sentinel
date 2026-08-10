@@ -35,9 +35,9 @@ const QUOTA_ENABLED =
     ? process.env.SENTINEL_QUOTA_ENABLED !== "false"
     : process.env.SENTINEL_QUOTA_ENABLED === "true";
 
-const ANONYMOUS_DAILY_LIMIT = Number(process.env.SENTINEL_ANON_DAILY_LIMIT ?? 1);
+const ANONYMOUS_DAILY_LIMIT = Number(process.env.SENTINEL_ANON_DAILY_LIMIT ?? 5);
 const ANONYMOUS_ACTIVE_LIMIT = Number(process.env.SENTINEL_ANON_ACTIVE_LIMIT ?? 1);
-const IP_DAILY_LIMIT = Number(process.env.SENTINEL_IP_DAILY_LIMIT ?? 50);
+const IP_DAILY_LIMIT = Number(process.env.SENTINEL_IP_DAILY_LIMIT ?? 100);
 const IP_ACTIVE_LIMIT = Number(process.env.SENTINEL_IP_ACTIVE_LIMIT ?? 1);
 const RUN_ACTIVE_TTL_SECONDS = Number(process.env.SENTINEL_RUN_MAX_SECONDS ?? 4 * 3600);
 
@@ -277,7 +277,7 @@ export function quotaDenialMessage(reason?: QuotaReasonCode): string {
   switch (reason) {
     case "ANONYMOUS_DAILY":
     case "ANONYMOUS_ACTIVE":
-      return "Your trial execution has been used. Create an account to receive 5 executions per day.";
+      return "You have used today's execution allowance. Try again after the daily reset.";
     case "IP_DAILY":
     case "IP_ACTIVE":
       return "Sentinel has reached its execution allowance for this network. Please try again later.";

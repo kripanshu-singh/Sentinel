@@ -329,14 +329,24 @@ export default function GoalInputPage() {
                 {quotaBlocked ? (
                   <>
                     <Lock className="size-3.5 shrink-0" />
-                    Your trial execution has been used. Create an account to
-                    receive 5 executions per day.
+                    You have used today's execution allowance. Try again after{" "}
+                    {quota.resetsAt
+                      ? new Date(quota.resetsAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "the daily reset"}
+                    .
                   </>
                 ) : (
                   <>
                     <Sparkles className="size-3.5 shrink-0 text-primary" />
-                    Trial execution available: {quotaRemaining} of{" "}
-                    {quota.dailyLimit} remaining
+                    {quotaRemaining} of {quota.dailyLimit} runs remaining today
+                    {quota.resetsAt &&
+                      ` · resets at ${new Date(quota.resetsAt).toLocaleTimeString(
+                        [],
+                        { hour: "2-digit", minute: "2-digit" }
+                      )}`}
                     {quota.active > 0 &&
                       ` · ${quota.active} run${
                         quota.active === 1 ? "" : "s"

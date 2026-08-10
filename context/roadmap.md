@@ -34,6 +34,6 @@ Status legend: `[x] done · [~] in progress · [ ] planned`
 - [x] Local PostgreSQL (`breakmyapi`) and Redis integration.
 
 ## Phase 4 — Execution Limits & Cost Protection
-- [x] **Execution limits (ADR-016):** anonymous trial allowance (1 run/cookie/UTC day) + per-IP backstop + per-client concurrency + global capacity ceiling, enforced atomically in worker Redis; anonymous-ID cookie issued by Next.js proxy; quota snapshot UI on the goal screen.
-- [ ] Sign-in / account tiers (5 executions/day per verified user).
+- [x] **Execution limits (ADR-016):** anonymous allowance (5 runs/cookie/UTC day) + per-IP backstop (100/day) + per-client concurrency + global capacity ceiling, enforced atomically in worker Redis; anonymous-ID cookie issued by Next.js proxy; quota snapshot UI on the goal screen.
+- [ ] Sign-in / account tiers — **deferred indefinitely**; the anonymous 5/day allowance replaces the account funnel until multi-tenant needs (seats, invoices, org budgets) justify auth.
 - [ ] Organization/workspace budgets + admin usage view.
