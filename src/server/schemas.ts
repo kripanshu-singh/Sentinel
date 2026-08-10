@@ -241,6 +241,19 @@ export const WorkerSuccessResponseSchema = z.object({
   ok: z.literal(true),
 });
 
+export const QuotaSnapshotSchema = z.object({
+  enabled: z.boolean(),
+  identity: z.literal("anonymous"),
+  dailyUsed: z.number().nonnegative().int(),
+  dailyLimit: z.number().int().positive(),
+  active: z.number().nonnegative().int(),
+  activeLimit: z.number().int().positive(),
+  resetsAt: z.string().nullable(),
+  canRun: z.boolean(),
+});
+
+export type QuotaSnapshot = z.infer<typeof QuotaSnapshotSchema>;
+
 export type RunSummary = z.infer<typeof RunSummarySchema>;
 export type ReconciliationReport = z.infer<typeof ReconciliationReportSchema>;
 export type Discrepancy = z.infer<typeof DiscrepancySchema>;

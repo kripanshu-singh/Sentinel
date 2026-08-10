@@ -2,10 +2,12 @@
 
 import { useEffect, useState, type ComponentType } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
 import { SentinelNavbar } from "@/components/sentinel-navbar";
+import { useQuota } from "@/hooks/use-quota";
 import {
   Play,
   Paperclip,
@@ -110,6 +112,8 @@ export default function GoalInputPage() {
     useState<AssistantMessage | null>(null);
   const [conversation, setConversation] = useState<ConversationTurn[]>([]);
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { data: quota } = useQuota();
 
   useEffect(() => {
     void fetch("/api/wake", { method: "GET" }).catch(() => undefined);
@@ -120,6 +124,17 @@ export default function GoalInputPage() {
     window.addEventListener("sentinel:start-tour", handler as EventListener);
     return () => window.removeEventListener("sentinel:start-tour", handler as EventListener);
   }, [startTour]);
+
+  // Execution-allowance display. The worker is the authority; this only drives
+  // the banner copy and the disabled state of the run action.
+  const quotaEnabled = Boolean(quota?.enabled);
+  const quotaBlocked = quotaEnabled && quota ? !quota.canRun : false;
+  const quotaRemaining =
+    quotaEnabled && quota ? Math.max(0, quota.dailyLimit - quota.dailyUsed) : 0;
+
+  function refreshQuota() {
+    void queryClient.invalidateQueries({ queryKey: ["quota"] });
+  }
 
   function handleWorkflowClick(workflow: string | SuggestedWorkflow) {
     if (typeof workflow === "string") {
@@ -196,6 +211,7 @@ export default function GoalInputPage() {
 
       if (data.intent === "AUTOMATION_TASK") {
         setConversation([]);
+        refreshQuota();
         router.push(`/runs/${data.runId}`);
         return;
       }
@@ -217,6 +233,9 @@ export default function GoalInputPage() {
       const message =
         err instanceof Error ? err.message : "Failed to start run";
       setSubmitError(message);
+      // A denial moved the allowance: reconcile the displayed count with the
+      // server's authoritative decision.
+      refreshQuota();
       setIsSubmitting(false);
     }
   }
@@ -298,6 +317,35 @@ export default function GoalInputPage() {
               </div>
             )}
 
+            {/* Execution allowance */}
+            {quotaEnabled && quota && (
+              <div
+                className={`w-full flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
+                  quotaBlocked
+                    ? "border-destructive/30 bg-destructive/10 text-destructive"
+                    : "border-border bg-card text-muted-foreground"
+                }`}
+              >
+                {quotaBlocked ? (
+                  <>
+                    <Lock className="size-3.5 shrink-0" />
+                    Your trial execution has been used. Create an account to
+                    receive 5 executions per day.
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="size-3.5 shrink-0 text-primary" />
+                    Trial execution available: {quotaRemaining} of{" "}
+                    {quota.dailyLimit} remaining
+                    {quota.active > 0 &&
+                      ` · ${quota.active} run${
+                        quota.active === 1 ? "" : "s"
+                      } in progress`}
+                  </>
+                )}
+              </div>
+            )}
+
             {/* Goal textarea */}
             <div className="w-full relative group" id="tour-goal">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/30 to-primary/10 rounded-2xl blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-500 pointer-events-none" />
@@ -332,7 +380,7 @@ export default function GoalInputPage() {
                   <Button
                     type="submit"
                     id="tour-start"
-                    disabled={!goal.trim() || isSubmitting}
+                    disabled={!goal.trim() || isSubmitting || quotaBlocked}
                     className="gap-2"
                     size="sm"
                   >

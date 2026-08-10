@@ -11,6 +11,7 @@ import runsRouter from "./routes/runs.js";
 import streamRouter from "./routes/stream.js";
 import resolveRouter from "./routes/resolve.js";
 import steerRouter from "./routes/steer.js";
+import quotaRouter from "./routes/quota.js";
 import { startQueueWorker } from "./queue/jobs.js";
 import { createTablesIfNotExist } from "./storage/db.js";
 
@@ -28,6 +29,7 @@ app.use("/runs", runsRouter);
 app.use("/runs", streamRouter); // Mount GET /runs/:id/stream
 app.use("/runs", resolveRouter); // Mount POST /runs/:id/resolve
 app.use("/runs", steerRouter); // Mount POST /runs/:id/steer (ADR-012)
+app.use("/quota", quotaRouter); // Mount GET /quota (quota snapshot)
 
 // Liveness check
 app.get("/health", (req: Request, res: Response) => {

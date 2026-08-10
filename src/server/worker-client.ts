@@ -10,7 +10,9 @@ import {
   RunSummarySchema,
   StartRunResponseSchema,
   WorkerSuccessResponseSchema,
+  QuotaSnapshotSchema,
   type RunSummary,
+  type QuotaSnapshot,
 } from "./schemas";
 import type { GoalInput, ApprovalResolution } from "./schemas";
 
@@ -20,11 +22,19 @@ const WORKER_REQUEST_TIMEOUT_MS = 15_000;
 export class WorkerError extends Error {
   constructor(
     message: string,
-    public readonly statusCode?: number
+    public readonly statusCode?: number,
+    /** Present when the worker denied a run with a quota snapshot. */
+    public readonly quota?: QuotaSnapshot | null
   ) {
     super(message);
     this.name = "WorkerError";
   }
+}
+
+/** Identity forwarded from the browser cookie so the worker can enforce quotas. */
+export interface RunRequestContext {
+  anonymousId?: string;
+  ip?: string;
 }
 
 function getWorkerUrl(path: string): string {
@@ -39,12 +49,15 @@ function getWorkerUrl(path: string): string {
   }
 }
 
-async function workerErrorMessage(response: Response): Promise<string> {
+async function workerErrorMessage(response: Response): Promise<{
+  message: string;
+  quota?: QuotaSnapshot | null;
+}> {
   const fallbackMessage = `Worker responded with ${response.status}`;
   const contentType = response.headers.get("content-type") ?? "";
 
   if (!contentType.includes("application/json")) {
-    return fallbackMessage;
+    return { message: fallbackMessage };
   }
 
   try {
@@ -55,13 +68,20 @@ async function workerErrorMessage(response: Response): Promise<string> {
       "error" in body &&
       typeof body.error === "string"
     ) {
-      return body.error;
+      const quotaCandidate =
+        typeof body === "object" && body !== null && "quota" in body
+          ? body.quota
+          : undefined;
+      const quota = QuotaSnapshotSchema.safeParse(quotaCandidate).success
+        ? QuotaSnapshotSchema.parse(quotaCandidate)
+        : undefined;
+      return { message: body.error, quota };
     }
   } catch {
-    return fallbackMessage;
+    return { message: fallbackMessage };
   }
 
-  return fallbackMessage;
+  return { message: fallbackMessage };
 }
 
 async function workerFetch(
@@ -104,7 +124,8 @@ async function workerFetch(
   }
 
   if (!response.ok) {
-    throw new WorkerError(await workerErrorMessage(response), response.status);
+    const { message, quota } = await workerErrorMessage(response);
+    throw new WorkerError(message, response.status, quota);
   }
 
   return response;
@@ -114,15 +135,37 @@ async function workerFetch(
 // Run lifecycle
 // ---------------------------------------------------------------------------
 
+/** Headers that carry the anonymous identity to the worker's quota authority. */
+function identityHeaders(ctx?: RunRequestContext): [string, string][] {
+  const headers: [string, string][] = [];
+  if (ctx?.anonymousId) headers.push(["x-anonymous-id", ctx.anonymousId]);
+  if (ctx?.ip) headers.push(["x-client-ip", ctx.ip]);
+  return headers;
+}
+
 /**
  * Start a new agent run. Returns the generated runId.
+ * Passes the visitor's anonymous identity so the worker can enforce quotas.
  */
-export async function startRun(input: GoalInput): Promise<{ runId: string }> {
+export async function startRun(
+  input: GoalInput,
+  ctx?: RunRequestContext
+): Promise<{ runId: string }> {
   const res = await workerFetch("/runs", {
     method: "POST",
+    headers: identityHeaders(ctx),
     body: JSON.stringify(input),
   });
   return StartRunResponseSchema.parse(await res.json());
+}
+
+/**
+ * Fetch the current quota snapshot for the anonymous visitor (display only —
+ * the worker remains the authority).
+ */
+export async function getQuota(ctx?: RunRequestContext): Promise<QuotaSnapshot> {
+  const res = await workerFetch("/quota", { headers: identityHeaders(ctx) });
+  return QuotaSnapshotSchema.parse(await res.json());
 }
 
 /**

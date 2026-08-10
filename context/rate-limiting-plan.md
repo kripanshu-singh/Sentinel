@@ -3,8 +3,15 @@
 ## Purpose
 
 Protect Sentinel's costly automation capacity while keeping the first experience easy for people
-who have not created an account. This is a product and implementation plan only; it does not add
-rate-limiting behavior to the application.
+who have not created an account.
+
+> **Status:** The anonymous slice is **implemented** (ADR-016, 2026-08-10): the worker owns
+> atomic Redis quotas (`worker/src/quota.ts`), the Next.js proxy issues a long-lived anonymous-ID
+> cookie, and `GET /api/quota` + the 429-with-snapshot refusal drive the UI. User/org tiers and
+> sign-in remain on the migration path below. Thresholds are env-tunable
+> (`SENTINEL_ANON_DAILY_LIMIT`, `SENTINEL_IP_DAILY_LIMIT`, `SENTINEL_ANON_ACTIVE_LIMIT`,
+> `SENTINEL_IP_ACTIVE_LIMIT`, `SENTINEL_GLOBAL_ACTIVE_LIMIT`); `SENTINEL_QUOTA_ENABLED=false`
+> disables enforcement for local development.
 
 ## Recommended policy
 

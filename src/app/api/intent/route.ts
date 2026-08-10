@@ -12,8 +12,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { IntentRequestSchema, IntentResponseSchema } from "@/server/schemas";
-import { startRun } from "@/server/worker-client";
+import { startRun, WorkerError } from "@/server/worker-client";
 import { CAPABILITY_HELP, routeIntent } from "@/server/intent-classifier";
+import { getAnonymousId, getClientIp } from "@/server/identity";
 
 export async function POST(request: NextRequest) {
   let body: unknown;
@@ -35,22 +36,40 @@ export async function POST(request: NextRequest) {
 
   if (decision.intent === "AUTOMATION_TASK") {
     try {
-      const result = await startRun({
-        goal: parsed.data.goal,
-        storefrontUrl: parsed.data.storefrontUrl,
-        credentials: parsed.data.credentials,
-        targetUnitPrice: parsed.data.targetUnitPrice,
-        targetSubtotal: parsed.data.targetSubtotal,
-        varianceThresholdPct: parsed.data.varianceThresholdPct,
-        discountCode: parsed.data.discountCode,
-        fallbackPolicy: parsed.data.fallbackPolicy,
-      });
+      const result = await startRun(
+        {
+          goal: parsed.data.goal,
+          storefrontUrl: parsed.data.storefrontUrl,
+          credentials: parsed.data.credentials,
+          targetUnitPrice: parsed.data.targetUnitPrice,
+          targetSubtotal: parsed.data.targetSubtotal,
+          varianceThresholdPct: parsed.data.varianceThresholdPct,
+          discountCode: parsed.data.discountCode,
+          fallbackPolicy: parsed.data.fallbackPolicy,
+        },
+        {
+          anonymousId: getAnonymousId(request),
+          ip: getClientIp(request),
+        }
+      );
       const response = IntentResponseSchema.parse({
         intent: "AUTOMATION_TASK",
         runId: result.runId,
       });
       return NextResponse.json(response, { status: 201 });
     } catch (err: unknown) {
+      if (err instanceof WorkerError) {
+        if (err.statusCode === 429) {
+          return NextResponse.json(
+            { error: err.message, quota: err.quota ?? undefined },
+            { status: 429 }
+          );
+        }
+        return NextResponse.json(
+          { error: err.message },
+          { status: err.statusCode ?? 502 }
+        );
+      }
       const message = err instanceof Error ? err.message : "Worker unavailable";
       return NextResponse.json({ error: message }, { status: 502 });
     }

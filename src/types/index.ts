@@ -132,3 +132,17 @@ export interface RunSummary {
   report?: ReconciliationReport;
   currentApprovalRequest?: ApprovalRequest;
 }
+
+/** Execution allowance for the current anonymous visitor (context/rate-limiting-plan.md). */
+export interface QuotaSnapshot {
+  enabled: boolean;
+  identity: "anonymous";
+  dailyUsed: number;
+  dailyLimit: number;
+  active: number;
+  activeLimit: number;
+  /** ISO timestamp of the next daily reset (UTC midnight). Null when disabled. */
+  resetsAt: string | null;
+  /** Soft preview; the server's decision at run start is always authoritative. */
+  canRun: boolean;
+}

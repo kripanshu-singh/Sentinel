@@ -6,6 +6,7 @@
 
 import { Queue, Worker, type Job } from "bullmq";
 import { runGraph } from "../agent/graph/graph.js";
+import { releaseRun } from "../quota.js";
 import type { GoalInput } from "../types/index.js";
 
 const REDIS_URL = process.env.REDIS_URL ?? "redis://localhost:6379";
@@ -24,7 +25,10 @@ export const runsQueue = new Queue("runs", {
 // Worker Setup
 // ---------------------------------------------------------------------------
 
-const DEFAULT_CONCURRENCY = 5;
+// One concurrent Chromium by default: Playwright needs ~250–400MB per browser,
+// and the Render free tier (512MB) cannot run more than one at a time. If the
+// worker runs on a larger instance, raise WORKER_CONCURRENCY accordingly.
+const DEFAULT_CONCURRENCY = 1;
 
 export function startQueueWorker(): Worker {
   const concurrency = Number(process.env.WORKER_CONCURRENCY ?? DEFAULT_CONCURRENCY);
@@ -34,8 +38,14 @@ export function startQueueWorker(): Worker {
     async (job: Job<{ runId: string; input: GoalInput }>) => {
       const { runId, input } = job.data;
       console.log(`[queue] Processing run job ${runId}`);
-      
-      await runGraph(runId, input);
+
+      try {
+        await runGraph(runId, input);
+      } finally {
+        // The run ended (success, failure, or HITL resolution): free the
+        // concurrency token. Leaked tokens self-expire via their TTL.
+        await releaseRun(runId);
+      }
     },
     {
       connection: {
@@ -49,8 +59,9 @@ export function startQueueWorker(): Worker {
     console.log(`[queue] Job ${job.id} completed successfully`);
   });
 
-  worker.on("failed", (job: Job | undefined, err: Error) => {
+  worker.on("failed", async (job: Job | undefined, err: Error) => {
     console.error(`[queue] Job ${job?.id} failed:`, err.message);
+    if (job?.id) await releaseRun(job.id);
   });
 
   return worker;

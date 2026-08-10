@@ -32,3 +32,8 @@ Status legend: `[x] done · [~] in progress · [ ] planned`
 - [x] Multi-channel pricing audit (per-channel snapshots, variance vs threshold, HITL on large gaps).
 - [x] CSV export of invoice/report from result screen.
 - [x] Local PostgreSQL (`breakmyapi`) and Redis integration.
+
+## Phase 4 — Execution Limits & Cost Protection
+- [x] **Execution limits (ADR-016):** anonymous trial allowance (1 run/cookie/UTC day) + per-IP backstop + per-client concurrency + global capacity ceiling, enforced atomically in worker Redis; anonymous-ID cookie issued by Next.js proxy; quota snapshot UI on the goal screen.
+- [ ] Sign-in / account tiers (5 executions/day per verified user).
+- [ ] Organization/workspace budgets + admin usage view.
