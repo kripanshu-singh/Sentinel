@@ -20,7 +20,7 @@ const router = Router();
  * Matches the single-Chromium limit of the Render free worker by default; the
  * queue absorbs extra attempts via 429 instead of piling up unstartable jobs.
  */
-const GLOBAL_ACTIVE_LIMIT = Number(process.env.SENTINEL_GLOBAL_ACTIVE_LIMIT ?? 1);
+export const GLOBAL_ACTIVE_LIMIT = Number(process.env.SENTINEL_GLOBAL_ACTIVE_LIMIT ?? 1);
 
 function identityFrom(headers: Record<string, string | string[] | undefined>): {
   anonymousId?: string;
@@ -68,7 +68,10 @@ router.post("/", async (req: Request, res: Response) => {
       res.status(429).json({
         error: quotaDenialMessage("CAPACITY"),
         reason: "CAPACITY",
-        quota: await getQuotaSnapshot({ anonymousId, ip }),
+        quota: await getQuotaSnapshot(
+          { anonymousId, ip },
+          { occupied: occupying, limit: GLOBAL_ACTIVE_LIMIT }
+        ),
       });
       return;
     }

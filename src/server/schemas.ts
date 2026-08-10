@@ -248,8 +248,17 @@ export const QuotaSnapshotSchema = z.object({
   dailyLimit: z.number().int().positive(),
   active: z.number().nonnegative().int(),
   activeLimit: z.number().int().positive(),
+  ipDailyUsed: z.number().nonnegative().int().optional(),
+  ipDailyLimit: z.number().int().positive().nullable().optional(),
+  ipActive: z.number().nonnegative().int().optional(),
+  ipActiveLimit: z.number().int().positive().nullable().optional(),
+  capacityOccupied: z.number().nonnegative().int().optional(),
+  capacityLimit: z.number().int().positive().nullable().optional(),
   resetsAt: z.string().nullable(),
   canRun: z.boolean(),
+  deny: z
+    .object({ reason: z.string(), message: z.string() })
+    .optional(),
 });
 
 export type QuotaSnapshot = z.infer<typeof QuotaSnapshotSchema>;

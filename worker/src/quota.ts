@@ -68,8 +68,16 @@ export interface QuotaSnapshot {
   dailyLimit: number;
   active: number;
   activeLimit: number;
+  ipDailyUsed: number;
+  ipDailyLimit: number | null;
+  ipActive: number;
+  ipActiveLimit: number | null;
+  capacityOccupied: number;
+  capacityLimit: number | null;
   resetsAt: string | null;
   canRun: boolean;
+  /** Present only when canRun is false — which dimension blocked and the copy to show. */
+  deny?: { reason: QuotaReasonCode; message: string };
 }
 
 export interface QuotaDecision {
@@ -117,7 +125,12 @@ function ipDailyKey(ip: string): string {
 }
 
 function ipActiveKey(ip: string): string {
-  return `quota:active:ip:${ipHash(ip)}`;
+  return ipActiveKeyForHash(ipHash(ip));
+}
+
+/** Builds an IP-active key from an already-hashed IP (release must not re-hash). */
+function ipActiveKeyForHash(ipHashValue: string): string {
+  return `quota:active:ip:${ipHashValue}`;
 }
 
 function runScopeKey(runId: string): string {
@@ -226,7 +239,7 @@ export async function releaseRun(runId: string): Promise<void> {
     const ip = scope.slice(separator + 1);
 
     if (anonymousId) await redis.srem(clientActiveKey(anonymousId), runId);
-    if (ip) await redis.srem(ipActiveKey(ip), runId);
+    if (ip) await redis.srem(ipActiveKeyForHash(ip), runId);
     await redis.del(runScopeKey(runId));
   } catch (err) {
     // Non-fatal: active tokens self-expire via their TTL.
@@ -243,11 +256,14 @@ const range = (v: unknown, fallback: number): number => {
   return Number.isFinite(n) && n >= 0 ? Math.floor(n) : fallback;
 };
 
-export async function getQuotaSnapshot(identity: QuotaIdentity): Promise<QuotaSnapshot> {
+export async function getQuotaSnapshot(
+  identity: QuotaIdentity,
+  capacity?: { occupied: number; limit: number }
+): Promise<QuotaSnapshot> {
   const { anonymousId, ip } = identity;
   const hasIp = Boolean(ip);
 
-  const [clientDaily, clientActive, ipDaily, ipActive] = await Promise.all([
+  const [clientDaily, clientActive, ipDailyCount, ipActiveCount] = await Promise.all([
     anonymousId ? redis.get(clientDailyKey(anonymousId)) : null,
     anonymousId ? redis.scard(clientActiveKey(anonymousId)) : null,
     hasIp ? redis.get(ipDailyKey(ip!)) : null,
@@ -256,6 +272,23 @@ export async function getQuotaSnapshot(identity: QuotaIdentity): Promise<QuotaSn
 
   const dailyUsed = anonymousId ? range(clientDaily, 0) : 0;
   const active = anonymousId ? range(clientActive, 0) : 0;
+  const ipDailyUsed = hasIp ? range(ipDailyCount, 0) : 0;
+  const ipActive = hasIp ? range(ipActiveCount, 0) : 0;
+
+  const capacityOccupied = capacity?.occupied ?? 0;
+  const capacityLimit = capacity?.limit ?? null;
+
+  // Mirror the reserve script's priority so the UI shows the exact blocker.
+  let denyReason: QuotaReasonCode | undefined;
+  let canRun = !QUOTA_ENABLED;
+  if (QUOTA_ENABLED) {
+    if (anonymousId && dailyUsed >= ANONYMOUS_DAILY_LIMIT) denyReason = "ANONYMOUS_DAILY";
+    else if (anonymousId && active >= ANONYMOUS_ACTIVE_LIMIT) denyReason = "ANONYMOUS_ACTIVE";
+    else if (hasIp && ipDailyUsed >= IP_DAILY_LIMIT) denyReason = "IP_DAILY";
+    else if (hasIp && ipActive >= IP_ACTIVE_LIMIT) denyReason = "IP_ACTIVE";
+    else if (capacity && capacityOccupied >= capacity.limit) denyReason = "CAPACITY";
+    canRun = !denyReason;
+  }
 
   return {
     enabled: QUOTA_ENABLED,
@@ -264,8 +297,15 @@ export async function getQuotaSnapshot(identity: QuotaIdentity): Promise<QuotaSn
     dailyLimit: ANONYMOUS_DAILY_LIMIT,
     active,
     activeLimit: ANONYMOUS_ACTIVE_LIMIT,
+    ipDailyUsed,
+    ipDailyLimit: hasIp ? IP_DAILY_LIMIT : null,
+    ipActive,
+    ipActiveLimit: hasIp ? IP_ACTIVE_LIMIT : null,
+    capacityOccupied,
+    capacityLimit,
     resetsAt: QUOTA_ENABLED ? nextUtcMidnight() : null,
-    canRun: !QUOTA_ENABLED || dailyUsed < ANONYMOUS_DAILY_LIMIT && active < ANONYMOUS_ACTIVE_LIMIT,
+    canRun,
+    ...(denyReason ? { deny: { reason: denyReason, message: quotaDenialMessage(denyReason) } } : {}),
   };
 }
 
@@ -279,8 +319,9 @@ export function quotaDenialMessage(reason?: QuotaReasonCode): string {
     case "ANONYMOUS_ACTIVE":
       return "You have used today's execution allowance. Try again after the daily reset.";
     case "IP_DAILY":
-    case "IP_ACTIVE":
       return "Sentinel has reached its execution allowance for this network. Please try again later.";
+    case "IP_ACTIVE":
+      return "Another run is already active for this network. Please wait for it to finish.";
     case "CAPACITY":
       return "Sentinel is at its current execution capacity. Please try again shortly.";
     case "MISSING_IDENTITY":

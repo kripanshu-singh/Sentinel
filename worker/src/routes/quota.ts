@@ -8,6 +8,8 @@
 
 import { Router } from "express";
 import { getQuotaSnapshot } from "../quota.js";
+import { runsQueue } from "../queue/jobs.js";
+import { GLOBAL_ACTIVE_LIMIT } from "./runs.js";
 
 const router = Router();
 
@@ -17,7 +19,13 @@ router.get("/", async (req, res) => {
   const ip = String(req.headers["x-client-ip"] ?? "").trim() || undefined;
 
   try {
-    const snapshot = await getQuotaSnapshot({ anonymousId, ip });
+    const counts = await runsQueue.getJobCounts();
+    const occupied =
+      (counts.active ?? 0) + (counts.waiting ?? 0) + (counts.delayed ?? 0);
+    const snapshot = await getQuotaSnapshot(
+      { anonymousId, ip },
+      { occupied, limit: GLOBAL_ACTIVE_LIMIT }
+    );
     res.json(snapshot);
   } catch (err) {
     console.error("[routes:quota] Failed to read quota:", err);

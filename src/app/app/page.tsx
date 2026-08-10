@@ -6,8 +6,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { SentinelNavbar } from "@/components/sentinel-navbar";
 import { useQuota } from "@/hooks/use-quota";
+import { cn } from "@/lib/utils";
 import {
   Play,
   Paperclip,
@@ -56,7 +58,6 @@ interface SuggestedWorkflow {
   discountCode?: string;
   fallbackPolicy?: string;
 }
-
 
 const SUGGESTED_WORKFLOWS: SuggestedWorkflow[] = [
   {
@@ -122,7 +123,11 @@ export default function GoalInputPage() {
   useEffect(() => {
     const handler = () => startTour();
     window.addEventListener("sentinel:start-tour", handler as EventListener);
-    return () => window.removeEventListener("sentinel:start-tour", handler as EventListener);
+    return () =>
+      window.removeEventListener(
+        "sentinel:start-tour",
+        handler as EventListener,
+      );
   }, [startTour]);
 
   // Execution-allowance display. The worker is the authority; this only drives
@@ -131,6 +136,12 @@ export default function GoalInputPage() {
   const quotaBlocked = quotaEnabled && quota ? !quota.canRun : false;
   const quotaRemaining =
     quotaEnabled && quota ? Math.max(0, quota.dailyLimit - quota.dailyUsed) : 0;
+  const resetTime = quota?.resetsAt
+    ? new Date(quota.resetsAt).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
 
   function refreshQuota() {
     void queryClient.invalidateQueries({ queryKey: ["quota"] });
@@ -171,6 +182,18 @@ export default function GoalInputPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!goal.trim()) return;
+
+    // Fail fast when the authoritative snapshot already says no execution is
+    // possible — skip the classify round-trip entirely.
+    if (quotaEnabled && quota && !quota.canRun) {
+      setSubmitError(
+        quota.deny?.message ??
+          "Execution allowance used. Please try again later.",
+      );
+      refreshQuota();
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
 
@@ -189,7 +212,9 @@ export default function GoalInputPage() {
               ? { username: credUsername.trim(), password: credPassword.trim() }
               : undefined,
           targetUnitPrice: targetPrice ? parseFloat(targetPrice) : undefined,
-          targetSubtotal: targetSubtotal ? parseFloat(targetSubtotal) : undefined,
+          targetSubtotal: targetSubtotal
+            ? parseFloat(targetSubtotal)
+            : undefined,
           varianceThresholdPct: parseFloat(variancePct) ?? 10,
           discountCode: discountCode.trim() || undefined,
           fallbackPolicy: fallback,
@@ -242,7 +267,7 @@ export default function GoalInputPage() {
 
   return (
     <SidebarInset>
-      <SentinelNavbar onNewRun={handleNewWorkflow} /> 
+      <SentinelNavbar onNewRun={handleNewWorkflow} />
 
       {/* Main Canvas */}
       <main className="flex-1 flex flex-col items-center justify-center px-4 md:px-8 py-8 relative overflow-y-auto">
@@ -260,17 +285,14 @@ export default function GoalInputPage() {
           <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground mb-2 text-center">
             Sentinel
           </h1>
-          <p className="text-sm text-muted-foreground mb-3 text-center max-w-xl" id="tour-subtitle">
-            B2B Vendor Order &amp; Discrepancy Reconciliation Agent. Describe your procurement task — Sentinel executes it with human-in-the-loop guardrails.
-          </p>
-          <button
-            type="button"
-            onClick={startTour}
-            className="mb-6 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
+          <p
+            className="text-sm text-muted-foreground mb-3 text-center max-w-xl"
+            id="tour-subtitle"
           >
-            <Sparkles className="size-3.5" />
-            Take the 2-minute tour
-          </button>
+            B2B Vendor Order &amp; Discrepancy Reconciliation Agent. Describe
+            your procurement task — Sentinel executes it with human-in-the-loop
+            guardrails.
+          </p>
 
           <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
             {/* Assistant reply for non-task prompts */}
@@ -320,39 +342,60 @@ export default function GoalInputPage() {
             {/* Execution allowance */}
             {quotaEnabled && quota && (
               <div
-                className={`w-full flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-xl border px-3.5 py-2.5",
                   quotaBlocked
-                    ? "border-destructive/30 bg-destructive/10 text-destructive"
-                    : "border-border bg-card text-muted-foreground"
-                }`}
-              >
-                {quotaBlocked ? (
-                  <>
-                    <Lock className="size-3.5 shrink-0" />
-                    You have used today's execution allowance. Try again after{" "}
-                    {quota.resetsAt
-                      ? new Date(quota.resetsAt).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "the daily reset"}
-                    .
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="size-3.5 shrink-0 text-primary" />
-                    {quotaRemaining} of {quota.dailyLimit} runs remaining today
-                    {quota.resetsAt &&
-                      ` · resets at ${new Date(quota.resetsAt).toLocaleTimeString(
-                        [],
-                        { hour: "2-digit", minute: "2-digit" }
-                      )}`}
-                    {quota.active > 0 &&
-                      ` · ${quota.active} run${
-                        quota.active === 1 ? "" : "s"
-                      } in progress`}
-                  </>
+                    ? "border-destructive/30 bg-destructive/5"
+                    : "border-border bg-card shadow-border/60",
                 )}
+              >
+                <div
+                  className={cn(
+                    "flex size-7 shrink-0 items-center justify-center rounded-full",
+                    quotaBlocked
+                      ? "bg-destructive/10 text-destructive"
+                      : "bg-primary/10 text-primary",
+                  )}
+                >
+                  {quotaBlocked ? (
+                    <Lock className="size-3.5" />
+                  ) : (
+                    <Sparkles className="size-3.5" />
+                  )}
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground/70">
+                    {quotaBlocked ? "Allowance used" : "Run allowance"}
+                  </span>
+                  <p
+                    className={cn(
+                      "truncate text-xs",
+                      quotaBlocked
+                        ? "text-destructive"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {quotaBlocked ? (
+                      <>{quota.deny?.message ?? "Execution allowance used."}</>
+                    ) : (
+                      <>
+                        {quotaRemaining} of {quota.dailyLimit} runs remaining
+                        today
+                        {resetTime ? ` · resets at ${resetTime}` : ""}
+                        {quota.active > 0 &&
+                          ` · ${quota.active} run${
+                            quota.active === 1 ? "" : "s"
+                          } in progress`}
+                      </>
+                    )}
+                  </p>
+                </div>
+                <Badge
+                  variant={quotaBlocked ? "destructive" : "secondary"}
+                  className="shrink-0"
+                >
+                  {quotaBlocked ? "Used" : `${quotaRemaining} left`}
+                </Badge>
               </div>
             )}
 
@@ -416,7 +459,10 @@ export default function GoalInputPage() {
             )}
 
             {/* Business rules */}
-            <fieldset className="bg-card border border-border rounded-xl p-5 flex flex-col gap-4 shadow-sm" id="tour-rules">
+            <fieldset
+              className="bg-card border border-border rounded-xl p-5 flex flex-col gap-4 shadow-sm"
+              id="tour-rules"
+            >
               <legend className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2">
                 Business Rules
               </legend>
@@ -424,7 +470,10 @@ export default function GoalInputPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {/* Target Unit Price */}
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="target-price" className="text-xs font-medium text-muted-foreground">
+                  <label
+                    htmlFor="target-price"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
                     Target Unit Price
                   </label>
                   <div className="flex items-center h-8 rounded-lg border border-input bg-transparent focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 transition-all overflow-hidden">
@@ -446,7 +495,10 @@ export default function GoalInputPage() {
 
                 {/* Target Subtotal */}
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="target-subtotal" className="text-xs font-medium text-muted-foreground">
+                  <label
+                    htmlFor="target-subtotal"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
                     Target Subtotal
                   </label>
                   <div className="flex items-center h-8 rounded-lg border border-input bg-transparent focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 transition-all overflow-hidden">
@@ -468,7 +520,10 @@ export default function GoalInputPage() {
 
                 {/* Variance Threshold */}
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="variance" className="text-xs font-medium text-muted-foreground">
+                  <label
+                    htmlFor="variance"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
                     Variance Threshold
                   </label>
                   <div className="flex items-center h-8 rounded-lg border border-input bg-transparent focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 transition-all overflow-hidden">
@@ -491,7 +546,10 @@ export default function GoalInputPage() {
 
                 {/* Discount Code */}
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="discount-code" className="text-xs font-medium text-muted-foreground">
+                  <label
+                    htmlFor="discount-code"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
                     Discount Code
                   </label>
                   <Input
@@ -506,7 +564,10 @@ export default function GoalInputPage() {
 
                 {/* Fallback Policy */}
                 <div className="flex flex-col gap-1.5 sm:col-span-2">
-                  <label htmlFor="fallback" className="text-xs font-medium text-muted-foreground">
+                  <label
+                    htmlFor="fallback"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
                     Fallback Policy
                   </label>
                   <select
@@ -533,7 +594,9 @@ export default function GoalInputPage() {
                 >
                   <Lock className="size-3.5" />
                   Portal login credentials
-                  <span className="text-muted-foreground/50 font-normal">(optional)</span>
+                  <span className="text-muted-foreground/50 font-normal">
+                    (optional)
+                  </span>
                   {showCredentials ? (
                     <ChevronUp className="size-3.5 ml-0.5" />
                   ) : (
@@ -544,7 +607,10 @@ export default function GoalInputPage() {
                 {showCredentials && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                     <div className="flex flex-col gap-1.5">
-                      <label htmlFor="cred-username" className="text-xs font-medium text-muted-foreground">
+                      <label
+                        htmlFor="cred-username"
+                        className="text-xs font-medium text-muted-foreground"
+                      >
                         Username
                       </label>
                       <Input
@@ -558,7 +624,10 @@ export default function GoalInputPage() {
                       />
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label htmlFor="cred-password" className="text-xs font-medium text-muted-foreground">
+                      <label
+                        htmlFor="cred-password"
+                        className="text-xs font-medium text-muted-foreground"
+                      >
                         Password
                       </label>
                       <Input

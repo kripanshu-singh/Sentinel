@@ -141,8 +141,16 @@ export interface QuotaSnapshot {
   dailyLimit: number;
   active: number;
   activeLimit: number;
+  ipDailyUsed?: number;
+  ipDailyLimit?: number | null;
+  ipActive?: number;
+  ipActiveLimit?: number | null;
+  capacityOccupied?: number;
+  capacityLimit?: number | null;
   /** ISO timestamp of the next daily reset (UTC midnight). Null when disabled. */
   resetsAt: string | null;
   /** Soft preview; the server's decision at run start is always authoritative. */
   canRun: boolean;
+  /** When blocked: which dimension denied the run and the copy to show. */
+  deny?: { reason: string; message: string };
 }
