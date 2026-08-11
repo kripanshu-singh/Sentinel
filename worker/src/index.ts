@@ -13,6 +13,7 @@ import resolveRouter from "./routes/resolve.js";
 import steerRouter from "./routes/steer.js";
 import quotaRouter from "./routes/quota.js";
 import { startQueueWorker } from "./queue/jobs.js";
+import { startStaleHitlSweeper } from "./jobs/hitl-sweeper.js";
 import { createTablesIfNotExist } from "./storage/db.js";
 
 const app = express();
@@ -78,6 +79,15 @@ function startServer() {
       console.log("[queue] Background task worker listening for runs");
     } catch (err) {
       console.error("[queue] Failed to start background worker:", err);
+    }
+
+    // Start abandoned-HITL recovery sweep (frees capacity slots held by runs
+    // left paused at the approval gate past the stale threshold).
+    try {
+      startStaleHitlSweeper();
+      console.log("[hitl-sweeper] Stale-HITL recovery sweep started");
+    } catch (err) {
+      console.error("[hitl-sweeper] Failed to start sweeper:", err);
     }
   };
 
